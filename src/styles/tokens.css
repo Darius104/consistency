@@ -1,0 +1,229 @@
+:root {
+  color-scheme: dark;
+
+  --bg: #101114;
+  --bg-elevated: #17181c;
+  --surface: #1c1d22;
+  --surface-hover: #24252b;
+  --border: #2a2b32;
+  --border-strong: #383a42;
+
+  --text: #e8e8ec;
+  --text-secondary: #9a9aa4;
+  --text-muted: #64656d;
+
+  --accent: #7c9eff;
+  --accent-rgb: 124, 158, 255;
+  --accent-soft: rgba(124, 158, 255, 0.16);
+
+  --priority-low: #4caf82;
+  --priority-medium: #d9a441;
+  --priority-high: #e5686b;
+
+  --danger: #e5686b;
+
+  /* Completion signals a task/day being done, not priority or theme - so it
+     stays this exact green everywhere, same as the priority colors. */
+  --success: #46c98f;
+  --success-soft: rgba(70, 201, 143, 0.16);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.32);
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI",
+    sans-serif;
+
+  /* Shared motion curves - every deliberate entrance/exit/press animation in
+     the app draws from these instead of inventing its own cubic-bezier. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+  /* Named type scale - keep every size in the app on this ladder */
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 13px;
+  --text-md: 14px;
+  --text-lg: 15px;
+  --text-xl: 18px;
+  --text-2xl: 22px;
+}
+
+/* Themes only ever change background/text/accent tokens. Priority colors
+   and spacing/radius/type scale stay constant so switching themes never
+   changes what anything *means*, only its mood. */
+
+:root[data-theme="steel"] {
+  --bg: #0d0e10;
+  --bg-elevated: #131416;
+  --surface: #191a1d;
+  --surface-hover: #202226;
+  --border: #2b2d31;
+  --border-strong: #3a3d42;
+  --text: #e5e6e8;
+  --text-secondary: #9b9da2;
+  --text-muted: #66686d;
+  --accent: #64748b;
+  --accent-rgb: 100, 116, 139;
+  --accent-soft: rgba(100, 116, 139, 0.16);
+}
+
+:root[data-theme="ocean"] {
+  --bg: #0b1420;
+  --bg-elevated: #0f1c2b;
+  --surface: #132234;
+  --surface-hover: #182b40;
+  --border: #1f3650;
+  --border-strong: #2a4763;
+  --text: #e3edf7;
+  --text-secondary: #8fa8c2;
+  --text-muted: #5d7387;
+  --accent: #38bdf8;
+  --accent-rgb: 56, 189, 248;
+  --accent-soft: rgba(56, 189, 248, 0.16);
+}
+
+:root[data-theme="blossom"] {
+  --bg: #16111a;
+  --bg-elevated: #1e1620;
+  --surface: #241a27;
+  --surface-hover: #2d2130;
+  --border: #3a2a3d;
+  --border-strong: #4a3650;
+  --text: #f2e9ee;
+  --text-secondary: #b79db3;
+  --text-muted: #7c6478;
+  --accent: #f472b6;
+  --accent-rgb: 244, 114, 182;
+  --accent-soft: rgba(244, 114, 182, 0.16);
+}
+
+:root[data-theme="lavender"] {
+  --bg: #14131c;
+  --bg-elevated: #1b1926;
+  --surface: #221f2f;
+  --surface-hover: #2a2638;
+  --border: #362f47;
+  --border-strong: #453c59;
+  --text: #ece9f7;
+  --text-secondary: #ab9fc9;
+  --text-muted: #726b8c;
+  --accent: #b794f6;
+  --accent-rgb: 183, 148, 246;
+  --accent-soft: rgba(183, 148, 246, 0.16);
+}
+
+:root[data-theme="forest"] {
+  --bg: #0c130f;
+  --bg-elevated: #101a15;
+  --surface: #15211b;
+  --surface-hover: #1b2a22;
+  --border: #223930;
+  --border-strong: #2d4a3e;
+  --text: #e6f2ec;
+  --text-secondary: #8fb5a3;
+  --text-muted: #5c7d6c;
+  --accent: #34d399;
+  --accent-rgb: 52, 211, 153;
+  --accent-soft: rgba(52, 211, 153, 0.16);
+}
+
+:root[data-theme="crimson"] {
+  --bg: #170b0c;
+  --bg-elevated: #1e0f10;
+  --surface: #251416;
+  --surface-hover: #2e1a1c;
+  --border: #3d2224;
+  --border-strong: #4f2c2f;
+  --text: #f5e6e7;
+  --text-secondary: #c79a9c;
+  --text-muted: #8c6668;
+  --accent: #ef4565;
+  --accent-rgb: 239, 69, 101;
+  --accent-soft: rgba(239, 69, 101, 0.16);
+}
+
+:root[data-theme="amber"] {
+  --bg: #16110a;
+  --bg-elevated: #1c160d;
+  --surface: #241c11;
+  --surface-hover: #2d2415;
+  --border: #3d3018;
+  --border-strong: #4f3f1f;
+  --text: #f5ecd9;
+  --text-secondary: #c9b085;
+  --text-muted: #8c7a58;
+  --accent: #f0b429;
+  --accent-rgb: 240, 180, 41;
+  --accent-soft: rgba(240, 180, 41, 0.16);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  /* Fixed-width digits everywhere - the streak count, weekly %, task
+     counts ("3/5"), and calendar day numbers all change independently of
+     user action, and proportional digits would make them visibly shift
+     width each time. */
+  font-variant-numeric: tabular-nums;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+/* Visible keyboard focus everywhere - mouse users never see this,
+   keyboard/VoiceOver users always do. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Toggled on <body> for the duration of any manual drag (panel blocks,
+   tasks, tag groups) so moving the mouse across text during a drag never
+   triggers the browser's native text selection. */
+body.is-dragging {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+  }
+}

@@ -1,0 +1,25 @@
+.priority-badge {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.priority-badge--low {
+  background: rgba(76, 175, 130, 0.16);
+  color: var(--priority-low);
+}
+.priority-badge--medium {
+  background: rgba(217, 164, 65, 0.16);
+  color: var(--priority-medium);
+}
+.priority-badge--high {
+  background: rgba(229, 104, 107, 0.16);
+  color: var(--priority-high);
+}

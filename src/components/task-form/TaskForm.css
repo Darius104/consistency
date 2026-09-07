@@ -1,0 +1,107 @@
+.task-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.task-form__row {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.task-form__row .task-form__field {
+  flex: 1;
+}
+
+.task-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.task-form__label {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+
+.task-form__input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  width: 100%;
+  transition: border-color 0.12s ease;
+}
+
+.task-form__input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.task-form__textarea {
+  resize: vertical;
+  font-family: inherit;
+}
+
+.task-form__priority {
+  display: flex;
+  gap: 6px;
+}
+
+.task-form__priority-btn {
+  flex: 1;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  padding: 8px 6px;
+  font-size: var(--text-sm);
+  transition: border-color 0.12s ease, background-color 0.12s ease, color 0.12s ease,
+    transform 120ms var(--ease-out);
+}
+
+.task-form__priority-btn:active {
+  transform: scale(0.96);
+}
+
+.task-form__priority-btn--active.task-form__priority-btn--low {
+  border-color: var(--priority-low);
+  color: var(--priority-low);
+  background: rgba(76, 175, 130, 0.12);
+}
+.task-form__priority-btn--active.task-form__priority-btn--medium {
+  border-color: var(--priority-medium);
+  color: var(--priority-medium);
+  background: rgba(217, 164, 65, 0.12);
+}
+.task-form__priority-btn--active.task-form__priority-btn--high {
+  border-color: var(--priority-high);
+  color: var(--priority-high);
+  background: rgba(229, 104, 107, 0.12);
+}
+
+.task-form__error {
+  color: var(--danger);
+  font-size: var(--text-sm);
+  opacity: 1;
+  transition: opacity 160ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+.task-form__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: var(--space-2);
+}
+
+.task-form__actions-right {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+}

@@ -1,0 +1,18 @@
+.backup-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.backup-section__status {
+  font-size: var(--text-xs);
+  word-break: break-all;
+}
+
+.backup-section__status--success {
+  color: var(--success);
+}
+
+.backup-section__status--error {
+  color: var(--danger);
+}

@@ -1,0 +1,106 @@
+.tag-picker__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.tag-picker__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: var(--text-sm);
+  transition: border-color 0.12s ease, background-color 0.12s ease, color 0.12s ease,
+    transform 120ms var(--ease-out);
+}
+
+.tag-picker__pill:active {
+  transform: scale(0.95);
+}
+
+.tag-picker__pill--active,
+.tag-picker__pill--active-none {
+  font-weight: 600;
+}
+
+.tag-picker__pill--active-none {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text);
+}
+
+.tag-picker__pill--add {
+  color: var(--accent);
+  border-style: dashed;
+}
+
+.tag-picker__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.tag-picker__new {
+  margin-top: var(--space-3);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.tag-picker__input {
+  flex: 1 1 120px;
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+}
+
+.tag-picker__colors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag-picker__swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  transition: border-color 0.12s ease, transform 120ms var(--ease-out);
+}
+
+.tag-picker__swatch--active {
+  border-color: var(--text);
+}
+
+.tag-picker__swatch:active {
+  transform: scale(0.85);
+}
+
+.tag-picker__confirm {
+  background: var(--accent);
+  color: #10131f;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-weight: 500;
+  transition: transform 120ms var(--ease-out);
+}
+
+.tag-picker__confirm:active {
+  transform: scale(0.96);
+}

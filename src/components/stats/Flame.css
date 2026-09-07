@@ -1,0 +1,274 @@
+.flame {
+  position: relative;
+  display: inline-block;
+  width: 26px;
+  height: 34px;
+  flex: none;
+}
+
+/* Everything that scales/brightens/fades with completion - the logs
+   underneath are a sibling, not a child, so they never inherit this. */
+.flame__fire {
+  position: absolute;
+  inset: 0;
+  transform: scale(calc(0.4 + var(--power, 0) * 0.8));
+  transform-origin: center bottom;
+  /* Ramps to fully visible well before 100% (by ~1/3 power) - once there's
+     any real fire it should look properly lit, not half-transparent. Only
+     the size (below) keeps growing past that point. */
+  opacity: clamp(0, calc(var(--power, 0) * 3), 1);
+  filter: drop-shadow(0 0 calc(var(--power, 0) * 9px) rgba(240, 147, 43, calc(var(--power, 0) * 0.75)));
+  transition: transform 0.35s var(--ease-out), opacity 0.35s ease, filter 0.35s ease;
+}
+
+/* A warm pool of light on the "ground" beneath the fire - sits behind the
+   layers below since it comes first in the DOM. */
+.flame__halo {
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  translate: -50% 0;
+  width: 30px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    rgba(240, 147, 43, calc(var(--power, 0) * 0.6)),
+    rgba(240, 147, 43, 0) 100%
+  );
+  filter: blur(3px);
+  scale: calc(0.7 + var(--power, 0) * 0.6);
+  transition: scale 0.35s var(--ease-out);
+}
+
+/* Two crossed logs sitting under the fire - constant size regardless of
+   --power (a woodpile doesn't grow, only the fire on top of it does). */
+.flame__logs {
+  position: absolute;
+  left: 50%;
+  bottom: -1px;
+  translate: -50% 0;
+  width: 30px;
+  height: 8px;
+}
+
+.flame__log {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 28px;
+  height: 6px;
+  border-radius: 3px;
+  /* Charred, not raw wood - a faint warm glow shows through the char as
+     completion rises, like embers still alive underneath. */
+  background: linear-gradient(180deg, #3c3934, #17140f);
+  border: 1px solid #0d0b08;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6),
+    inset 0 0 2px rgba(255, 120, 40, calc(var(--power, 0) * 0.5));
+}
+
+.flame__log--1 {
+  translate: -50% -50%;
+  rotate: -24deg;
+}
+
+.flame__log--2 {
+  translate: -50% -50%;
+  rotate: 24deg;
+}
+
+/* Nothing burning yet - fades out fast as soon as any real fire appears. */
+.flame__smoke {
+  position: absolute;
+  inset: 0;
+  opacity: clamp(0, calc((0.15 - var(--power, 0)) * 6.7), 1);
+  transition: opacity 0.4s ease;
+}
+
+.flame__wisp {
+  position: absolute;
+  bottom: 18%;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(205, 205, 210, 0.55);
+  filter: blur(1.5px);
+  animation: smoke-rise 3s ease-out infinite;
+}
+
+.flame__wisp--1 {
+  left: 48%;
+  animation-delay: 0s;
+  --drift: 5px;
+}
+.flame__wisp--2 {
+  left: 56%;
+  animation-delay: 1s;
+  animation-duration: 3.4s;
+  --drift: 8px;
+}
+.flame__wisp--3 {
+  left: 42%;
+  animation-delay: 2s;
+  animation-duration: 2.7s;
+  --drift: -7px;
+}
+
+@keyframes smoke-rise {
+  0% {
+    translate: -50% 0;
+    scale: 0.6;
+    opacity: 0.5;
+  }
+  100% {
+    translate: calc(-50% + var(--drift, 5px)) -22px;
+    scale: 1.7;
+    opacity: 0;
+  }
+}
+
+.flame__layer {
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  /* Standalone `translate` (not the `transform` shorthand) so the
+     centering offset never fights with the `scale`/`rotate` the keyframes
+     below animate independently. */
+  translate: -50% 0;
+  transform-origin: 50% 100%;
+  border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+}
+
+.flame__layer--outer {
+  width: 22px;
+  height: 30px;
+  background: var(--flame-base, #b45309);
+  /* Fades in with power instead of always sitting at a fixed 0.9 - a small
+     flame is mostly its hot core, not a dim version of the full body. */
+  opacity: calc(0.4 + var(--power, 0) * 0.5);
+  animation: flame-grow-outer calc(2.6s - var(--power, 0) * 0.9s) ease-in-out infinite;
+}
+
+.flame__layer--mid {
+  width: 15px;
+  height: 23px;
+  background: var(--flame-mid, #f0932b);
+  opacity: calc(0.65 + var(--power, 0) * 0.35);
+  animation: flame-grow-mid calc(1.9s - var(--power, 0) * 0.7s) ease-in-out infinite;
+  animation-delay: -0.4s;
+}
+
+.flame__layer--core {
+  width: 8px;
+  height: 14px;
+  background: var(--flame-tip, #ffd76a);
+  /* Always fully lit, regardless of power - the one part of the flame that
+     never dims, only the layers around it grow in. */
+  animation: flame-grow-core calc(1.3s - var(--power, 0) * 0.5s) ease-in-out infinite;
+  animation-delay: -0.8s;
+}
+
+/* Each layer squashes and stretches on its own schedule (negative delays
+   so they start mid-cycle and out of phase with each other) - that
+   desync, not the individual keyframe, is what sells it as fire rather
+   than a single shape pulsing in place. */
+
+@keyframes flame-grow-outer {
+  0%,
+  100% {
+    scale: 1 1;
+    border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+  }
+  33% {
+    scale: 0.93 1.1;
+    border-radius: 42% 58% 55% 45% / 68% 72% 32% 40%;
+  }
+  66% {
+    scale: 1.06 0.92;
+    border-radius: 58% 42% 45% 55% / 55% 65% 40% 30%;
+  }
+}
+
+@keyframes flame-grow-mid {
+  0%,
+  100% {
+    scale: 1 1;
+    border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+  }
+  40% {
+    scale: 0.88 1.16;
+    border-radius: 40% 60% 58% 42% / 70% 75% 30% 38%;
+  }
+  75% {
+    scale: 1.1 0.88;
+    border-radius: 60% 40% 42% 58% / 58% 60% 42% 28%;
+  }
+}
+
+@keyframes flame-grow-core {
+  0%,
+  100% {
+    scale: 1 1;
+    border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+  }
+  50% {
+    scale: 0.82 1.22;
+    border-radius: 38% 62% 60% 40% / 72% 78% 28% 36%;
+  }
+}
+
+/* Embers are an all-or-nothing reward for 100% - not a gradual ramp - so
+   "almost done" and "all done" read as clearly different states. */
+.flame__particles {
+  position: absolute;
+  inset: 0;
+  opacity: clamp(0, calc((var(--power, 0) - 0.999) * 1000), 1);
+  transition: opacity 0.3s ease;
+}
+
+.flame__particle {
+  position: absolute;
+  bottom: 60%;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: var(--flame-tip, #ffd76a);
+  animation: ember-rise 1.6s ease-out infinite;
+}
+
+.flame__particle--1 {
+  left: 50%;
+  animation-delay: 0s;
+  --drift: 6px;
+}
+.flame__particle--2 {
+  left: 38%;
+  animation-delay: 0.5s;
+  animation-duration: 1.3s;
+  --drift: -7px;
+}
+.flame__particle--3 {
+  left: 62%;
+  animation-delay: 1s;
+  animation-duration: 1.8s;
+  --drift: 4px;
+}
+.flame__particle--4 {
+  left: 46%;
+  animation-delay: 0.25s;
+  animation-duration: 1.5s;
+  --drift: -3px;
+}
+
+@keyframes ember-rise {
+  0% {
+    translate: -50% 0;
+    scale: 1;
+    opacity: 0.9;
+  }
+  100% {
+    translate: calc(-50% + var(--drift, 4px)) -26px;
+    scale: 0.25;
+    opacity: 0;
+  }
+}

@@ -1,0 +1,158 @@
+.task-group {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.task-group--complete {
+  border-color: var(--success);
+  background: var(--success-soft);
+}
+
+.task-group--dragging {
+  opacity: 0.4;
+}
+
+.task-group__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--text-secondary);
+  width: 100%;
+}
+
+.task-group__handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  color: var(--text-muted);
+  opacity: 0;
+  cursor: grab;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: opacity 0.12s ease;
+}
+
+.task-group:hover .task-group__handle {
+  opacity: 1;
+}
+
+.task-group--complete .task-group__header {
+  color: var(--text);
+}
+
+.task-group__header:hover {
+  color: var(--text);
+}
+
+.task-group__chevron {
+  transition: transform 220ms var(--ease-in-out);
+  flex: none;
+}
+
+.task-group__chevron--open {
+  transform: rotate(90deg);
+}
+
+.task-group__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.task-group__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.task-group__count {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.task-group--complete .task-group__count {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.task-group__save-template {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  padding: 3px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 0.12s ease, color 0.12s ease, background-color 0.12s ease,
+    transform 120ms var(--ease-out);
+}
+
+.task-group:hover .task-group__save-template {
+  opacity: 1;
+}
+
+.task-group__save-template:hover {
+  color: var(--accent);
+  background: var(--surface-hover);
+}
+
+.task-group__save-template--saved {
+  opacity: 1;
+  color: var(--priority-medium);
+}
+
+.task-group__save-template:active {
+  transform: scale(0.9);
+}
+
+.task-group__save-template--pop {
+  animation: task-group-save-pop 420ms var(--ease-out);
+}
+
+@keyframes task-group-save-pop {
+  35% {
+    scale: 1.35;
+  }
+}
+
+/* Grid-rows trick: animating 1fr -> 0fr smoothly collapses the row without
+   ever knowing the content's actual height, no JS measurement needed. The
+   gap to the header lives here (not on .task-group's flex gap) so it can
+   close in lockstep with the row instead of leaving a dangling gap. */
+.task-group__items-wrapper {
+  display: grid;
+  grid-template-rows: 1fr;
+  margin-top: var(--space-3);
+  transition: grid-template-rows 220ms var(--ease-out), margin-top 220ms var(--ease-out);
+}
+
+.task-group__items-wrapper--collapsed {
+  grid-template-rows: 0fr;
+  margin-top: 0;
+}
+
+.task-group__items {
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}

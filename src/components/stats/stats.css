@@ -1,0 +1,215 @@
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  box-shadow: var(--shadow-sm);
+}
+
+.stat-card__value {
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.stat-card__label {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+.stat-card__sub {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-top: var(--space-2);
+}
+
+.week-bar {
+  margin-top: var(--space-2);
+  height: 5px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.week-bar__fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+
+/* Streak hero - the app's one deliberately prominent element. Everything
+   else stays quiet so this is what actually draws the eye. */
+
+.streak-hero {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* Two columns instead of one left-stacked list: the flame + streak number
+   own the left, "Best" and freezes remaining sit as small right-aligned
+   stats on the right - using the card's full width instead of leaving the
+   right half empty. */
+.streak-hero__main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.streak-hero__primary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.streak-hero__value {
+  display: flex;
+  flex-direction: column;
+  font-size: 32px;
+  font-weight: 800;
+  line-height: 1.05;
+  color: var(--text);
+  transform-origin: left center;
+}
+
+.streak-hero__value--pop {
+  animation: streak-pop 380ms var(--ease-out);
+}
+
+@keyframes streak-pop {
+  35% {
+    transform: scale(1.15);
+  }
+}
+
+.streak-hero__unit {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.streak-hero__stats {
+  display: flex;
+  flex: none;
+  gap: var(--space-4);
+}
+
+.streak-hero__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.streak-hero__stat-value {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.streak-hero__stat-label {
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.streak-hero__stat-label--record {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* A hairline separates the "hero" row above from today's status below, so
+   the two don't blur into one stack of same-weight lines. */
+.streak-hero__secondary {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.streak-hero__status,
+.streak-hero__freezes {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.streak-hero__status {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-wrap: balance;
+}
+
+/* The actionable state (tasks still left today) is the one thing on this
+   card actually asking for something - it gets a filled badge so it reads
+   as a call to action, not just another muted status line. */
+.streak-hero__status--pending {
+  color: var(--text);
+  font-weight: 600;
+  background: var(--accent-soft);
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+}
+
+.streak-hero__status--complete {
+  color: var(--success);
+  font-weight: 600;
+  background: var(--success-soft);
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+}
+
+.streak-hero__freezes {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.streak-hero__inline-icon {
+  flex: none;
+  color: var(--accent);
+}
+
+.streak-hero__status-number {
+  font-size: var(--text-md);
+  font-weight: 800;
+  color: var(--accent);
+}
+
+/* Tiers: cold -> blazing. The card chrome stays disciplined so it never
+   turns gaudy - the flame itself gets its liveliness from --power instead,
+   set in StreakCounter.tsx. */
+
+.streak-hero--low .streak-hero__value,
+.streak-hero--warm .streak-hero__value,
+.streak-hero--hot .streak-hero__value,
+.streak-hero--blazing .streak-hero__value {
+  color: var(--accent);
+}
+
+.streak-hero--warm,
+.streak-hero--hot,
+.streak-hero--blazing {
+  border-color: var(--accent);
+}
+
+.streak-hero--hot {
+  box-shadow: var(--shadow-sm), 0 0 20px var(--accent-soft);
+}
+
+.streak-hero--blazing {
+  box-shadow: var(--shadow-sm), 0 0 32px var(--accent-soft);
+}

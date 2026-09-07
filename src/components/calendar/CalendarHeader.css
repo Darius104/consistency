@@ -1,0 +1,97 @@
+.cal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.cal-header__title {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  margin: 0;
+}
+
+.cal-header__nav {
+  display: flex;
+  gap: var(--space-2);
+}
+
+/* A quiet nudge that today's phrase hasn't been opened yet - stops
+   pulsing (and disappears) the moment it has. */
+.cal-header__phrase-badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.cal-header__phrase-badge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: phrase-badge-ping 1.8s ease-out infinite;
+}
+
+@keyframes phrase-badge-ping {
+  0% {
+    scale: 1;
+    opacity: 0.7;
+  }
+  100% {
+    scale: 2.4;
+    opacity: 0;
+  }
+}
+
+.cal-header__phrase-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+/* A small callout pointing straight up at the button - stays up until the
+   phrase has actually been opened, then unmounts along with the badge. */
+.cal-header__phrase-tooltip {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  translate: -50% 0;
+  z-index: 20;
+  width: max-content;
+  max-width: 160px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  line-height: 1.35;
+  text-align: center;
+  box-shadow: var(--shadow-md);
+  opacity: 1;
+  scale: 1;
+  transition: opacity 160ms var(--ease-out), scale 160ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    scale: 0.9;
+  }
+}
+
+.cal-header__phrase-tooltip-arrow {
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  translate: -50% 0;
+  width: 8px;
+  height: 8px;
+  background: var(--bg-elevated);
+  border-left: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+  rotate: 45deg;
+}

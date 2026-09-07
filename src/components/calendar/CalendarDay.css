@@ -1,0 +1,111 @@
+.cal-day {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  /* Solid surface as the base layer, with the heatmap tint as a translucent
+     layer above it - both driven by CSS vars, so a theme switch repaints
+     both instantly with no JS involved. */
+  background-color: var(--surface);
+  background-image: linear-gradient(
+    rgba(var(--accent-rgb), var(--heat-alpha, 0)),
+    rgba(var(--accent-rgb), var(--heat-alpha, 0))
+  );
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  padding: var(--space-2);
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+  /* Each cell remounts (new `key`) only when the month itself changes, not
+     on selection or completion updates - so this only ever plays when
+     navigating months, never on the frequent day-to-day clicks. */
+  animation: cal-day-in 150ms var(--ease-out);
+}
+
+@keyframes cal-day-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.cal-day:hover {
+  border-color: var(--border-strong);
+}
+
+.cal-day--dim {
+  opacity: 0.35;
+}
+
+.cal-day--selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.cal-day--complete {
+  border-color: var(--accent);
+}
+
+.cal-day__number {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.cal-day__number--today {
+  color: var(--bg);
+  background: var(--text);
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.cal-day__badges {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.cal-day__check {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--success);
+  color: #0d1a14;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  /* Only ever mounts the instant a day actually becomes fully completed -
+     a genuine, occasional moment worth a small pop rather than an instant
+     appearance. */
+  animation: cal-day-check-in 260ms var(--ease-out);
+}
+
+@keyframes cal-day-check-in {
+  from {
+    scale: 0.4;
+    opacity: 0;
+  }
+}
+
+.cal-day__frozen {
+  display: inline-flex;
+  color: var(--text-secondary);
+}
+
+.cal-day__indicator {
+  margin-top: auto;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}

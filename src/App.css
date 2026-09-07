@@ -1,0 +1,32 @@
+.app {
+  height: 100vh;
+  display: flex;
+  overflow: hidden;
+  animation: app-fade-in 240ms var(--ease-out);
+}
+
+@keyframes app-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.app-loading {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  animation: app-loading-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes app-loading-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}

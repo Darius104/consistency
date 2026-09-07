@@ -1,0 +1,111 @@
+.task-view {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.task-view__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.task-view__priority,
+.task-view__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px;
+}
+
+.task-view__tag-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.task-view__title {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--text);
+  text-wrap: balance;
+}
+
+.task-view__info-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.task-view__info-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.task-view__info-icon {
+  flex: none;
+  color: var(--text-muted);
+}
+
+.task-view__notes {
+  margin: 0;
+  padding: var(--space-3);
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+
+.task-view__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-2);
+}
+
+/* A quick cascade instead of everything appearing at once - the same
+   treatment PhraseModal uses, so the two "read-only detail" modals in the
+   app feel like the same family. */
+.task-view__badges,
+.task-view__title,
+.task-view__info-rows,
+.task-view__notes,
+.task-view__actions {
+  animation: task-view-reveal 260ms var(--ease-out) both;
+}
+
+.task-view__badges {
+  animation-delay: 20ms;
+}
+.task-view__title {
+  animation-delay: 60ms;
+}
+.task-view__info-rows {
+  animation-delay: 110ms;
+}
+.task-view__notes {
+  animation-delay: 150ms;
+}
+.task-view__actions {
+  animation-delay: 190ms;
+}
+
+@keyframes task-view-reveal {
+  from {
+    opacity: 0;
+    translate: 0 6px;
+  }
+}

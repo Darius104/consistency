@@ -1,0 +1,58 @@
+.theme-carousel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+}
+
+.theme-carousel__arrow {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  transition: background-color 0.12s ease, color 0.12s ease,
+    transform 120ms var(--ease-out);
+}
+
+.theme-carousel__arrow:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.theme-carousel__arrow:active:not(:disabled) {
+  transform: scale(0.9);
+}
+
+.theme-carousel__arrow:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.theme-carousel__scroller {
+  /* Fixed to exactly 4 whole swatches (4 * 72px item + 3 * 4px gap) so the
+     row never clips a partial swatch at the edge - it must stay in sync
+     with ThemeSwatch's own sizing if that ever changes. */
+  width: 300px;
+  flex: none;
+  display: flex;
+  gap: var(--space-1);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.theme-carousel__scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.theme-carousel__item {
+  flex: none;
+  scroll-snap-align: start;
+}
