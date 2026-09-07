@@ -1,8 +1,13 @@
 import { useEffect, useState } from "react";
+import { AuthScreen } from "./auth/AuthScreen";
+import { useSession } from "./auth/useSession";
 import { CalendarView } from "./components/calendar/CalendarView";
 import { PhraseModal } from "./components/calendar/PhraseModal";
 import { DayPanel } from "./components/day-panel/DayPanel";
 import { TaskViewModal } from "./components/day-panel/TaskViewModal";
+import { ImportPrompt } from "./import/ImportPrompt";
+import { peekLegacyData } from "./import/importLegacyData";
+import { supabase } from "./lib/supabaseClient";
 import { SettingsModal } from "./components/settings/SettingsModal";
 import { TaskForm } from "./components/task-form/TaskForm";
 import {
@@ -55,6 +60,7 @@ const RANDOM_THEME_SETTING_KEY = "randomThemeColors";
 const REMINDERS_SETTING_KEY = "remindersEnabled";
 const PANEL_ORDER_SETTING_KEY = "panelOrder";
 const PHRASE_VIEW_SETTING_KEY = "lastPhraseViewDate";
+const LEGACY_IMPORT_SETTING_KEY = "legacyImportStatus";
 
 const RANDOM_THEME_CSS_VARS: Record<keyof RandomThemeColors, string> = {
   bg: "--bg",
@@ -92,9 +98,31 @@ export default function App() {
     { open: false } | { open: true; task?: Task }
   >({ open: false });
 
+  const { session, loading: sessionLoading } = useSession();
+  const [justSignedUp, setJustSignedUp] = useState(false);
+  const [legacyImportStatus, setLegacyImportStatus] = useState<string | null>(null);
+  const [importPeekCounts, setImportPeekCounts] = useState<
+    { tags: number; tasks: number; completions: number } | null
+  >(null);
+
   useEffect(() => {
-    void refreshAll();
-  }, []);
+    if (session) void refreshAll();
+  }, [session]);
+
+  // Only ever probes for a local legacy database right after a brand-new
+  // sign-up, never on a plain sign-in - a returning user's data is already
+  // in their account, there's nothing to import.
+  useEffect(() => {
+    if (!justSignedUp || loading || legacyImportStatus !== null) return;
+    void peekLegacyData().then((peek) => {
+      if (peek.hasData) {
+        setImportPeekCounts(peek.counts);
+      } else {
+        setLegacyImportStatus("not_found");
+        void setSetting(LEGACY_IMPORT_SETTING_KEY, "not_found");
+      }
+    });
+  }, [justSignedUp, loading, legacyImportStatus]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -128,6 +156,7 @@ export default function App() {
       savedReminders,
       savedPanelOrder,
       savedPhraseViewDate,
+      savedLegacyImportStatus,
     ] = await Promise.all([
       getAllTasks(),
       getTags(),
@@ -139,6 +168,7 @@ export default function App() {
       getSetting(REMINDERS_SETTING_KEY),
       getSetting(PANEL_ORDER_SETTING_KEY),
       getSetting(PHRASE_VIEW_SETTING_KEY),
+      getSetting(LEGACY_IMPORT_SETTING_KEY),
     ]);
     setTasks(taskRows);
     setTags(tagRows);
@@ -150,7 +180,25 @@ export default function App() {
     if (savedReminders !== null) setRemindersEnabled(savedReminders === "true");
     setPanelOrder(parsePanelOrder(savedPanelOrder));
     setLastPhraseViewDate(savedPhraseViewDate);
+    setLegacyImportStatus(savedLegacyImportStatus);
     setLoading(false);
+  }
+
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+  }
+
+  async function handleImportDone() {
+    setImportPeekCounts(null);
+    await setSetting(LEGACY_IMPORT_SETTING_KEY, "done");
+    setLegacyImportStatus("done");
+    await refreshAll();
+  }
+
+  async function handleImportSkip() {
+    setImportPeekCounts(null);
+    await setSetting(LEGACY_IMPORT_SETTING_KEY, "skipped");
+    setLegacyImportStatus("skipped");
   }
 
   async function handleOpenPhrase() {
@@ -294,6 +342,14 @@ export default function App() {
     setTemplates((prev) => prev.filter((t) => t.id !== id));
   }
 
+  if (sessionLoading) {
+    return <div className="app-loading">Loading…</div>;
+  }
+
+  if (!session) {
+    return <AuthScreen onSignedUp={() => setJustSignedUp(true)} />;
+  }
+
   if (loading) {
     return <div className="app-loading">Loading…</div>;
   }
@@ -392,6 +448,15 @@ export default function App() {
           onUnfreezeDay={handleUnfreezeDay}
           onStartArranging={handleStartArranging}
           onClose={() => setSettingsOpen(false)}
+          onSignOut={handleSignOut}
+        />
+      )}
+
+      {importPeekCounts && (
+        <ImportPrompt
+          counts={importPeekCounts}
+          onDone={handleImportDone}
+          onSkip={handleImportSkip}
         />
       )}
 

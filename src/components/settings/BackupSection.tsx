@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { save } from "@tauri-apps/plugin-dialog";
-import { backupDatabase } from "../../db/queries";
+import { writeTextFile } from "@tauri-apps/plugin-fs";
+import { exportAllData } from "../../db/queries";
 import { todayKey } from "../../utils/dates";
 import { Button } from "../ui/Button";
 import "./BackupSection.css";
@@ -14,15 +15,16 @@ export function BackupSection() {
   async function handleSave() {
     setStatus({ kind: "idle" });
     const destination = await save({
-      title: "Save Backup",
-      defaultPath: `Consistency Backup ${todayKey()}.db`,
-      filters: [{ name: "SQLite Database", extensions: ["db"] }],
+      title: "Export Data",
+      defaultPath: `Consistency Export ${todayKey()}.json`,
+      filters: [{ name: "JSON", extensions: ["json"] }],
     });
     if (!destination) return;
 
     setSaving(true);
     try {
-      await backupDatabase(destination);
+      const data = await exportAllData();
+      await writeTextFile(destination, JSON.stringify(data, null, 2));
       setStatus({ kind: "success", path: destination });
     } catch (err) {
       setStatus({
@@ -30,7 +32,7 @@ export function BackupSection() {
         message:
           err instanceof Error
             ? err.message
-            : "Couldn't save the backup - if a file already exists at that path, pick a different name.",
+            : "Couldn't export your data - if a file already exists at that path, pick a different name.",
       });
     } finally {
       setSaving(false);
@@ -41,10 +43,10 @@ export function BackupSection() {
     <div className="backup-section">
       <div className="settings__row">
         <span className="settings__row-text">
-          Save a complete copy of your tasks, tags, and history to a file
+          Save a copy of your tasks, categories, and history to a file
         </span>
         <Button onClick={handleSave} disabled={saving}>
-          {saving ? "Saving…" : "Save Backup…"}
+          {saving ? "Exporting…" : "Export Data…"}
         </Button>
       </div>
 
@@ -60,8 +62,8 @@ export function BackupSection() {
       )}
 
       <span className="settings__hint">
-        To restore, quit the app, replace the file at "~/Library/Application
-        Support/com.darius.consistency/app.db" with your backup, then reopen.
+        Your data lives in your account now, not on this device - this export is a
+        readable snapshot for your own records, not a restore point yet.
       </span>
     </div>
   );

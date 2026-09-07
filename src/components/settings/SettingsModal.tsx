@@ -28,6 +28,7 @@ interface SettingsModalProps {
   onUnfreezeDay: (date: string) => void;
   onStartArranging: () => void;
   onClose: () => void;
+  onSignOut: () => void;
 }
 
 export function SettingsModal({
@@ -47,6 +48,7 @@ export function SettingsModal({
   onUnfreezeDay,
   onStartArranging,
   onClose,
+  onSignOut,
 }: SettingsModalProps) {
   return (
     <Modal title="Settings" onClose={onClose}>
@@ -107,6 +109,16 @@ export function SettingsModal({
         <div className="settings__section">
           <span className="settings__label">Backup</span>
           <BackupSection />
+        </div>
+
+        <div className="settings__section">
+          <span className="settings__label">Account</span>
+          <div className="settings__row">
+            <span className="settings__row-text">Sign out of your account on this device</span>
+            <Button variant="danger" onClick={onSignOut}>
+              Sign out
+            </Button>
+          </div>
         </div>
       </div>
     </Modal>
