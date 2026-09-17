@@ -16,6 +16,16 @@
   gap: var(--space-2);
 }
 
+.cal-header__sync-icon--spinning {
+  animation: cal-header-sync-spin 800ms linear infinite;
+}
+
+@keyframes cal-header-sync-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* A quiet nudge that today's phrase hasn't been opened yet - stops
    pulsing (and disappears) the moment it has. */
 .cal-header__phrase-badge {

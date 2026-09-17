@@ -1,0 +1,47 @@
+.avatar-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.avatar-picker__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.avatar-picker__grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.avatar-picker__option {
+  padding: 3px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  background: transparent;
+  transition: border-color 0.12s ease, transform 120ms var(--ease-out);
+}
+
+.avatar-picker__option:active {
+  transform: scale(0.94);
+}
+
+.avatar-picker__option--active {
+  border-color: var(--accent);
+}
+
+/* Stays put at the bottom of the modal while the sections above scroll -
+   Save/Cancel should never require scrolling all the way down to reach. */
+.avatar-picker__footer {
+  position: sticky;
+  bottom: calc(var(--space-5) * -1);
+  margin: 0 calc(var(--space-5) * -1) calc(var(--space-5) * -1);
+  padding: var(--space-3) var(--space-5);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  background: var(--bg-elevated);
+  border-top: 1px solid var(--border);
+}

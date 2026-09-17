@@ -4,13 +4,7 @@ import { supabase } from "../lib/supabaseClient";
 import { Button } from "../components/ui/Button";
 import "./AuthScreen.css";
 
-interface AuthScreenProps {
-  /** Fires only on a brand-new account, never on a plain sign-in - drives
-      the one-time "import my existing data" prompt in App.tsx. */
-  onSignedUp: () => void;
-}
-
-export function AuthScreen({ onSignedUp }: AuthScreenProps) {
+export function AuthScreen() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,7 +19,6 @@ export function AuthScreen({ onSignedUp }: AuthScreenProps) {
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        onSignedUp();
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;

@@ -14,6 +14,30 @@
     transform 100ms var(--ease-out);
 }
 
+/* The bare (no-label) checkbox button - its real tappable box is enlarged
+   well past the visible 18px square via padding, then pulled back with an
+   equal negative margin so it still only takes up 18px of flex-row space.
+   An 18px target is well under the ~40-44px a finger reliably hits, which
+   is why tapping it used to often land on the parent task row instead. */
+.checkbox-hit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  padding: 11px;
+  margin: -11px;
+  background: transparent;
+  border: none;
+}
+
+.checkbox-hit:hover .checkbox {
+  border-color: var(--accent);
+}
+
+.checkbox-hit:active .checkbox {
+  transform: scale(0.9);
+}
+
 .checkbox:hover {
   border-color: var(--accent);
 }

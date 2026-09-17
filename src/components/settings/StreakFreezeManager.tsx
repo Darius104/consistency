@@ -1,8 +1,12 @@
+import { useEffect, useRef, useState } from "react";
 import type { FreezeCandidate } from "../../utils/stats";
 import { parseDateKey } from "../../utils/dates";
 import { Button } from "../ui/Button";
-import { FrostIcon, XIcon } from "../ui/icons";
+import { FrostIcon, TrashIcon } from "../ui/icons";
 import "./StreakFreezeManager.css";
+
+// How long the "X frozen" confirmation stays up after clicking Freeze.
+const CONFIRM_MS = 1800;
 
 interface StreakFreezeManagerProps {
   frozenDays: string[];
@@ -27,6 +31,25 @@ export function StreakFreezeManager({
   onFreeze,
   onUnfreeze,
 }: StreakFreezeManagerProps) {
+  // Keyed by a fresh id each time (not just the date) so freezing the same
+  // date again later still replays the pop-in/fade instead of no-op'ing
+  // because the key didn't change.
+  const [confirmation, setConfirmation] = useState<{ date: string; id: number } | null>(null);
+  const confirmTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (confirmTimerRef.current !== null) window.clearTimeout(confirmTimerRef.current);
+    };
+  }, []);
+
+  function handleFreezeClick(date: string) {
+    onFreeze(date);
+    if (confirmTimerRef.current !== null) window.clearTimeout(confirmTimerRef.current);
+    setConfirmation({ date, id: Date.now() });
+    confirmTimerRef.current = window.setTimeout(() => setConfirmation(null), CONFIRM_MS);
+  }
+
   return (
     <div className="freeze-manager">
       <span className="freeze-manager__remaining">
@@ -34,9 +57,16 @@ export function StreakFreezeManager({
         {freezesRemaining} of 3 freezes left this month
       </span>
 
+      {confirmation && (
+        <div className="freeze-manager__confirm" key={confirmation.id}>
+          <FrostIcon size={13} />
+          {formatDate(confirmation.date)} frozen - streak protected.
+        </div>
+      )}
+
       {frozenDays.length > 0 && (
         <div className="freeze-manager__group">
-          <span className="freeze-manager__group-label">Frozen days</span>
+          <span className="settings__label">Frozen days</span>
           <div className="freeze-manager__list">
             {frozenDays.map((date) => (
               <div className="freeze-manager__row" key={date}>
@@ -50,7 +80,7 @@ export function StreakFreezeManager({
                   aria-label={`Unfreeze ${formatDate(date)}`}
                   onClick={() => onUnfreeze(date)}
                 >
-                  <XIcon size={13} />
+                  <TrashIcon size={13} />
                 </button>
               </div>
             ))}
@@ -59,7 +89,7 @@ export function StreakFreezeManager({
       )}
 
       <div className="freeze-manager__group">
-        <span className="freeze-manager__group-label">Freeze a missed day</span>
+        <span className="settings__label">Freeze a missed day</span>
         {candidates.length === 0 ? (
           <span className="freeze-manager__empty">
             Nothing to freeze - no incomplete days this month.
@@ -74,7 +104,7 @@ export function StreakFreezeManager({
                     {Math.round(c.rate * 100)}% done
                   </span>
                 </span>
-                <Button onClick={() => onFreeze(c.date)} disabled={freezesRemaining === 0}>
+                <Button onClick={() => handleFreezeClick(c.date)} disabled={freezesRemaining === 0}>
                   Freeze
                 </Button>
               </div>

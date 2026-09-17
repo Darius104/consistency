@@ -1,7 +1,8 @@
+import type { PointerEvent, SyntheticEvent } from "react";
 import type { Task } from "../../types";
 import { Checkbox } from "../ui/Checkbox";
 import { PriorityDot } from "../ui/PriorityDot";
-import { GripIcon, XIcon } from "../ui/icons";
+import { GripIcon, TrashIcon } from "../ui/icons";
 import "./TaskItem.css";
 
 interface TaskItemProps {
@@ -10,7 +11,8 @@ interface TaskItemProps {
   onToggle: () => void;
   onView: () => void;
   onDelete: () => void;
-  onDragHandleDown: () => void;
+  onHandlePointerDown: (e: PointerEvent) => void;
+  suppressClick: (e: SyntheticEvent) => boolean;
   dragging: boolean;
 }
 
@@ -20,24 +22,20 @@ export function TaskItem({
   onToggle,
   onView,
   onDelete,
-  onDragHandleDown,
+  onHandlePointerDown,
+  suppressClick,
   dragging,
 }: TaskItemProps) {
   return (
     <div
       className={`task-item ${completed ? "task-item--completed" : ""} ${dragging ? "task-item--dragging" : ""}`}
-      onClick={onView}
+      onClick={(e) => {
+        if (suppressClick(e)) return;
+        onView();
+      }}
     >
-      <span
-        className="task-item__handle"
-        aria-hidden="true"
-        onMouseDown={(e) => {
-          e.stopPropagation();
-          onDragHandleDown();
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <GripIcon size={14} />
+      <span className="task-item__handle" onPointerDown={onHandlePointerDown} aria-hidden="true">
+        <GripIcon size={13} />
       </span>
       <Checkbox checked={completed} onChange={onToggle} ariaLabel={`Mark ${task.title} complete`} />
       <div className="task-item__main">
@@ -56,7 +54,7 @@ export function TaskItem({
           onDelete();
         }}
       >
-        <XIcon size={14} />
+        <TrashIcon size={14} />
       </button>
     </div>
   );

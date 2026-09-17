@@ -1,5 +1,6 @@
-import { supabase } from "../lib/supabaseClient";
+import { trySync } from "../sync";
 import type {
+  DayNote,
   NewTask,
   Priority,
   RecurrenceType,
@@ -8,23 +9,49 @@ import type {
   Template,
   TemplateTaskBlueprint,
 } from "../types";
+import {
+  cacheAddStreakFreeze,
+  cacheDeleteNote,
+  cacheDeleteTag,
+  cacheDeleteTask,
+  cacheDeleteTemplate,
+  cacheFindTemplateByTagId,
+  cacheGetAllSettings,
+  cacheGetCompletions,
+  cacheGetNotes,
+  cacheGetSetting,
+  cacheGetStreakFreezes,
+  cacheGetTags,
+  cacheGetTasks,
+  cacheGetTemplateTasks,
+  cacheGetTemplates,
+  cacheNextNoteSortOrder,
+  cacheNextTagSortOrder,
+  cacheNextTaskSortOrder,
+  cacheRemoveStreakFreeze,
+  cacheReplaceTemplateTasks,
+  cacheSetCompletion,
+  cacheSetSetting,
+  cacheUpsertNote,
+  cacheUpsertTag,
+  cacheUpsertTask,
+  cacheUpsertTemplate,
+  discardPendingOpsFor,
+  enqueueOp,
+  type NoteRow,
+  type TagRow,
+  type TaskRow,
+  type TemplateTaskRow,
+} from "./localCache";
 
-interface TaskRow {
-  id: number;
-  title: string;
-  notes: string | null;
-  time: string | null;
-  tag_id: number | null;
-  priority: Priority;
-  recurrence_type: RecurrenceType;
-  recurrence_days: string | null;
-  start_date: string;
-  end_date: string | null;
-  sort_order: number;
+// Every function here reads from / writes to the local SQLite cache only -
+// instant, and identical whether the device is online or offline. Writes
+// also enqueue an outbox entry and kick a non-blocking sync attempt; the
+// actual Supabase calls live in ../sync.ts, the only place network happens.
+
+function kickSync(): void {
+  void trySync();
 }
-
-const TASK_COLUMNS =
-  "id, title, notes, time, tag_id, priority, recurrence_type, recurrence_days, start_date, end_date, sort_order";
 
 function rowToTask(row: TaskRow): Task {
   return {
@@ -33,223 +60,237 @@ function rowToTask(row: TaskRow): Task {
     notes: row.notes,
     time: row.time,
     tagId: row.tag_id,
-    priority: row.priority,
-    recurrenceType: row.recurrence_type,
-    recurrenceDays: row.recurrence_days
-      ? row.recurrence_days.split(",").map(Number)
-      : null,
+    priority: row.priority as Priority,
+    recurrenceType: row.recurrence_type as RecurrenceType,
+    recurrenceDays: row.recurrence_days ? row.recurrence_days.split(",").map(Number) : null,
     startDate: row.start_date,
     endDate: row.end_date,
     sortOrder: row.sort_order,
   };
 }
 
-function checkError(error: { message: string } | null): void {
-  if (error) throw new Error(error.message);
+function rowToTag(row: TagRow): Tag {
+  return { id: row.id, name: row.name, color: row.color, sortOrder: row.sort_order };
 }
-
-// Every table has a `user_id` column defaulting to auth.uid() server-side,
-// and RLS scopes every select/insert/update/delete to the signed-in user -
-// no function here needs to pass or filter on user_id explicitly.
 
 // ---------- Tags ----------
 
 export async function getTags(): Promise<Tag[]> {
-  const { data, error } = await supabase
-    .from("tags")
-    .select("id, name, color, sortOrder:sort_order")
-    .order("sort_order", { ascending: true })
-    .order("name", { ascending: true });
-  checkError(error);
-  return (data ?? []) as unknown as Tag[];
+  const rows = await cacheGetTags();
+  return rows.map(rowToTag);
 }
 
 export async function createTag(name: string, color: string): Promise<Tag> {
-  // sort_order is left for the tags_set_sort_order trigger to assign.
-  const { data, error } = await supabase
-    .from("tags")
-    .insert({ name, color })
-    .select("id, name, color, sortOrder:sort_order")
-    .single();
-  checkError(error);
-  return data as unknown as Tag;
+  const row: TagRow = { id: crypto.randomUUID(), name, color, sort_order: await cacheNextTagSortOrder() };
+  await cacheUpsertTag(row);
+  await enqueueOp({ table: "tags", op: "upsert", rowId: row.id, payload: row });
+  kickSync();
+  return rowToTag(row);
 }
 
-export async function updateTag(
-  id: number,
-  name: string,
-  color: string,
-): Promise<void> {
-  const { error } = await supabase.from("tags").update({ name, color }).eq("id", id);
-  checkError(error);
+export async function updateTag(id: string, name: string, color: string): Promise<void> {
+  const existing = (await cacheGetTags()).find((t) => t.id === id);
+  const row: TagRow = { id, name, color, sort_order: existing?.sort_order ?? 0 };
+  await cacheUpsertTag(row);
+  await enqueueOp({ table: "tags", op: "upsert", rowId: id, payload: row });
+  kickSync();
 }
 
 /** Persists a manually-dragged tag group order via a single batched RPC call. */
-export async function updateTagOrder(tagIds: number[]): Promise<void> {
-  const { error } = await supabase.rpc("reorder_tags", { tag_ids: tagIds });
-  checkError(error);
+export async function updateTagOrder(tagIds: string[]): Promise<void> {
+  const orderMap = new Map(tagIds.map((id, i) => [id, i]));
+  for (const t of await cacheGetTags()) {
+    if (orderMap.has(t.id)) await cacheUpsertTag({ ...t, sort_order: orderMap.get(t.id)! });
+  }
+  await enqueueOp({ table: "rpc:reorder_tags", op: "upsert", rowId: "-", payload: { ids: tagIds } });
+  kickSync();
 }
 
-export async function deleteTag(id: number): Promise<void> {
-  const { error } = await supabase.from("tags").delete().eq("id", id);
-  checkError(error);
+export async function deleteTag(id: string): Promise<void> {
+  await cacheDeleteTag(id);
+  // Discard any still-queued writes for this row (no point pushing an edit
+  // to something about to be deleted) and always queue the delete itself -
+  // deleting a row that never actually reached the server is a harmless
+  // no-op there, so this is simpler (and safer) than trying to infer
+  // whether the row was ever synced from the outbox's contents alone.
+  await discardPendingOpsFor("tags", id);
+  await enqueueOp({ table: "tags", op: "delete", rowId: id });
+  kickSync();
 }
 
 // ---------- Tasks ----------
 
 export async function getAllTasks(): Promise<Task[]> {
-  const rows = await fetchAllRows<TaskRow>("tasks", TASK_COLUMNS);
+  const rows = await cacheGetTasks();
   return rows.map(rowToTask);
 }
 
+function taskRowFrom(id: string, task: NewTask, sortOrder: number): TaskRow {
+  return {
+    id,
+    title: task.title,
+    notes: task.notes ?? null,
+    time: task.time ?? null,
+    tag_id: task.tagId ?? null,
+    priority: task.priority,
+    recurrence_type: task.recurrenceType,
+    recurrence_days: task.recurrenceDays?.length ? task.recurrenceDays.join(",") : null,
+    start_date: task.startDate,
+    end_date: task.endDate ?? null,
+    sort_order: sortOrder,
+  };
+}
+
 export async function createTask(task: NewTask): Promise<Task> {
-  const recurrenceDays = task.recurrenceDays?.length
-    ? task.recurrenceDays.join(",")
-    : null;
-  const { data, error } = await supabase
-    .from("tasks")
-    .insert({
-      title: task.title,
-      notes: task.notes ?? null,
-      time: task.time ?? null,
-      tag_id: task.tagId ?? null,
-      priority: task.priority,
-      recurrence_type: task.recurrenceType,
-      recurrence_days: recurrenceDays,
-      start_date: task.startDate,
-      end_date: task.endDate ?? null,
-      // sort_order intentionally omitted - the tasks_set_sort_order trigger assigns it
-    })
-    .select(TASK_COLUMNS)
-    .single();
-  checkError(error);
-  return rowToTask(data as TaskRow);
+  const row = taskRowFrom(crypto.randomUUID(), task, await cacheNextTaskSortOrder());
+  await cacheUpsertTask(row);
+  await enqueueOp({ table: "tasks", op: "upsert", rowId: row.id, payload: row });
+  kickSync();
+  return rowToTask(row);
 }
 
-export async function updateTask(
-  id: number,
-  task: NewTask,
-): Promise<void> {
-  const recurrenceDays = task.recurrenceDays?.length
-    ? task.recurrenceDays.join(",")
-    : null;
-  const { error } = await supabase
-    .from("tasks")
-    .update({
-      title: task.title,
-      notes: task.notes ?? null,
-      time: task.time ?? null,
-      tag_id: task.tagId ?? null,
-      priority: task.priority,
-      recurrence_type: task.recurrenceType,
-      recurrence_days: recurrenceDays,
-      start_date: task.startDate,
-      end_date: task.endDate ?? null,
-    })
-    .eq("id", id);
-  checkError(error);
+export async function updateTask(id: string, task: NewTask): Promise<void> {
+  const existing = (await cacheGetTasks()).find((t) => t.id === id);
+  const row = taskRowFrom(id, task, existing?.sort_order ?? 0);
+  await cacheUpsertTask(row);
+  await enqueueOp({ table: "tasks", op: "upsert", rowId: id, payload: row });
+  kickSync();
 }
 
-export async function deleteTask(id: number): Promise<void> {
-  const { error } = await supabase.from("tasks").delete().eq("id", id);
-  checkError(error);
+export async function deleteTask(id: string): Promise<void> {
+  await cacheDeleteTask(id);
+  await discardPendingOpsFor("tasks", id);
+  await enqueueOp({ table: "tasks", op: "delete", rowId: id });
+  kickSync();
 }
 
 /** Persists a manually-dragged order via a single batched RPC call. */
-export async function updateTaskOrder(taskIds: number[]): Promise<void> {
-  const { error } = await supabase.rpc("reorder_tasks", { task_ids: taskIds });
-  checkError(error);
+export async function updateTaskOrder(taskIds: string[]): Promise<void> {
+  const orderMap = new Map(taskIds.map((id, i) => [id, i]));
+  for (const t of await cacheGetTasks()) {
+    if (orderMap.has(t.id)) await cacheUpsertTask({ ...t, sort_order: orderMap.get(t.id)! });
+  }
+  await enqueueOp({ table: "rpc:reorder_tasks", op: "upsert", rowId: "-", payload: { ids: taskIds } });
+  kickSync();
 }
 
 // ---------- Completions ----------
 
-// PostgREST caps a single response at 1000 rows by default - a personal
-// dataset (~10 tasks/day) crosses that within 3-4 months, so this pages
-// through the full table instead of assuming one request is enough.
-const PAGE_SIZE = 1000;
-
-async function fetchAllRows<T>(table: string, columns: string): Promise<T[]> {
-  const rows: T[] = [];
-  let from = 0;
-  for (;;) {
-    const { data, error } = await supabase
-      .from(table)
-      .select(columns)
-      .range(from, from + PAGE_SIZE - 1);
-    checkError(error);
-    const page = (data ?? []) as unknown as T[];
-    rows.push(...page);
-    if (page.length < PAGE_SIZE) break;
-    from += PAGE_SIZE;
-  }
-  return rows;
-}
-
 export async function getAllCompletions(): Promise<Set<string>> {
-  const rows = await fetchAllRows<{ task_id: number; date: string }>(
-    "task_completions",
-    "task_id, date",
-  );
+  const rows = await cacheGetCompletions();
   return new Set(rows.map((r) => `${r.task_id}:${r.date}`));
 }
 
 export async function setCompletion(
-  taskId: number,
+  taskId: string,
   date: string,
   completed: boolean,
 ): Promise<void> {
+  await cacheSetCompletion(taskId, date, completed);
+  const rowId = `${taskId}:${date}`;
   if (completed) {
-    const { error } = await supabase
-      .from("task_completions")
-      .upsert({ task_id: taskId, date }, { onConflict: "task_id,date", ignoreDuplicates: true });
-    checkError(error);
+    await enqueueOp({ table: "task_completions", op: "upsert", rowId, payload: { task_id: taskId, date } });
   } else {
-    const { error } = await supabase
-      .from("task_completions")
-      .delete()
-      .eq("task_id", taskId)
-      .eq("date", date);
-    checkError(error);
+    await enqueueOp({ table: "task_completions", op: "delete", rowId });
   }
+  kickSync();
+}
+
+// ---------- Notes ----------
+
+function rowToNote(row: NoteRow): DayNote {
+  return {
+    id: row.id,
+    date: row.date,
+    content: row.content,
+    sortOrder: row.sort_order,
+    afterGroupKey: row.after_group_key,
+  };
+}
+
+export async function getAllNotes(): Promise<DayNote[]> {
+  const rows = await cacheGetNotes();
+  return rows.map(rowToNote);
+}
+
+export async function createNote(date: string, content: string): Promise<DayNote> {
+  const row: NoteRow = {
+    id: crypto.randomUUID(),
+    date,
+    content,
+    sort_order: await cacheNextNoteSortOrder(),
+    after_group_key: null,
+  };
+  await cacheUpsertNote(row);
+  await enqueueOp({ table: "notes", op: "upsert", rowId: row.id, payload: row });
+  kickSync();
+  return rowToNote(row);
+}
+
+export async function updateNote(id: string, content: string): Promise<void> {
+  const existing = (await cacheGetNotes()).find((n) => n.id === id);
+  if (!existing) return;
+  const row: NoteRow = { ...existing, content };
+  await cacheUpsertNote(row);
+  await enqueueOp({ table: "notes", op: "upsert", rowId: id, payload: row });
+  kickSync();
+}
+
+/** Persists where each note sits relative to that day's tag groups (see
+ *  DayNote.afterGroupKey) after a combined drag among notes and groups -
+ *  plain per-row upserts, unlike tags/tasks' batched RPC, since each note's
+ *  position is independent of every other note's, not one shared order. */
+export async function updateNotePositions(
+  updates: { id: string; afterGroupKey: string | null; sortOrder: number }[],
+): Promise<void> {
+  const existingById = new Map((await cacheGetNotes()).map((n) => [n.id, n]));
+  for (const u of updates) {
+    const existing = existingById.get(u.id);
+    if (!existing) continue;
+    const row: NoteRow = { ...existing, after_group_key: u.afterGroupKey, sort_order: u.sortOrder };
+    await cacheUpsertNote(row);
+    await enqueueOp({ table: "notes", op: "upsert", rowId: u.id, payload: row });
+  }
+  kickSync();
+}
+
+export async function deleteNote(id: string): Promise<void> {
+  await cacheDeleteNote(id);
+  await discardPendingOpsFor("notes", id);
+  await enqueueOp({ table: "notes", op: "delete", rowId: id });
+  kickSync();
 }
 
 // ---------- Settings ----------
 
 export async function getSetting(key: string): Promise<string | null> {
-  const { data, error } = await supabase
-    .from("settings")
-    .select("value")
-    .eq("key", key)
-    .maybeSingle();
-  checkError(error);
-  return data?.value ?? null;
+  return cacheGetSetting(key);
 }
 
 export async function setSetting(key: string, value: string): Promise<void> {
-  const { error } = await supabase
-    .from("settings")
-    .upsert({ key, value }, { onConflict: "user_id,key" });
-  checkError(error);
+  await cacheSetSetting(key, value);
+  await enqueueOp({ table: "settings", op: "upsert", rowId: key, payload: { key, value } });
+  kickSync();
 }
 
 // ---------- Streak freezes ----------
 
 export async function getStreakFreezes(): Promise<Set<string>> {
-  const rows = await fetchAllRows<{ date: string }>("streak_freezes", "date");
-  return new Set(rows.map((r) => r.date));
+  return new Set(await cacheGetStreakFreezes());
 }
 
 export async function addStreakFreeze(date: string): Promise<void> {
-  const { error } = await supabase
-    .from("streak_freezes")
-    .upsert({ date }, { onConflict: "user_id,date", ignoreDuplicates: true });
-  checkError(error);
+  await cacheAddStreakFreeze(date);
+  await enqueueOp({ table: "streak_freezes", op: "upsert", rowId: date, payload: { date } });
+  kickSync();
 }
 
 export async function removeStreakFreeze(date: string): Promise<void> {
-  const { error } = await supabase.from("streak_freezes").delete().eq("date", date);
-  checkError(error);
+  await cacheRemoveStreakFreeze(date);
+  await enqueueOp({ table: "streak_freezes", op: "delete", rowId: date });
+  kickSync();
 }
+
 
 // ---------- Export (replaces the old SQLite VACUUM INTO backup) ----------
 
@@ -257,31 +298,38 @@ export interface ExportedData {
   exportedAt: string;
   tags: Tag[];
   tasks: Task[];
-  completions: { taskId: number; date: string }[];
+  completions: { taskId: string; date: string }[];
   streakFreezes: string[];
   templates: (Template & { tasks: TemplateTaskBlueprint[] })[];
+  notes: DayNote[];
   settings: Record<string, string>;
 }
 
-/** Pulls every row the signed-in user owns (RLS-scoped) into one JSON-able snapshot. */
+/** Pulls everything out of the local cache into one JSON-able snapshot - works offline too. */
 export async function exportAllData(): Promise<ExportedData> {
-  const [tags, tasks, templates] = await Promise.all([getTags(), getAllTasks(), getTemplates()]);
-
-  const [completionRows, freezeRows, settingRows] = await Promise.all([
-    fetchAllRows<{ task_id: number; date: string }>("task_completions", "task_id, date"),
-    fetchAllRows<{ date: string }>("streak_freezes", "date"),
-    fetchAllRows<{ key: string; value: string }>("settings", "key, value"),
-  ]);
+  const [tags, tasks, templates, completionRows, freezeRows, notes, settingRows] =
+    await Promise.all([
+      getTags(),
+      getAllTasks(),
+      getTemplates(),
+      cacheGetCompletions(),
+      cacheGetStreakFreezes(),
+      getAllNotes(),
+      cacheGetAllSettings(),
+    ]);
 
   const templatesWithTasks: (Template & { tasks: TemplateTaskBlueprint[] })[] = [];
   for (const t of templates) {
-    const { data: blueprints, error } = await supabase
-      .from("template_tasks")
-      .select("title, notes, time, priority")
-      .eq("template_id", t.id)
-      .order("sort_order", { ascending: true });
-    checkError(error);
-    templatesWithTasks.push({ ...t, tasks: (blueprints ?? []) as TemplateTaskBlueprint[] });
+    const blueprints = await cacheGetTemplateTasks(t.id);
+    templatesWithTasks.push({
+      ...t,
+      tasks: blueprints.map((b) => ({
+        title: b.title,
+        notes: b.notes,
+        time: b.time,
+        priority: b.priority as Priority,
+      })),
+    });
   }
 
   return {
@@ -289,144 +337,106 @@ export async function exportAllData(): Promise<ExportedData> {
     tags,
     tasks,
     completions: completionRows.map((r) => ({ taskId: r.task_id, date: r.date })),
-    streakFreezes: freezeRows.map((r) => r.date),
+    streakFreezes: freezeRows,
     templates: templatesWithTasks,
+    notes,
     settings: Object.fromEntries(settingRows.map((r) => [r.key, r.value])),
   };
 }
 
 // ---------- Templates ----------
 
-interface TemplateRow {
-  id: number;
-  name: string;
-  tag_id: number | null;
-  template_tasks: { count: number }[];
+export async function getTemplates(): Promise<Template[]> {
+  const rows = await cacheGetTemplates();
+  return rows
+    .map((r) => ({ id: r.id, name: r.name, tagId: r.tag_id, taskCount: r.task_count }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export async function getTemplates(): Promise<Template[]> {
-  const { data, error } = await supabase
-    .from("templates")
-    .select("id, name, tag_id, template_tasks(count)")
-    .order("name", { ascending: true });
-  checkError(error);
-  return ((data ?? []) as unknown as TemplateRow[]).map((row) => ({
-    id: row.id,
-    name: row.name,
-    tagId: row.tag_id,
-    taskCount: row.template_tasks[0]?.count ?? 0,
+export async function getTemplateTasks(templateId: string): Promise<TemplateTaskBlueprint[]> {
+  const rows = await cacheGetTemplateTasks(templateId);
+  return rows.map((r) => ({
+    title: r.title,
+    notes: r.notes,
+    time: r.time,
+    priority: r.priority as Priority,
   }));
 }
 
 /**
  * Captures a category's current tasks as a reusable, named starter pack.
  * A category only ever has one template - re-saving it replaces its
- * blueprint tasks in place instead of piling up duplicates.
+ * blueprint tasks in place instead of piling up duplicates. The outbox
+ * mirrors that as a "delete all this template's tasks" op followed by one
+ * upsert per fresh blueprint task, so a partial sync never leaves stale rows.
  */
 export async function createTemplateFromTasks(
   name: string,
-  tagId: number | null,
+  tagId: string | null,
   tasks: TemplateTaskBlueprint[],
 ): Promise<Template> {
-  let templateId: number;
+  const existing = tagId ? await cacheFindTemplateByTagId(tagId) : null;
+  const templateId = existing?.id ?? crypto.randomUUID();
 
-  if (tagId) {
-    const { data: existing, error } = await supabase
-      .from("templates")
-      .select("id")
-      .eq("tag_id", tagId)
-      .maybeSingle();
-    checkError(error);
-    if (existing) {
-      templateId = existing.id;
-      const { error: deleteError } = await supabase
-        .from("template_tasks")
-        .delete()
-        .eq("template_id", templateId);
-      checkError(deleteError);
-    } else {
-      const { data: created, error: insertError } = await supabase
-        .from("templates")
-        .insert({ name, tag_id: tagId })
-        .select("id")
-        .single();
-      checkError(insertError);
-      templateId = created!.id;
-    }
-  } else {
-    const { data: created, error: insertError } = await supabase
-      .from("templates")
-      .insert({ name, tag_id: null })
-      .select("id")
-      .single();
-    checkError(insertError);
-    templateId = created!.id;
+  await cacheUpsertTemplate({ id: templateId, name, tag_id: tagId });
+  await enqueueOp({
+    table: "templates",
+    op: "upsert",
+    rowId: templateId,
+    payload: { id: templateId, name, tag_id: tagId },
+  });
+
+  const taskRows: TemplateTaskRow[] = tasks.map((t, i) => ({
+    id: crypto.randomUUID(),
+    template_id: templateId,
+    title: t.title,
+    notes: t.notes,
+    time: t.time,
+    priority: t.priority,
+    sort_order: i,
+  }));
+  await cacheReplaceTemplateTasks(templateId, taskRows);
+  await enqueueOp({ table: "template_tasks", op: "delete", rowId: `template:${templateId}` });
+  for (const row of taskRows) {
+    await enqueueOp({ table: "template_tasks", op: "upsert", rowId: row.id, payload: row });
   }
+  kickSync();
 
-  if (tasks.length > 0) {
-    const rows = tasks.map((t, i) => ({
-      template_id: templateId,
-      title: t.title,
-      notes: t.notes,
-      time: t.time,
-      priority: t.priority,
-      sort_order: i,
-    }));
-    const { error: tasksError } = await supabase.from("template_tasks").insert(rows);
-    checkError(tasksError);
-  }
-
-  const { data: row, error: selectError } = await supabase
-    .from("templates")
-    .select("id, name, tag_id, template_tasks(count)")
-    .eq("id", templateId)
-    .single();
-  checkError(selectError);
-  const typedRow = row as unknown as TemplateRow;
-  return {
-    id: typedRow.id,
-    name: typedRow.name,
-    tagId: typedRow.tag_id,
-    taskCount: typedRow.template_tasks[0]?.count ?? 0,
-  };
+  return { id: templateId, name, tagId, taskCount: taskRows.length };
 }
 
 /** Stamps fresh, independent (non-recurring) copies of a template's tasks onto `date`. */
-export async function applyTemplate(templateId: number, date: string): Promise<void> {
-  const { data: template, error: templateError } = await supabase
-    .from("templates")
-    .select("tag_id")
-    .eq("id", templateId)
-    .maybeSingle();
-  checkError(templateError);
+export async function applyTemplate(templateId: string, date: string): Promise<void> {
+  const template = (await cacheGetTemplates()).find((t) => t.id === templateId);
   if (!template) return;
+  const blueprints = await cacheGetTemplateTasks(templateId);
+  if (blueprints.length === 0) return;
 
-  const { data: blueprints, error: blueprintError } = await supabase
-    .from("template_tasks")
-    .select("title, notes, time, priority")
-    .eq("template_id", templateId)
-    .order("sort_order", { ascending: true });
-  checkError(blueprintError);
-  if (!blueprints || blueprints.length === 0) return;
-
-  // One bulk insert instead of N sequential createTask() round trips - the
-  // sort_order trigger still fires correctly per row inside a multi-row insert.
-  const rows = blueprints.map((bp) => ({
-    title: bp.title,
-    notes: bp.notes,
-    time: bp.time,
-    tag_id: template.tag_id,
-    priority: bp.priority,
-    recurrence_type: "none" as const,
-    recurrence_days: null,
-    start_date: date,
-    end_date: null,
-  }));
-  const { error: insertError } = await supabase.from("tasks").insert(rows);
-  checkError(insertError);
+  let sortOrder = await cacheNextTaskSortOrder();
+  for (const bp of blueprints) {
+    const row: TaskRow = {
+      id: crypto.randomUUID(),
+      title: bp.title,
+      notes: bp.notes,
+      time: bp.time,
+      tag_id: template.tag_id,
+      priority: bp.priority as Priority,
+      recurrence_type: "none",
+      recurrence_days: null,
+      start_date: date,
+      end_date: null,
+      sort_order: sortOrder++,
+    };
+    await cacheUpsertTask(row);
+    await enqueueOp({ table: "tasks", op: "upsert", rowId: row.id, payload: row });
+  }
+  kickSync();
 }
 
-export async function deleteTemplate(id: number): Promise<void> {
-  const { error } = await supabase.from("templates").delete().eq("id", id);
-  checkError(error);
+export async function deleteTemplate(id: string): Promise<void> {
+  await cacheDeleteTemplate(id);
+  await discardPendingOpsFor("templates", id);
+  await enqueueOp({ table: "templates", op: "delete", rowId: id });
+  await enqueueOp({ table: "template_tasks", op: "delete", rowId: `template:${id}` });
+  kickSync();
 }

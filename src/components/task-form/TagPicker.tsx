@@ -7,8 +7,8 @@ import "./TagPicker.css";
 
 interface TagPickerProps {
   tags: Tag[];
-  selectedTagId: number | null;
-  onChange: (tagId: number | null) => void;
+  selectedTagId: string | null;
+  onChange: (tagId: string | null) => void;
   onCreateTag: (name: string, color: string) => Promise<Tag>;
 }
 

@@ -18,6 +18,34 @@
   gap: var(--space-2);
 }
 
+/* Mobile-only: lets this panel take over the whole screen (collapsing the
+   compact calendar above it - see CalendarView.css/App.css) instead of
+   always sharing it. Hidden on wider screens, where both panels are always
+   shown side by side and there's nothing to expand. */
+.day-panel__expand-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  transition: background-color 0.12s ease, color 0.12s ease, transform 100ms var(--ease-out);
+}
+
+.day-panel__expand-toggle:active {
+  transform: scale(0.92);
+}
+
+@media (max-width: 700px) {
+  .day-panel__expand-toggle {
+    display: inline-flex;
+  }
+}
+
 .day-panel__date {
   font-size: var(--text-lg);
   font-weight: 600;
@@ -43,10 +71,6 @@
   white-space: nowrap;
 }
 
-.day-panel__add-btn {
-  flex: none;
-}
-
 .day-panel__arrange-bar {
   display: flex;
   align-items: center;
@@ -61,9 +85,12 @@
 }
 
 .day-panel__block {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: 2px;
+  transition: box-shadow 140ms var(--ease-out), background-color 140ms var(--ease-out),
+    scale 140ms var(--ease-out);
 }
 
 .day-panel__block--arranging {
@@ -73,8 +100,83 @@
   margin: -8px;
 }
 
+/* Holding still on one of these long enough triggers the arrange-suggestion
+   prompt (see bindArrangeSuggestion) - without this, the same hold instead
+   triggers the browser's own text-selection/callout on whatever text is
+   underneath, which looks like the app doing nothing while your finger
+   accidentally selects text. */
+.day-panel__block--suggestable {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* The dragged block visually lifts off the list and follows the pointer
+   1:1 (see DayPanel.tsx's onMove) instead of just sitting dimmed in place. */
 .day-panel__block--dragging {
-  opacity: 0.4;
+  position: relative;
+  z-index: 5;
+  background: var(--bg-elevated);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  scale: 1.02;
+}
+
+/* The "..." widget-options icon - only ever shown on hover-capable devices
+   (desktop). Touch keeps the long-press-to-suggest gesture as its only
+   trigger for this same menu, so this is never even in the layout on
+   mobile, not just hidden-until-hover there. */
+.day-panel__widget-menu {
+  display: none;
+}
+
+@media (hover: hover) {
+  .day-panel__widget-menu {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: var(--space-2);
+    right: var(--space-2);
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    opacity: 0;
+    transition: opacity 0.12s ease, color 0.12s ease, background-color 0.12s ease;
+  }
+
+  .day-panel__block:hover .day-panel__widget-menu {
+    opacity: 1;
+  }
+
+  .day-panel__widget-menu:hover {
+    color: var(--text);
+    background: var(--surface-hover);
+  }
+}
+
+/* Placeholder that appears once at least one widget's been removed - matches
+   the dashed-border language already used for Arrange mode's own blocks. */
+.day-panel__add-widget {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  transition: border-color 0.12s ease, color 0.12s ease, background-color 0.12s ease;
+}
+
+.day-panel__add-widget:hover {
+  border-color: var(--accent);
+  color: var(--text);
+  background: var(--accent-soft);
 }
 
 .day-panel__handle {
@@ -86,6 +188,7 @@
   padding-top: 10px;
   color: var(--text-muted);
   cursor: grab;
+  touch-action: none;
   -webkit-user-select: none;
   user-select: none;
 }
@@ -101,4 +204,37 @@
   border-radius: 999px;
   background: #84cc16;
   box-shadow: 0 0 8px rgba(132, 204, 22, 0.7);
+}
+
+/* Phone-sized screens: stacked below the fixed-height calendar instead of
+   split side by side. The calendar above never scrolls out of view, so
+   this panel takes up the remaining height and scrolls on its own - and
+   fades its own content out at the top/bottom edge of that scroll area
+   (instead of an abrupt clip) via a mask gradient, so content passing
+   under the calendar or the bottom edge softens out rather than cutting
+   off sharply. No border-top here anymore - a divider line right at that
+   masked edge would fade away with it, so the divider is a separate,
+   unmasked element instead (.mobile-divider in App.tsx/App.css). */
+@media (max-width: 700px) {
+  .day-panel {
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    border-left: none;
+    overflow-y: auto;
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      black 20px,
+      black calc(100% - 20px),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      black 20px,
+      black calc(100% - 20px),
+      transparent 100%
+    );
+  }
 }

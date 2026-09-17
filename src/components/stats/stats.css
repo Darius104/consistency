@@ -129,20 +129,61 @@
   font-weight: 600;
 }
 
-/* A hairline separates the "hero" row above from today's status below, so
-   the two don't blur into one stack of same-weight lines. */
+/* Used to be a plain hairline separating the "hero" row above from today's
+   status below - now it's that same separator doing double duty as an
+   at-a-glance read of today's actual progress, instead of pure decoration. */
 .streak-hero__secondary {
   margin-top: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--border);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
-.streak-hero__status,
-.streak-hero__freezes {
+.streak-hero__progress {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.streak-hero__progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 400ms var(--ease-out), background-color 200ms ease;
+}
+
+.streak-hero__progress--complete .streak-hero__progress-fill {
+  background: var(--success);
+}
+
+/* Frozen still shows real progress (it isn't automatically 100%) - the
+   frost tint is just a color cue that the streak's protected regardless,
+   matching the same frost token the calendar's own frozen-day cells use. */
+.streak-hero__progress--frozen .streak-hero__progress-fill {
+  background: var(--frost);
+}
+
+/* Fires once, the instant today actually finishes - see barPop in
+   StreakCounter.tsx for why this is a separate moment from the streak
+   number's own pop above. */
+.streak-hero__progress--pop {
+  animation: streak-progress-pop 500ms var(--ease-out);
+}
+
+@keyframes streak-progress-pop {
+  0%,
+  100% {
+    box-shadow: none;
+  }
+  40% {
+    box-shadow: 0 0 0 4px var(--success-soft);
+  }
+}
+
+.streak-hero__status {
   display: flex;
   align-items: center;
   gap: 5px;
@@ -171,11 +212,6 @@
   background: var(--success-soft);
   padding: 5px 10px;
   border-radius: var(--radius-sm);
-}
-
-.streak-hero__freezes {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
 }
 
 .streak-hero__inline-icon {
@@ -212,4 +248,135 @@
 
 .streak-hero--blazing {
   box-shadow: var(--shadow-sm), 0 0 32px var(--accent-soft);
+}
+
+/* --- FreezeSummary --- */
+
+.freeze-summary__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.freeze-summary__icon {
+  flex: none;
+  color: var(--frost);
+}
+
+.freeze-pips {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* A used-up freeze is just a plain gray pip - the ones still colored are
+   the ones actually left to spend, so the visual weight matches "what can
+   I still do" rather than "what's already gone." */
+.freeze-pip {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.freeze-pip--available {
+  background: var(--frost);
+}
+
+/* --- CategoryBreakdown --- */
+
+.category-breakdown__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.category-breakdown__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.category-breakdown__dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.category-breakdown__name {
+  flex: none;
+  max-width: 40%;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.category-breakdown__bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.category-breakdown__bar-fill {
+  height: 100%;
+  border-radius: 999px;
+}
+
+.category-breakdown__percent {
+  flex: none;
+  width: 3ch;
+  text-align: right;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* --- QuoteWidget --- */
+
+.quote-widget {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  text-align: center;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: radial-gradient(
+    ellipse 140% 90% at 50% -10%,
+    color-mix(in srgb, var(--phrase-color, var(--accent)) 10%, transparent),
+    transparent 70%
+  );
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.quote-widget__category {
+  position: relative;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--phrase-color, var(--accent));
+  background: color-mix(in srgb, var(--phrase-color, var(--accent)) 16%, transparent);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.quote-widget__text {
+  position: relative;
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text);
+  text-wrap: balance;
 }

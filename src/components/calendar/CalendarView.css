@@ -1,11 +1,76 @@
 .cal-view {
+  position: relative;
   flex: 1;
   min-width: 0;
   min-height: 0;
   padding: var(--space-5);
+  overflow: hidden;
+}
+
+/* Sits behind .cal-view__content (which stacks above it - see the z-index
+   note below) at a fixed position - as the content slides down while
+   pulling, this is what gets revealed in the gap left behind, rather than
+   the calendar's own box growing/shrinking to make room for it. Desktop
+   never triggers this gesture at all (see CalendarView.tsx's pointerType
+   check), so it's hidden outright there rather than relying only on the
+   content above covering it. */
+.cal-view__pull-indicator {
+  position: absolute;
+  /* .cal-view is the positioning context, but its own padding means
+     top/left/right: 0 would land in that padding gap - outside where
+     .cal-view__content (and its masking background) actually starts.
+     Offsetting by the same amount aligns this with the real content box. */
+  top: var(--space-5);
+  left: var(--space-5);
+  right: var(--space-5);
+  z-index: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: var(--space-3);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+@media (min-width: 701px) {
+  .cal-view__pull-indicator {
+    display: none;
+  }
+}
+
+/* An opaque background (matching the app's own base) is what keeps the
+   indicator behind it invisible at rest - the header/weekday/grid children
+   don't fill every pixel of their own row, so without this the indicator
+   icon would bleed through those gaps even when not pulling. Being
+   non-positioned, this would otherwise paint BEHIND the indicator's
+   position:absolute regardless of DOM order (that's how CSS stacking
+   works), background or no - so it needs its own explicit stacking
+   position and a z-index above the indicator's for the background to
+   actually mask anything. */
+.cal-view__content {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg);
+}
+
+/* Only while springing back after a release - not during the active pull
+   itself, which needs to track the finger 1:1 with no lag. */
+.cal-view__content--settling {
+  transition: transform 200ms var(--ease-out);
+}
+
+.cal-view__pull-icon--spinning {
+  animation: cal-view-pull-spin 800ms linear infinite;
+}
+
+@keyframes cal-view-pull-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .cal-view__weekdays {
@@ -31,4 +96,32 @@
   grid-template-columns: repeat(7, minmax(0, 1fr));
   grid-template-rows: repeat(6, minmax(0, 1fr));
   gap: var(--space-2);
+}
+
+/* Phone-sized screens: the calendar now shares the screen with the streak
+   and today's tasks below it (see App.css/DayPanel.css). It stays fixed at
+   this height and never scrolls out of view - only the panel below it
+   scrolls - so it's given a generous, but not full, share of the height.
+   Height/padding transition so the expand/collapse toggle (see
+   DayPanel.tsx) can smoothly shrink this away to 0 instead of snapping. */
+@media (max-width: 700px) {
+  .cal-view {
+    flex: none;
+    height: 58dvh;
+    min-height: 380px;
+    transition: height 260ms var(--ease-out), min-height 260ms var(--ease-out),
+      padding 260ms var(--ease-out);
+  }
+
+  /* The day panel below has taken over the full screen (see App.tsx's
+     dayPanelExpanded state, or FriendCalendarView's own `expanded` state
+     when viewing a friend) - collapse away entirely rather than just
+     hiding, so the transition above animates it out smoothly. */
+  .app--day-expanded .cal-view,
+  .friend-view--day-expanded .cal-view {
+    height: 0;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+  }
 }

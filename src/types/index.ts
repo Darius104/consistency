@@ -14,18 +14,18 @@ export type ThemeId =
 export type RecurrenceType = "none" | "daily" | "weekly";
 
 export interface Tag {
-  id: number;
+  id: string;
   name: string;
   color: string;
   sortOrder: number;
 }
 
 export interface Task {
-  id: number;
+  id: string;
   title: string;
   notes: string | null;
   time: string | null; // "HH:MM"
-  tagId: number | null;
+  tagId: string | null;
   priority: Priority;
   recurrenceType: RecurrenceType;
   recurrenceDays: number[] | null; // 0=Sun..6=Sat, only for "weekly"
@@ -38,7 +38,7 @@ export interface NewTask {
   title: string;
   notes?: string | null;
   time?: string | null;
-  tagId?: number | null;
+  tagId?: string | null;
   priority: Priority;
   recurrenceType: RecurrenceType;
   recurrenceDays?: number[] | null;
@@ -57,9 +57,9 @@ export interface TaskOccurrence {
 // A reusable "starter pack": a category plus a canned list of tasks that can
 // be stamped onto any day on demand, instead of retyping them each time.
 export interface Template {
-  id: number;
+  id: string;
   name: string;
-  tagId: number | null;
+  tagId: string | null;
   taskCount: number;
 }
 
@@ -68,4 +68,17 @@ export interface TemplateTaskBlueprint {
   notes: string | null;
   time: string | null;
   priority: Priority;
+}
+
+// A quick free-text note attached to one specific day - not a task: no
+// checkbox, no time/priority, never counted toward the streak or weekly %.
+export interface DayNote {
+  id: string;
+  date: string; // "YYYY-MM-DD"
+  content: string;
+  sortOrder: number;
+  // Which tag-group (by tag id, or the literal "none" for the untagged
+  // group) this note is anchored after in the day's list - null means
+  // "before all groups" (the default for a freshly created note).
+  afterGroupKey: string | null;
 }

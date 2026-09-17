@@ -1,8 +1,39 @@
 .app {
   height: 100vh;
+  height: 100dvh;
   display: flex;
   overflow: hidden;
   animation: app-fade-in 240ms var(--ease-out);
+}
+
+.mobile-divider {
+  display: none;
+}
+
+/* Phone-sized screens: the calendar and day panel can't fit side by side,
+   so they stack into a fixed-height calendar up top (see CalendarView.css)
+   with the streak/tasks panel below it, updating in place as you tap a
+   date. The calendar itself never scrolls out of view - only the panel
+   below it scrolls (see DayPanel.css), so .app itself doesn't scroll at
+   all. Desktop/tablet layouts are untouched. */
+@media (max-width: 700px) {
+  .app {
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .mobile-divider {
+    display: block;
+    flex: none;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Calendar's collapsed away entirely (see CalendarView.css) - nothing
+     left for this line to divide from. */
+  .app--day-expanded .mobile-divider {
+    display: none;
+  }
 }
 
 @keyframes app-fade-in {
@@ -13,6 +44,7 @@
 
 .app-loading {
   height: 100vh;
+  height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;

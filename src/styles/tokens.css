@@ -27,6 +27,14 @@
   --success: #46c98f;
   --success-soft: rgba(70, 201, 143, 0.16);
 
+  /* Frozen signals streak protection, not theme - stays this exact icy
+     blue everywhere (a theme's own --accent already changes per theme, so
+     reusing it here would make a frozen day look different per theme for
+     no reason). */
+  --frost: #5ec8e8;
+  --frost-rgb: 94, 200, 232;
+  --frost-soft: rgba(94, 200, 232, 0.16);
+
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
@@ -191,6 +199,19 @@ body {
      user action, and proportional digits would make them visibly shift
      width each time. */
   font-variant-numeric: tabular-nums;
+  /* This is a native app, not a web page - text shouldn't highlight blue
+     and pop up a copy/selection callout just from tapping, holding, or
+     dragging around the UI (labels, task titles, buttons, etc). Re-enabled
+     explicitly below for actual text inputs, where selecting/editing text
+     is the whole point. */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+input,
+textarea {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 button,

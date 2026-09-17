@@ -131,12 +131,17 @@
   position: absolute;
   left: 50%;
   bottom: 3px;
-  /* Standalone `translate` (not the `transform` shorthand) so the
-     centering offset never fights with the `scale`/`rotate` the keyframes
-     below animate independently. */
-  translate: -50% 0;
   transform-origin: 50% 100%;
   border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+  /* Centering offset folded into the `transform` shorthand (not the
+     standalone `translate`/`scale` properties) - WebKit on iPhone doesn't
+     reliably hand animations of the standalone transform properties off to
+     the compositor, so they run on the main thread and stutter under any
+     other load. A single `transform` animation is the one form that's
+     always GPU-composited. `will-change` hints the browser to promote the
+     layer up front instead of only once the animation starts. */
+  transform: translate(-50%, 0);
+  will-change: transform;
 }
 
 .flame__layer--outer {
@@ -146,7 +151,11 @@
   /* Fades in with power instead of always sitting at a fixed 0.9 - a small
      flame is mostly its hot core, not a dim version of the full body. */
   opacity: calc(0.4 + var(--power, 0) * 0.5);
-  animation: flame-grow-outer calc(2.6s - var(--power, 0) * 0.9s) ease-in-out infinite;
+  /* Duration is set inline from Flame.tsx, not calc()'d here - see the
+     comment there for why. */
+  animation-name: flame-grow-outer;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
 }
 
 .flame__layer--mid {
@@ -154,7 +163,9 @@
   height: 23px;
   background: var(--flame-mid, #f0932b);
   opacity: calc(0.65 + var(--power, 0) * 0.35);
-  animation: flame-grow-mid calc(1.9s - var(--power, 0) * 0.7s) ease-in-out infinite;
+  animation-name: flame-grow-mid;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
   animation-delay: -0.4s;
 }
 
@@ -164,7 +175,9 @@
   background: var(--flame-tip, #ffd76a);
   /* Always fully lit, regardless of power - the one part of the flame that
      never dims, only the layers around it grow in. */
-  animation: flame-grow-core calc(1.3s - var(--power, 0) * 0.5s) ease-in-out infinite;
+  animation-name: flame-grow-core;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
   animation-delay: -0.8s;
 }
 
@@ -176,15 +189,15 @@
 @keyframes flame-grow-outer {
   0%,
   100% {
-    scale: 1 1;
+    transform: translate(-50%, 0) scale(1, 1);
     border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
   }
   33% {
-    scale: 0.93 1.1;
+    transform: translate(-50%, 0) scale(0.93, 1.1);
     border-radius: 42% 58% 55% 45% / 68% 72% 32% 40%;
   }
   66% {
-    scale: 1.06 0.92;
+    transform: translate(-50%, 0) scale(1.06, 0.92);
     border-radius: 58% 42% 45% 55% / 55% 65% 40% 30%;
   }
 }
@@ -192,15 +205,15 @@
 @keyframes flame-grow-mid {
   0%,
   100% {
-    scale: 1 1;
+    transform: translate(-50%, 0) scale(1, 1);
     border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
   }
   40% {
-    scale: 0.88 1.16;
+    transform: translate(-50%, 0) scale(0.88, 1.16);
     border-radius: 40% 60% 58% 42% / 70% 75% 30% 38%;
   }
   75% {
-    scale: 1.1 0.88;
+    transform: translate(-50%, 0) scale(1.1, 0.88);
     border-radius: 60% 40% 42% 58% / 58% 60% 42% 28%;
   }
 }
@@ -208,11 +221,11 @@
 @keyframes flame-grow-core {
   0%,
   100% {
-    scale: 1 1;
+    transform: translate(-50%, 0) scale(1, 1);
     border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
   }
   50% {
-    scale: 0.82 1.22;
+    transform: translate(-50%, 0) scale(0.82, 1.22);
     border-radius: 38% 62% 60% 40% / 72% 78% 28% 36%;
   }
 }

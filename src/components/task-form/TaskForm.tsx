@@ -31,7 +31,7 @@ export function TaskForm({
   const [title, setTitle] = useState(task?.title ?? "");
   const [notes, setNotes] = useState(task?.notes ?? "");
   const [time, setTime] = useState(task?.time ?? "");
-  const [tagId, setTagId] = useState<number | null>(task?.tagId ?? null);
+  const [tagId, setTagId] = useState<string | null>(task?.tagId ?? null);
   const [priority, setPriority] = useState<Priority>(task?.priority ?? "medium");
   const [recurrenceType, setRecurrenceType] = useState<RecurrenceType>(
     task?.recurrenceType ?? "none",

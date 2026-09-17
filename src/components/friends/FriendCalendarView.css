@@ -1,0 +1,170 @@
+.friend-view {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.friend-view__bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.friend-view__bar-text {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.friend-view__back {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.friend-view__status {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.friend-view__status--error {
+  color: var(--danger);
+}
+
+.friend-view__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+.friend-view__day {
+  width: 340px;
+  flex: none;
+  border-left: 1px solid var(--border);
+  background: var(--bg-elevated);
+  padding: var(--space-5);
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.friend-view__profile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.friend-view__profile-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.friend-view__profile-name {
+  font-weight: 600;
+  font-size: var(--text-md);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.friend-view__profile-bio {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+
+.friend-view__day-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.friend-view__date {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  margin: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.friend-view__empty {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+.friend-view__divider {
+  display: none;
+}
+
+/* Phone-sized screens: same stacked layout as the main app's calendar/day
+   panel - a compact calendar (CalendarView.css already applies this at any
+   .cal-view via its own max-width:700px rule) that stays fixed on screen,
+   with the day content below it taking the remaining height and scrolling
+   on its own, fading out at its top/bottom edges instead of clipping
+   abruptly. The divider between them is a separate element (not a border
+   on .friend-view__day) since that edge is exactly where the fade mask
+   goes to transparent, same reasoning as the main app's DayPanel.css. */
+@media (max-width: 700px) {
+  .friend-view__body {
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .friend-view__divider {
+    display: block;
+    flex: none;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .friend-view__day {
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    border-left: none;
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      black 20px,
+      black calc(100% - 20px),
+      transparent 100%
+    );
+    mask-image: linear-gradient(
+      to bottom,
+      transparent 0,
+      black 20px,
+      black calc(100% - 20px),
+      transparent 100%
+    );
+  }
+
+  .friend-view__bar-text {
+    white-space: normal;
+  }
+
+  /* The calendar above has collapsed away entirely (see CalendarView.css) -
+     nothing left for the divider to divide from. */
+  .friend-view--day-expanded .friend-view__divider {
+    display: none;
+  }
+}

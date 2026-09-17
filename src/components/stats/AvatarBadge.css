@@ -1,0 +1,12 @@
+.avatar-badge {
+  --avatar-size: 48px;
+  width: var(--avatar-size);
+  height: var(--avatar-size);
+  border-radius: 50%;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--avatar-bg, var(--surface));
+  line-height: 1;
+}

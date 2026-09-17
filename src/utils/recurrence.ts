@@ -1,5 +1,5 @@
 import type { Task } from "../types";
-import { isAfter, isBefore, weekdayOf } from "./dates";
+import { addDays, isAfter, isBefore, parseDateKey, weekdayOf } from "./dates";
 
 export function isTaskScheduledOn(task: Task, dateKey: string): boolean {
   if (isBefore(dateKey, task.startDate)) return false;
@@ -22,6 +22,57 @@ export function isTaskScheduledOn(task: Task, dateKey: string): boolean {
 
 export function tasksScheduledOn(tasks: Task[], dateKey: string): Task[] {
   return tasks.filter((t) => isTaskScheduledOn(t, dateKey));
+}
+
+/** Every date (as "YYYY-MM-DD" keys) this task occurs on over the next
+ *  `days` days starting at `fromDate` (inclusive) - used both to schedule
+ *  reminders ahead of time and to list upcoming ones in Settings. */
+export function nextOccurrences(task: Task, fromDate: string, days: number): string[] {
+  const dates: string[] = [];
+  let cursor = fromDate;
+  for (let i = 0; i < days; i++) {
+    if (isTaskScheduledOn(task, cursor)) dates.push(cursor);
+    cursor = addDays(cursor, 1);
+  }
+  return dates;
+}
+
+/** The exact moment a task's reminder for one occurrence is due. */
+export function occurrenceDateTime(dateKey: string, time: string): Date {
+  const [hours, minutes] = time.split(":").map(Number);
+  const date = parseDateKey(dateKey);
+  date.setHours(hours, minutes, 0, 0);
+  return date;
+}
+
+export interface ReminderEntry {
+  taskId: string;
+  date: string;
+}
+
+/** Every (task, date) pair that still has a pending reminder - a task with
+ *  a `time` set, occurring within `days` of `fromDate`, not already
+ *  completed, and (for `fromDate` itself) not already past its time. Shared
+ *  by both the actual OS-scheduling pass (useTaskReminders) and the in-app
+ *  upcoming-reminders list (ReminderList) so what's shown always matches
+ *  what's actually scheduled. */
+export function upcomingReminders(
+  tasks: Task[],
+  completions: Set<string>,
+  fromDate: string,
+  days: number,
+  now: Date = new Date(),
+): ReminderEntry[] {
+  const entries: ReminderEntry[] = [];
+  for (const task of tasks) {
+    if (!task.time) continue;
+    for (const date of nextOccurrences(task, fromDate, days)) {
+      if (completions.has(`${task.id}:${date}`)) continue;
+      if (date === fromDate && occurrenceDateTime(date, task.time) <= now) continue;
+      entries.push({ taskId: task.id, date });
+    }
+  }
+  return entries;
 }
 
 // Display order Mon..Sun, independent of recurrenceDays' own 0=Sun..6=Sat

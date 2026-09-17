@@ -2,6 +2,19 @@ import type { Task } from "../types";
 import { addDays, isBefore } from "./dates";
 import { tasksScheduledOn } from "./recurrence";
 
+export type StreakTier = "cold" | "low" | "warm" | "hot" | "blazing";
+
+/** Single shared source of truth for "how hot is this streak" - used by the
+ *  flame in StreakCounter and by the avatar badge's glow, so both always
+ *  agree on the exact same thresholds. */
+export function streakTier(streak: number): StreakTier {
+  if (streak === 0) return "cold";
+  if (streak < 3) return "low";
+  if (streak < 7) return "warm";
+  if (streak < 30) return "hot";
+  return "blazing";
+}
+
 /** Completion rate for one day: null when nothing was scheduled that day. */
 export function dayCompletionRate(
   tasks: Task[],
@@ -244,3 +257,42 @@ export function computeHeatmap(
   }
   return map;
 }
+
+export interface CategoryBreakdownItem {
+  /** null = tasks with no category assigned. */
+  tagId: string | null;
+  scheduled: number;
+  completed: number;
+  percent: number; // 0..100
+}
+
+/** Per-category completion for the Mon-Sun week starting `weekStartKey`,
+ *  most-scheduled category first - the same week window as
+ *  computeWeeklyCompletion, just split out by tag instead of summed. */
+export function computeCategoryBreakdown(
+  tasks: Task[],
+  completions: Set<string>,
+  weekStartKey: string,
+): CategoryBreakdownItem[] {
+  const byTag = new Map<string | null, { scheduled: number; completed: number }>();
+
+  for (let i = 0; i < 7; i++) {
+    const day = addDays(weekStartKey, i);
+    for (const task of tasksScheduledOn(tasks, day)) {
+      const entry = byTag.get(task.tagId) ?? { scheduled: 0, completed: 0 };
+      entry.scheduled += 1;
+      if (completions.has(`${task.id}:${day}`)) entry.completed += 1;
+      byTag.set(task.tagId, entry);
+    }
+  }
+
+  return Array.from(byTag.entries())
+    .map(([tagId, { scheduled, completed }]) => ({
+      tagId,
+      scheduled,
+      completed,
+      percent: scheduled === 0 ? 0 : Math.round((completed / scheduled) * 100),
+    }))
+    .sort((a, b) => b.scheduled - a.scheduled);
+}
+

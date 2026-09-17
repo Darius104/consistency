@@ -12,6 +12,15 @@ interface FlameProps {
 // in place. Colors come from the same --flame-base/mid/tip tokens as
 // before; --power still controls overall size/brightness/glow.
 export function Flame({ power }: FlameProps) {
+  // Computed here rather than left as a CSS calc() on animation-duration -
+  // some WebKit builds (iOS's WKWebView, not macOS's) don't reliably honor
+  // a calc()'d duration for animations at all, shorthand or not, and just
+  // fall back to running near-instantly. A plain computed value in an
+  // inline style sidesteps that entirely.
+  const outerDuration = 2.6 - power * 0.9;
+  const midDuration = 1.9 - power * 0.7;
+  const coreDuration = 1.3 - power * 0.5;
+
   return (
     <span className="flame" style={{ "--power": power } as CSSProperties} aria-hidden="true">
       {/* Constant size regardless of --power - a woodpile doesn't grow or
@@ -30,9 +39,18 @@ export function Flame({ power }: FlameProps) {
           separate from the logs above so they're unaffected by its scale. */}
       <span className="flame__fire">
         <span className="flame__halo" />
-        <span className="flame__layer flame__layer--outer" />
-        <span className="flame__layer flame__layer--mid" />
-        <span className="flame__layer flame__layer--core" />
+        <span
+          className="flame__layer flame__layer--outer"
+          style={{ animationDuration: `${outerDuration}s` }}
+        />
+        <span
+          className="flame__layer flame__layer--mid"
+          style={{ animationDuration: `${midDuration}s` }}
+        />
+        <span
+          className="flame__layer flame__layer--core"
+          style={{ animationDuration: `${coreDuration}s` }}
+        />
         <span className="flame__particles">
           <span className="flame__particle flame__particle--1" />
           <span className="flame__particle flame__particle--2" />

@@ -35,6 +35,7 @@ export function CalendarDay({
         !isCurrentMonth && "cal-day--dim",
         isSelected && "cal-day--selected",
         isFullyCompleted && "cal-day--complete",
+        isFrozen && "cal-day--frozen",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -61,7 +62,7 @@ export function CalendarDay({
         )}
         {isFrozen && (
           <span className="cal-day__frozen" aria-label="Streak frozen this day">
-            <FrostIcon size={10} />
+            <FrostIcon size={8} />
           </span>
         )}
       </span>

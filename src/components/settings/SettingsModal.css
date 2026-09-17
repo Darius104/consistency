@@ -1,7 +1,72 @@
 .settings {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  width: 100%;
+}
+
+.settings-detail {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-detail__header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5) 0;
+}
+
+.settings-detail__title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.settings-detail__back {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.settings-detail__back:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.settings-detail__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-5);
+}
+
+/* A fresh element per tab (keyed by activeId in SettingsModal.tsx) so
+   switching sections gets a small settle-in animation instead of content
+   just snapping into place. */
+.settings-detail__pane {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+  animation: settings-pane-in 180ms var(--ease-out);
+}
+
+@keyframes settings-pane-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
 }
 
 .settings__section {
@@ -10,15 +75,26 @@
   gap: var(--space-3);
 }
 
+/* One consistent "section label" language used everywhere something needs
+   a small heading above it - Theme/Layout here, but also each Friends
+   subsection and (via StreakFreezeManager reusing this same class) the
+   "Frozen days"/"Freeze a missed day" groups, which previously had their
+   own near-identical but different-looking label style. */
 .settings__label {
-  font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .settings__hint {
   font-size: var(--text-xs);
   color: var(--text-muted);
+}
+
+.settings__hint--warning {
+  color: var(--danger);
 }
 
 .settings__row {
@@ -29,6 +105,69 @@
 }
 
 .settings__row-text {
-  font-size: var(--text-sm);
+  font-size: var(--text-md);
   color: var(--text-secondary);
+}
+
+/* Phone-sized modal widths: the nav list and the section detail can't both
+   fit, so only one shows at a time (same list/detail pattern as the
+   calendar vs. day panel) - the back button only makes sense here too. */
+@media (max-width: 700px) {
+  .settings-nav {
+    width: 100%;
+    border-right: none;
+  }
+
+  .settings[data-mobile-pane="list"] .settings-detail {
+    display: none;
+  }
+
+  .settings[data-mobile-pane="detail"] .settings-nav {
+    display: none;
+  }
+
+  .settings-detail__back {
+    display: inline-flex;
+  }
+}
+
+.widget-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.widget-gallery__item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* The real StreakCounter/WeeklyCompletion, rendered with the user's actual
+   data so this is a true preview, not a mockup - not interactive here, so
+   pointer events (and any hover/press states meant for the live day panel)
+   are switched off. */
+.widget-gallery__preview {
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.widget-gallery__preview--hidden {
+  opacity: 0.45;
+}
+
+/* Generic responsive-text-swap utility (same 700px breakpoint used
+   throughout) - a couple of spots need different wording between the
+   desktop side-by-side layout and the mobile stacked one, without needing
+   two entirely different components. */
+@media (max-width: 700px) {
+  .only-desktop {
+    display: none;
+  }
+}
+
+@media (min-width: 701px) {
+  .only-mobile {
+    display: none;
+  }
 }

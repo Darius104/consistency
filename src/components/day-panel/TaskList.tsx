@@ -1,12 +1,24 @@
 import { Fragment, useEffect, useRef, useState } from "react";
-import type { Tag, Task, Template, TemplateTaskBlueprint } from "../../types";
+import { useReorderDrag } from "../../hooks/useReorderDrag";
+import type { DayNote, Tag, Task, Template, TemplateTaskBlueprint } from "../../types";
 import { CheckIcon } from "../ui/icons";
+import { NoteRow } from "./NoteRow";
 import { TaskGroup } from "./TaskGroup";
 import { TaskItem } from "./TaskItem";
 import "./TaskList.css";
 
 const NO_TAG_KEY = "none";
 const AUTO_COLLAPSE_DELAY_MS = 250;
+
+// Tag groups and notes share one combined drag domain (see layoutDrag
+// below) - these prefixes are how a single reordered id array is told
+// apart back into "which groups" vs "which notes" after a drop.
+function groupItemId(key: string): string {
+  return `group:${key}`;
+}
+function noteItemId(id: string): string {
+  return `note:${id}`;
+}
 
 interface Occurrence {
   task: Task;
@@ -27,16 +39,22 @@ interface TaskListProps {
   onToggle: (task: Task) => void;
   onView: (task: Task) => void;
   onDelete: (task: Task) => void;
-  onReorderTasks: (taskIds: number[]) => void;
-  onReorderTags: (tagIds: number[]) => void;
+  onReorderTasks: (taskIds: string[]) => void;
+  onReorderTags: (tagIds: string[]) => void;
   onSaveAsTemplate: (tag: Tag, tasks: TemplateTaskBlueprint[]) => void;
-  onRemoveTemplate: (templateId: number) => void;
+  onRemoveTemplate: (templateId: string) => void;
   templates: Template[];
+  notes: DayNote[];
+  onEditNote: (note: DayNote) => void;
+  onDeleteNote: (id: string) => void;
+  onReorderNotePositions: (
+    updates: { id: string; afterGroupKey: string | null; sortOrder: number }[],
+  ) => void;
 }
 
 function sortOccurrences(occurrences: Occurrence[]): Occurrence[] {
   return [...occurrences].sort(
-    (a, b) => a.task.sortOrder - b.task.sortOrder || a.task.id - b.task.id,
+    (a, b) => a.task.sortOrder - b.task.sortOrder || a.task.id.localeCompare(b.task.id),
   );
 }
 
@@ -52,6 +70,10 @@ export function TaskList({
   onSaveAsTemplate,
   onRemoveTemplate,
   templates,
+  notes,
+  onEditNote,
+  onDeleteNote,
+  onReorderNotePositions,
 }: TaskListProps) {
   // Collapse state and "have we seen this group finish before" tracking are
   // both scoped to `${selectedDate}:${tagKey}` - a tag collapsing because you
@@ -61,17 +83,40 @@ export function TaskList({
   const seenKeys = useRef<Set<string>>(new Set());
   const wasComplete = useRef<Record<string, boolean>>({});
 
-  // Dragging a task within its own group.
-  const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
-  const [draggingTaskGroupKey, setDraggingTaskGroupKey] = useState<string | null>(null);
-  const [taskDropIndex, setTaskDropIndex] = useState<number | null>(null);
-  const taskRefs = useRef<Partial<Record<number, HTMLDivElement>>>({});
+  // Reordered via each row's own small grab handle (see useReorderDrag's
+  // bindHandlePointerDown) rather than grab-anywhere, so the rest of the
+  // panel keeps ordinary native scrolling. Tasks within their own group are
+  // one domain; tag groups AND notes share a second, combined domain (see
+  // layoutDrag below) so a note can be dropped anywhere among the groups,
+  // not just reordered against other notes ("No tag" excluded from that
+  // combined domain - it isn't a real group, it always stays last).
+  const taskDrag = useReorderDrag((nextTaskIds) => onReorderTasks(nextTaskIds));
+  const layoutDrag = useReorderDrag((nextIds) => {
+    const nextTagIds = nextIds
+      .filter((id) => id.startsWith("group:"))
+      .map((id) => id.slice("group:".length));
+    onReorderTags(nextTagIds);
 
-  // Dragging a whole tag group among the other groups ("No tag" excluded -
-  // it isn't a real tag, it always stays last).
-  const [draggedGroupKey, setDraggedGroupKey] = useState<string | null>(null);
-  const [groupDropIndex, setGroupDropIndex] = useState<number | null>(null);
-  const groupRefs = useRef<Partial<Record<string, HTMLDivElement>>>({});
+    // Whichever group id most recently passed in this same reordered list
+    // becomes every following note's new anchor, until the next group -
+    // notes before the first group anchor to null ("top of the day").
+    const noteUpdates: { id: string; afterGroupKey: string | null; sortOrder: number }[] = [];
+    let currentAnchor: string | null = null;
+    let sortOrder = 0;
+    for (const id of nextIds) {
+      if (id.startsWith("group:")) {
+        currentAnchor = id.slice("group:".length);
+        sortOrder = 0;
+      } else if (id.startsWith("note:")) {
+        noteUpdates.push({
+          id: id.slice("note:".length),
+          afterGroupKey: currentAnchor,
+          sortOrder: sortOrder++,
+        });
+      }
+    }
+    onReorderNotePositions(noteUpdates);
+  });
 
   const tagById = new Map(tags.map((t) => [t.id, t]));
 
@@ -87,7 +132,7 @@ export function TaskList({
     .map(([key, groupOccurrences]) => ({
       key,
       scopedKey: `${selectedDate}:${key}`,
-      tag: key === NO_TAG_KEY ? undefined : tagById.get(Number(key)),
+      tag: key === NO_TAG_KEY ? undefined : tagById.get(key),
       occurrences: sortOccurrences(groupOccurrences),
     }))
     .sort((a, b) => {
@@ -96,15 +141,59 @@ export function TaskList({
       return (a.tag?.sortOrder ?? 0) - (b.tag?.sortOrder ?? 0);
     });
 
-  const draggableGroups = groups.filter((g) => g.key !== NO_TAG_KEY);
+  const sortedNotes = [...notes].sort((a, b) => a.sortOrder - b.sortOrder);
 
-  // Kept fresh every render (not a dependency of the drag effects below) so
-  // dragging always reads current data without tearing down/rebuilding the
-  // window listeners on every mousemove-triggered re-render.
-  const groupsRef = useRef(groups);
-  groupsRef.current = groups;
-  const draggableGroupsRef = useRef(draggableGroups);
-  draggableGroupsRef.current = draggableGroups;
+  // Buckets of notes by which group they're anchored after (see
+  // DayNote.afterGroupKey) - falls back to "before everything" if a note's
+  // anchor doesn't match any group actually showing today (e.g. every task
+  // under that tag was removed for this day), so a note can never silently
+  // disappear.
+  const notesByAnchor = new Map<string | null, DayNote[]>();
+  for (const note of sortedNotes) {
+    const anchor = groups.some((g) => g.key === note.afterGroupKey) ? note.afterGroupKey : null;
+    const bucket = notesByAnchor.get(anchor);
+    if (bucket) bucket.push(note);
+    else notesByAnchor.set(anchor, [note]);
+  }
+
+  // One combined, ordered list for rendering: notes anchored before any
+  // group, then each group followed immediately by whichever notes are
+  // anchored to it. "No category" is never draggable (it always stays
+  // last), but notes may still anchor to and render after it.
+  interface LayoutEntry {
+    itemId: string;
+    note?: DayNote;
+    group?: Group;
+    draggable: boolean;
+  }
+
+  const layout: LayoutEntry[] = [];
+  for (const note of notesByAnchor.get(null) ?? []) {
+    layout.push({ itemId: noteItemId(note.id), note, draggable: true });
+  }
+  for (const group of groups) {
+    layout.push({
+      itemId: groupItemId(group.key),
+      group,
+      draggable: group.key !== NO_TAG_KEY,
+    });
+    for (const note of notesByAnchor.get(group.key) ?? []) {
+      layout.push({ itemId: noteItemId(note.id), note, draggable: true });
+    }
+  }
+
+  const draggableLayout = layout.filter((entry) => entry.draggable);
+
+  // App.tsx builds a brand-new `occurrences` array on every render, even
+  // when nothing actually changed (e.g. a background sync re-rendering the
+  // whole tree). Depending on that array directly would tear down and
+  // reschedule the collapse effect below on every such render, cancelling
+  // an in-flight collapse timer before it ever fires. This signature only
+  // changes when a task's completion actually changes, so it's what the
+  // effect should really be reacting to.
+  const completionSignature = occurrences
+    .map((o) => `${o.task.id}:${o.completed}`)
+    .join(",");
 
   useEffect(() => {
     const timers: number[] = [];
@@ -134,125 +223,28 @@ export function TaskList({
     return () => {
       timers.forEach((t) => window.clearTimeout(t));
     };
-  }, [occurrences, selectedDate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [completionSignature, selectedDate]);
 
-  // Manual pointer-based dragging (same approach as the day-panel block
-  // reorder) - reliable inside WKWebView unlike the native HTML5 DnD API,
-  // and constrained to reordering within the dragged task's own group.
-  useEffect(() => {
-    if (draggedTaskId === null || draggingTaskGroupKey === null) return;
-    document.body.classList.add("is-dragging");
+  // Which task/group is currently being dragged, derived from the hooks'
+  // own draggedId rather than tracked separately - a task never changes
+  // group mid-drag (only its position within one), so scanning the live
+  // (always-current) `groups` for whichever one contains draggedTaskId is
+  // all that's needed to know where to render the task's drop-line.
+  const draggedTaskId = taskDrag.draggedId;
+  const taskDropIndex = taskDrag.dropIndex;
+  const draggingTaskGroupKey = draggedTaskId
+    ? groups.find((g) => g.occurrences.some((o) => o.task.id === draggedTaskId))?.key ?? null
+    : null;
 
-    function currentGroup(): Group | undefined {
-      return groupsRef.current.find((g) => g.key === draggingTaskGroupKey);
-    }
-
-    function indexForY(clientY: number): number {
-      const group = currentGroup();
-      if (!group) return 0;
-      for (let i = 0; i < group.occurrences.length; i++) {
-        const el = taskRefs.current[group.occurrences[i].task.id];
-        if (!el) continue;
-        const rect = el.getBoundingClientRect();
-        if (clientY < rect.top + rect.height / 2) return i;
-      }
-      return group.occurrences.length;
-    }
-
-    function onMove(e: MouseEvent) {
-      setTaskDropIndex(indexForY(e.clientY));
-    }
-
-    function onUp(e: MouseEvent) {
-      const group = currentGroup();
-      if (group) {
-        const ids = group.occurrences.map((o) => o.task.id);
-        const from = ids.indexOf(draggedTaskId as number);
-        const to = indexForY(e.clientY);
-        if (from !== -1) {
-          const next = [...ids];
-          next.splice(from, 1);
-          next.splice(to > from ? to - 1 : to, 0, draggedTaskId as number);
-          if (next.some((id, i) => id !== ids[i])) {
-            onReorderTasks(next);
-          }
-        }
-      }
-      setDraggedTaskId(null);
-      setDraggingTaskGroupKey(null);
-      setTaskDropIndex(null);
-    }
-
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    return () => {
-      document.body.classList.remove("is-dragging");
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-  }, [draggedTaskId, draggingTaskGroupKey, onReorderTasks]);
-
-  // Same pattern again, one level up: dragging a whole tag group among the
-  // other tag groups (never involves "No tag", which always stays last).
-  useEffect(() => {
-    if (draggedGroupKey === null) return;
-    document.body.classList.add("is-dragging");
-
-    function indexForY(clientY: number): number {
-      const list = draggableGroupsRef.current;
-      for (let i = 0; i < list.length; i++) {
-        const el = groupRefs.current[list[i].key];
-        if (!el) continue;
-        const rect = el.getBoundingClientRect();
-        if (clientY < rect.top + rect.height / 2) return i;
-      }
-      return list.length;
-    }
-
-    function onMove(e: MouseEvent) {
-      setGroupDropIndex(indexForY(e.clientY));
-    }
-
-    function onUp(e: MouseEvent) {
-      const list = draggableGroupsRef.current;
-      const ids = list.map((g) => Number(g.key));
-      const from = ids.indexOf(Number(draggedGroupKey));
-      const to = indexForY(e.clientY);
-      if (from !== -1) {
-        const next = [...ids];
-        next.splice(from, 1);
-        next.splice(to > from ? to - 1 : to, 0, Number(draggedGroupKey));
-        if (next.some((id, i) => id !== ids[i])) {
-          onReorderTags(next);
-        }
-      }
-      setDraggedGroupKey(null);
-      setGroupDropIndex(null);
-    }
-
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    return () => {
-      document.body.classList.remove("is-dragging");
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-  }, [draggedGroupKey, onReorderTags]);
-
-  function startTaskDrag(taskId: number, groupKey: string) {
-    const group = groups.find((g) => g.key === groupKey);
-    if (!group) return;
-    setDraggedTaskId(taskId);
-    setDraggingTaskGroupKey(groupKey);
-    setTaskDropIndex(group.occurrences.findIndex((o) => o.task.id === taskId));
-  }
-
-  function startGroupDrag(groupKey: string) {
-    const index = draggableGroups.findIndex((g) => g.key === groupKey);
-    if (index === -1) return;
-    setDraggedGroupKey(groupKey);
-    setGroupDropIndex(index);
-  }
+  const draggedLayoutId = layoutDrag.draggedId;
+  const layoutDropIndex = layoutDrag.dropIndex;
+  const draggedGroupKey = draggedLayoutId?.startsWith("group:")
+    ? draggedLayoutId.slice("group:".length)
+    : null;
+  const draggedNoteId = draggedLayoutId?.startsWith("note:")
+    ? draggedLayoutId.slice("note:".length)
+    : null;
 
   function toggleGroup(scopedKey: string) {
     setCollapsed((prev) => {
@@ -263,7 +255,7 @@ export function TaskList({
     });
   }
 
-  if (occurrences.length === 0) {
+  if (occurrences.length === 0 && notes.length === 0) {
     return (
       <div className="task-list__empty" key={selectedDate}>
         <span className="task-list__empty-icon" aria-hidden="true">
@@ -278,21 +270,43 @@ export function TaskList({
 
   return (
     <div className="task-list">
-      {groups.map(({ key, scopedKey, tag, occurrences: groupOccurrences }) => {
-        const isDraggable = key !== NO_TAG_KEY;
-        if (isDraggable) draggableIndex += 1;
-        const thisDraggableIndex = draggableIndex;
+      {layout.map((entry) => {
+        if (entry.draggable) draggableIndex += 1;
+        const thisDraggableIndex = entry.draggable ? draggableIndex : null;
+        const dropLineBefore =
+          draggedLayoutId !== null &&
+          thisDraggableIndex !== null &&
+          layoutDropIndex === thisDraggableIndex && (
+            <div className="task-list__drop-line" />
+          );
+
+        if (entry.note) {
+          const note = entry.note;
+          return (
+            <Fragment key={entry.itemId}>
+              {dropLineBefore}
+              <div ref={layoutDrag.registerItemRef(entry.itemId)}>
+                <NoteRow
+                  note={note}
+                  dragging={draggedNoteId === note.id}
+                  onHandlePointerDown={layoutDrag.bindHandlePointerDown(entry.itemId, () =>
+                    draggableLayout.map((e) => e.itemId),
+                  )}
+                  onEdit={() => onEditNote(note)}
+                  onDelete={() => onDeleteNote(note.id)}
+                />
+              </div>
+            </Fragment>
+          );
+        }
+
+        const { key, scopedKey, tag, occurrences: groupOccurrences } = entry.group!;
+        const isDraggable = entry.draggable;
 
         return (
-          <Fragment key={key}>
-            {draggedGroupKey !== null && groupDropIndex === thisDraggableIndex && isDraggable && (
-              <div className="task-list__drop-line" />
-            )}
-            <div
-              ref={(el) => {
-                if (isDraggable) groupRefs.current[key] = el ?? undefined;
-              }}
-            >
+          <Fragment key={entry.itemId}>
+            {dropLineBefore}
+            <div ref={isDraggable ? layoutDrag.registerItemRef(entry.itemId) : undefined}>
               <TaskGroup
                 label={tag?.name ?? "No category"}
                 color={tag?.color}
@@ -302,7 +316,14 @@ export function TaskList({
                 onToggle={() => toggleGroup(scopedKey)}
                 draggable={isDraggable}
                 dragging={draggedGroupKey === key}
-                onDragHandleDown={() => startGroupDrag(key)}
+                onHandlePointerDown={
+                  isDraggable
+                    ? layoutDrag.bindHandlePointerDown(entry.itemId, () =>
+                        draggableLayout.map((e) => e.itemId),
+                      )
+                    : undefined
+                }
+                suppressClick={layoutDrag.suppressClick}
                 onSaveAsTemplate={
                   tag
                     ? () => {
@@ -330,18 +351,18 @@ export function TaskList({
                     {draggingTaskGroupKey === key && taskDropIndex === index && (
                       <div className="task-list__drop-line" />
                     )}
-                    <div
-                      ref={(el) => {
-                        taskRefs.current[task.id] = el ?? undefined;
-                      }}
-                    >
+                    <div ref={taskDrag.registerItemRef(task.id)}>
                       <TaskItem
                         task={task}
                         completed={completed}
                         onToggle={() => onToggle(task)}
                         onView={() => onView(task)}
                         onDelete={() => onDelete(task)}
-                        onDragHandleDown={() => startTaskDrag(task.id, key)}
+                        onHandlePointerDown={taskDrag.bindHandlePointerDown(
+                          task.id,
+                          () => groupOccurrences.map((o) => o.task.id),
+                        )}
+                        suppressClick={taskDrag.suppressClick}
                         dragging={draggedTaskId === task.id}
                       />
                     </div>
@@ -355,7 +376,7 @@ export function TaskList({
           </Fragment>
         );
       })}
-      {draggedGroupKey !== null && groupDropIndex === draggableGroups.length && (
+      {draggedLayoutId !== null && layoutDropIndex === draggableLayout.length && (
         <div className="task-list__drop-line" />
       )}
     </div>

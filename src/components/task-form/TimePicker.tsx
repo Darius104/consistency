@@ -9,7 +9,7 @@ interface TimePickerProps {
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i); // 0..23
-const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5); // 0,5,...,55
+const MINUTES = Array.from({ length: 60 }, (_, i) => i); // 0..59
 
 function pad(n: number): string {
   return String(n).padStart(2, "0");
@@ -45,13 +45,17 @@ function ScrollSelect({
 
   useEffect(() => {
     if (!isOpen) return;
-    function onOutside(e: MouseEvent) {
+    // Pointer, not mouse - on touch, compat mouse events can arrive very
+    // late (or not at all for a touch that moved), which could leave this
+    // popup open over a tap it should have already closed for (see the
+    // identical fix in AddMenu.tsx).
+    function onOutside(e: PointerEvent) {
       if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
         onClose();
       }
     }
-    document.addEventListener("mousedown", onOutside);
-    return () => document.removeEventListener("mousedown", onOutside);
+    document.addEventListener("pointerdown", onOutside);
+    return () => document.removeEventListener("pointerdown", onOutside);
   }, [isOpen, onClose]);
 
   useEffect(() => {

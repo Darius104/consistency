@@ -13,25 +13,84 @@
     transform 120ms var(--ease-out);
 }
 
-.task-item:hover {
-  border-color: var(--border-strong);
-  background: var(--surface-hover);
+.task-item:not(.task-item--readonly) {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Grabbing anywhere on the row used to permanently disable native touch
+   scrolling here (WebKit locks in scroll permission at the very first touch
+   of a gesture and never reconsiders it mid-gesture), which meant every
+   scroll starting on a task had to be reimplemented by hand in JS - fragile,
+   and the source of several rounds of scroll/drag conflicts. A dedicated
+   handle removes the ambiguity instead: touch-action:none is scoped to just
+   this small element (see useReorderDrag's bindHandlePointerDown), so
+   everywhere else on the row keeps ordinary, fully native scrolling and
+   momentum, with zero custom scroll code. */
+.task-item__handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  align-self: stretch;
+  margin: calc(var(--space-3) * -1) 0;
+  padding: 0 2px;
+  color: var(--text-muted);
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.task-item--dragging .task-item__handle {
+  cursor: grabbing;
+}
+
+/* Touch-only devices never get any :hover rule on .task-item at all - not
+   just a cosmetic call. WebKit on iOS requires a "priming" first tap before
+   it delivers a real click to a nested element (the checkbox) when the
+   ancestor has :hover styles, so a tap on the checkbox first "selected" the
+   whole row (this component's own onClick) and only a second tap actually
+   reached the checkbox. Scoping these to real pointer devices removes that
+   requirement entirely, on top of the checkbox's own enlarged tap target
+   (see Checkbox.css) which only reduced how often a tap missed. */
+@media (hover: hover) {
+  .task-item:hover {
+    border-color: var(--border-strong);
+    background: var(--surface-hover);
+  }
 }
 
 .task-item:active {
   transform: scale(0.99);
 }
 
-.task-item:hover .task-item__delete {
-  opacity: 1;
-}
-
-.task-item:hover .task-item__handle {
-  opacity: 1;
-}
-
+/* The dragged task visually lifts and follows the pointer 1:1 (see
+   TaskList.tsx's onMove, which sets style.transform directly) instead of
+   just sitting dimmed in place. `transition: none` matters here - the base
+   rule above transitions `transform` for the :active press effect, which
+   would otherwise turn the live per-frame transform into a laggy eased
+   animation instead of tracking the finger/cursor exactly. `scale` is a
+   separate CSS property from `transform`, so it composes with the JS-driven
+   translateY instead of fighting it. */
 .task-item--dragging {
-  opacity: 0.4;
+  position: relative;
+  z-index: 5;
+  transition: none;
+  background: var(--bg-elevated);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  scale: 1.02;
+  cursor: grabbing;
+}
+
+/* A friend's calendar is read-only - no click handler, no drag/delete
+   affordances - so it shouldn't look or act clickable either.
+   pointer-events:none is simpler than overriding :hover/:active per state
+   (including --completed's own hover colors) - it stops the browser from
+   ever entering those states on this element at all. */
+.task-item--readonly {
+  cursor: default;
+  pointer-events: none;
 }
 
 .task-item__main {
@@ -70,26 +129,10 @@
   white-space: nowrap;
 }
 
-.task-item__handle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  width: 14px;
-  padding-top: 3px;
-  color: var(--text-muted);
-  opacity: 0;
-  cursor: grab;
-  -webkit-user-select: none;
-  user-select: none;
-  transition: opacity 0.12s ease;
-}
-
 .task-item__delete {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
   background: transparent;
   border: none;
   color: var(--text-muted);
@@ -97,8 +140,22 @@
   border-radius: var(--radius-sm);
   transition: opacity 0.12s ease, color 0.12s ease, background-color 0.12s ease;
 }
-.task-item__delete:hover {
-  color: var(--danger);
+
+/* Touch has no hover to reveal this, so it stays visible there instead -
+   same pattern used for note rows and category rows. Hidden-until-hover
+   only applies where hover actually exists (desktop). */
+@media (hover: hover) {
+  .task-item__delete {
+    opacity: 0;
+  }
+
+  .task-item:hover .task-item__delete {
+    opacity: 1;
+  }
+
+  .task-item__delete:hover {
+    color: var(--danger);
+  }
 }
 
 .task-item--completed {
@@ -106,9 +163,11 @@
   background: var(--success-soft);
 }
 
-.task-item--completed:hover {
-  background: var(--success-soft);
-  border-left-color: var(--success);
+@media (hover: hover) {
+  .task-item--completed:hover {
+    background: var(--success-soft);
+    border-left-color: var(--success);
+  }
 }
 
 .task-item--completed .task-item__title,

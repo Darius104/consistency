@@ -1,13 +1,45 @@
-import type { Tag, Template, ThemeId } from "../../types";
-import type { FreezeCandidate } from "../../utils/stats";
+import { useState } from "react";
+import type { ReactNode } from "react";
+import type { Friend } from "../../db/friends";
+import type { ReminderStatus } from "../../hooks/useTaskReminders";
+import type { Tag, Task, Template, TemplateTaskBlueprint, ThemeId } from "../../types";
+import { WIDGET_IDS, WIDGET_LABELS, type WidgetId } from "../../utils/panelOrder";
+import type { Quote } from "../../utils/quotes";
+import {
+  MAX_FREEZES_PER_MONTH,
+  type CategoryBreakdownItem,
+  type FreezeCandidate,
+  type TodayStatus,
+  type WeeklyCompletion as WeeklyCompletionData,
+} from "../../utils/stats";
 import { THEMES } from "../../utils/themes";
+import { CategoryBreakdown } from "../stats/CategoryBreakdown";
+import { FreezeSummary } from "../stats/FreezeSummary";
+import { QuoteWidget } from "../stats/QuoteWidget";
+import { StreakCounter } from "../stats/StreakCounter";
+import { WeeklyCompletion } from "../stats/WeeklyCompletion";
 import { Button } from "../ui/Button";
 import { Checkbox } from "../ui/Checkbox";
 import { Modal } from "../ui/Modal";
+import {
+  BellIcon,
+  ChevronLeftIcon,
+  DownloadIcon,
+  FrostIcon,
+  GridIcon,
+  ProfileIcon,
+  SunIcon,
+  TagIcon,
+  UserIcon,
+  UsersIcon,
+} from "../ui/icons";
 import { BackupSection } from "./BackupSection";
+import { CategoryManager } from "./CategoryManager";
+import { FriendsManager } from "./FriendsManager";
+import { ProfileSection } from "./ProfileSection";
+import { ReminderList } from "./ReminderList";
+import { SettingsNav, type SettingsSection } from "./SettingsNav";
 import { StreakFreezeManager } from "./StreakFreezeManager";
-import { TagManager } from "./TagManager";
-import { TemplateManager } from "./TemplateManager";
 import { ThemeCarousel } from "./ThemeCarousel";
 import "./SettingsModal.css";
 
@@ -16,30 +48,65 @@ interface SettingsModalProps {
   onChangeTheme: (theme: ThemeId) => void;
   remindersEnabled: boolean;
   onChangeRemindersEnabled: (enabled: boolean) => void;
+  reminderStatus: ReminderStatus;
+  tasks: Task[];
+  completions: Set<string>;
   tags: Tag[];
-  onUpdateTag: (id: number, name: string, color: string) => void;
-  onDeleteTag: (id: number) => void;
+  onCreateTag: (name: string, color: string) => Promise<Tag>;
+  onUpdateTag: (id: string, name: string, color: string) => void;
+  onDeleteTag: (id: string) => void;
+  onReorderTags: (tagIds: string[]) => void;
   templates: Template[];
-  onDeleteTemplate: (id: number) => void;
+  onSaveAsTemplate: (tag: Tag, tasks: TemplateTaskBlueprint[]) => void;
+  onDeleteTemplate: (id: string) => void;
   frozenDays: string[];
   freezeCandidates: FreezeCandidate[];
   freezesRemaining: number;
   onFreezeDay: (date: string) => void;
   onUnfreezeDay: (date: string) => void;
   onStartArranging: () => void;
+  hiddenWidgets: WidgetId[];
+  onHideWidget: (id: WidgetId) => void;
+  onShowWidget: (id: WidgetId) => void;
+  streak: number;
+  bestStreak: number;
+  todayStatus: TodayStatus;
+  weekly: WeeklyCompletionData;
+  categoryBreakdown: CategoryBreakdownItem[];
+  quote: Quote;
   onClose: () => void;
   onSignOut: () => void;
+  online: boolean;
+  onViewFriend: (friend: Friend) => void;
 }
+
+const SECTIONS: SettingsSection[] = [
+  { id: "appearance", label: "Appearance", icon: SunIcon },
+  { id: "profile", label: "Profile", icon: ProfileIcon },
+  { id: "widgets", label: "Widgets", icon: GridIcon },
+  { id: "categories", label: "Categories", icon: TagIcon },
+  { id: "freezes", label: "Streak Freezes", icon: FrostIcon },
+  { id: "reminders", label: "Reminders", icon: BellIcon },
+  { id: "friends", label: "Friends", icon: UsersIcon },
+  { id: "backup", label: "Backup & Data", icon: DownloadIcon },
+  { id: "account", label: "Account", icon: UserIcon },
+];
 
 export function SettingsModal({
   theme,
   onChangeTheme,
   remindersEnabled,
   onChangeRemindersEnabled,
+  reminderStatus,
+  tasks,
+  completions,
   tags,
+  onCreateTag,
   onUpdateTag,
   onDeleteTag,
+  onReorderTags,
   templates,
+  onSaveAsTemplate,
   onDeleteTemplate,
   frozenDays,
   freezeCandidates,
@@ -47,77 +114,208 @@ export function SettingsModal({
   onFreezeDay,
   onUnfreezeDay,
   onStartArranging,
+  hiddenWidgets,
+  onHideWidget,
+  onShowWidget,
+  streak,
+  bestStreak,
+  todayStatus,
+  weekly,
+  categoryBreakdown,
+  quote,
   onClose,
   onSignOut,
+  online,
+  onViewFriend,
 }: SettingsModalProps) {
+  const [activeId, setActiveId] = useState(SECTIONS[0].id);
+  // Only meaningful on phone-sized modal widths, where the nav list and the
+  // section detail can't both fit - mirrors the same list/detail pattern
+  // used for the calendar vs. day panel on mobile.
+  const [showingDetail, setShowingDetail] = useState(false);
+
+  function selectSection(id: string) {
+    setActiveId(id);
+    setShowingDetail(true);
+  }
+
+  function renderWidgetPreview(id: WidgetId): ReactNode {
+    switch (id) {
+      case "streak":
+        return <StreakCounter streak={streak} best={bestStreak} today={todayStatus} />;
+      case "weekly":
+        return <WeeklyCompletion data={weekly} />;
+      case "freezes":
+        return <FreezeSummary remaining={freezesRemaining} total={MAX_FREEZES_PER_MONTH} />;
+      case "categories":
+        return <CategoryBreakdown data={categoryBreakdown} tags={tags} />;
+      case "quote":
+        return <QuoteWidget quote={quote} />;
+    }
+  }
+
+  const activeLabel = SECTIONS.find((s) => s.id === activeId)?.label ?? "";
+
   return (
-    <Modal title="Settings" onClose={onClose}>
-      <div className="settings">
-        <div className="settings__section">
-          <span className="settings__label">Theme</span>
-          <ThemeCarousel themes={THEMES} selected={theme} onSelect={onChangeTheme} />
-        </div>
+    <Modal title="Settings" onClose={onClose} size="wide">
+      <div className="settings" data-mobile-pane={showingDetail ? "detail" : "list"}>
+        <SettingsNav sections={SECTIONS} activeId={activeId} onSelect={selectSection} />
 
-        <div className="settings__section">
-          <span className="settings__label">Layout</span>
-          <div className="settings__row">
-            <span className="settings__row-text">
-              Reorder the streak, weekly %, and task list on the right panel
-            </span>
-            <Button onClick={onStartArranging}>Arrange right panel</Button>
+        <div className="settings-detail">
+          <div className="settings-detail__header">
+            <button
+              type="button"
+              className="settings-detail__back"
+              onClick={() => setShowingDetail(false)}
+              aria-label="Back to settings list"
+            >
+              <ChevronLeftIcon size={16} />
+            </button>
+            <h3 className="settings-detail__title">{activeLabel}</h3>
           </div>
-        </div>
 
-        <div className="settings__section">
-          <span className="settings__label">Categories</span>
-          <TagManager tags={tags} onUpdateTag={onUpdateTag} onDeleteTag={onDeleteTag} />
-        </div>
+          <div className="settings-detail__body">
+          <div className="settings-detail__pane" key={activeId}>
+            {activeId === "appearance" && (
+              <div className="settings__section">
+                <span className="settings__label">Theme</span>
+                <ThemeCarousel themes={THEMES} selected={theme} onSelect={onChangeTheme} />
+              </div>
+            )}
 
-        <div className="settings__section">
-          <span className="settings__label">Templates</span>
-          <TemplateManager
-            templates={templates}
-            tags={tags}
-            onDeleteTemplate={onDeleteTemplate}
-          />
-        </div>
+            {activeId === "profile" && <ProfileSection />}
 
-        <div className="settings__section">
-          <span className="settings__label">Streak freezes</span>
-          <StreakFreezeManager
-            frozenDays={frozenDays}
-            candidates={freezeCandidates}
-            freezesRemaining={freezesRemaining}
-            onFreeze={onFreezeDay}
-            onUnfreeze={onUnfreezeDay}
-          />
-        </div>
+            {activeId === "widgets" && (
+              <div className="settings__section">
+                <span className="settings__hint">
+                  Choose which widgets show up on your day panel, and preview what
+                  each one looks like with your real data.
+                </span>
+                <div className="widget-gallery">
+                  {WIDGET_IDS.map((id) => {
+                    const visible = !hiddenWidgets.includes(id);
+                    return (
+                      <div className="widget-gallery__item" key={id}>
+                        <div
+                          className={`widget-gallery__preview ${visible ? "" : "widget-gallery__preview--hidden"}`}
+                          aria-hidden="true"
+                        >
+                          {renderWidgetPreview(id)}
+                        </div>
+                        <Checkbox
+                          checked={visible}
+                          onChange={(checked) => (checked ? onShowWidget(id) : onHideWidget(id))}
+                          label={WIDGET_LABELS[id]}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="settings__row">
+                  <span className="settings__row-text">
+                    <span className="only-desktop">
+                      Reorder the streak, weekly %, and task list on the right panel
+                    </span>
+                    <span className="only-mobile">
+                      Reorder the streak, weekly %, and task list sections
+                    </span>
+                  </span>
+                  <Button onClick={onStartArranging}>
+                    <span className="only-desktop">Arrange right panel</span>
+                    <span className="only-mobile">Arrange panel</span>
+                  </Button>
+                </div>
+              </div>
+            )}
 
-        <div className="settings__section">
-          <span className="settings__label">Reminders</span>
-          <Checkbox
-            checked={remindersEnabled}
-            onChange={onChangeRemindersEnabled}
-            label="Notify me when a scheduled task's time arrives"
-          />
-          <span className="settings__hint">
-            Needs notification permission from macOS, and the app has to stay
-            running (it can be in the background) to send them.
-          </span>
-        </div>
+            {activeId === "categories" && (
+              <CategoryManager
+                tags={tags}
+                templates={templates}
+                onCreateTag={onCreateTag}
+                onUpdateTag={onUpdateTag}
+                onDeleteTag={onDeleteTag}
+                onReorderTags={onReorderTags}
+                onSaveTemplate={onSaveAsTemplate}
+                onDeleteTemplate={onDeleteTemplate}
+              />
+            )}
 
-        <div className="settings__section">
-          <span className="settings__label">Backup</span>
-          <BackupSection />
-        </div>
+            {activeId === "freezes" && (
+              <StreakFreezeManager
+                frozenDays={frozenDays}
+                candidates={freezeCandidates}
+                freezesRemaining={freezesRemaining}
+                onFreeze={onFreezeDay}
+                onUnfreeze={onUnfreezeDay}
+              />
+            )}
 
-        <div className="settings__section">
-          <span className="settings__label">Account</span>
-          <div className="settings__row">
-            <span className="settings__row-text">Sign out of your account on this device</span>
-            <Button variant="danger" onClick={onSignOut}>
-              Sign out
-            </Button>
+            {activeId === "reminders" && (
+              <div className="settings__section">
+                <Checkbox
+                  checked={remindersEnabled}
+                  onChange={onChangeRemindersEnabled}
+                  label="Notify me when a scheduled task's time arrives"
+                />
+                <span className="settings__hint">
+                  Needs notification permission - once granted, these arrive even if
+                  the app isn't open.
+                </span>
+                {remindersEnabled && reminderStatus.permission === "denied" && (
+                  <span className="settings__hint settings__hint--warning">
+                    Notifications permission was denied - enable it for this app in
+                    your device's system Settings.
+                  </span>
+                )}
+                {remindersEnabled && reminderStatus.lastError && (
+                  <span className="settings__hint settings__hint--warning">
+                    Couldn't schedule reminders: {reminderStatus.lastError}
+                  </span>
+                )}
+                {remindersEnabled && reminderStatus.permission === "granted" && (
+                  <span
+                    className={`settings__hint ${
+                      reminderStatus.attemptedCount > reminderStatus.confirmedCount
+                        ? "settings__hint--warning"
+                        : ""
+                    }`}
+                  >
+                    {reminderStatus.attemptedCount > reminderStatus.confirmedCount
+                      ? `${reminderStatus.attemptedCount - reminderStatus.confirmedCount} of ${reminderStatus.attemptedCount} reminders didn't actually register with the system - they may not arrive.`
+                      : `${reminderStatus.confirmedCount} reminder${reminderStatus.confirmedCount === 1 ? "" : "s"} confirmed with the system.`}
+                  </span>
+                )}
+                {remindersEnabled && (
+                  <>
+                    <span className="settings__label">Upcoming reminders</span>
+                    <ReminderList tasks={tasks} completions={completions} />
+                  </>
+                )}
+              </div>
+            )}
+
+            {activeId === "friends" && (
+              <FriendsManager
+                online={online}
+                onViewFriend={(friend) => {
+                  onViewFriend(friend);
+                  onClose();
+                }}
+              />
+            )}
+
+            {activeId === "backup" && <BackupSection />}
+
+            {activeId === "account" && (
+              <div className="settings__row">
+                <span className="settings__row-text">Sign out of your account on this device</span>
+                <Button variant="danger" onClick={onSignOut}>
+                  Sign out
+                </Button>
+              </div>
+            )}
+          </div>
           </div>
         </div>
       </div>

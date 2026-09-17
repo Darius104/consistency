@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import type { TodayStatus } from "../../utils/stats";
+import { streakTier, type TodayStatus } from "../../utils/stats";
 import { FrostIcon } from "../ui/icons";
 import { Flame } from "./Flame";
 import "./stats.css";
@@ -9,15 +9,6 @@ interface StreakCounterProps {
   streak: number;
   best: number;
   today: TodayStatus;
-  freezesRemaining: number;
-}
-
-function tier(streak: number): "cold" | "low" | "warm" | "hot" | "blazing" {
-  if (streak === 0) return "cold";
-  if (streak < 3) return "low";
-  if (streak < 7) return "warm";
-  if (streak < 30) return "hot";
-  return "blazing";
 }
 
 function statusModifier(today: TodayStatus): string {
@@ -50,13 +41,8 @@ function statusMessage(streak: number, today: TodayStatus): ReactNode {
   );
 }
 
-export function StreakCounter({
-  streak,
-  best,
-  today,
-  freezesRemaining,
-}: StreakCounterProps) {
-  const t = tier(streak);
+export function StreakCounter({ streak, best, today }: StreakCounterProps) {
+  const t = streakTier(streak);
   const isRecordStreak = streak > 0 && streak >= best;
 
   // How alive the flame looks - driven by today's completion, not the
@@ -81,6 +67,26 @@ export function StreakCounter({
     }
     prevStreak.current = streak;
   }, [streak]);
+
+  // A second, distinct one-shot moment from the streak pop above - this
+  // fires the instant *today* gets finished, which isn't always the same
+  // event as the streak incrementing (a frozen day protects the streak
+  // without needing every task done, so completing it afterward should
+  // still feel like a small win of its own).
+  const prevAllDone = useRef(today.allDone);
+  const [barPop, setBarPop] = useState(false);
+
+  useEffect(() => {
+    if (today.allDone && !prevAllDone.current) {
+      setBarPop(true);
+      const timer = window.setTimeout(() => setBarPop(false), 500);
+      prevAllDone.current = today.allDone;
+      return () => window.clearTimeout(timer);
+    }
+    prevAllDone.current = today.allDone;
+  }, [today.allDone]);
+
+  const progressState = today.allDone ? "complete" : today.frozen ? "frozen" : "pending";
 
   return (
     <div className={`streak-hero streak-hero--${t}`}>
@@ -108,12 +114,20 @@ export function StreakCounter({
         )}
       </div>
       <div className="streak-hero__secondary">
+        <div
+          className={`streak-hero__progress streak-hero__progress--${progressState} ${
+            barPop ? "streak-hero__progress--pop" : ""
+          }`}
+          role="progressbar"
+          aria-valuenow={Math.round(power * 100)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Today's progress"
+        >
+          <div className="streak-hero__progress-fill" style={{ width: `${power * 100}%` }} />
+        </div>
         <div className={`streak-hero__status ${statusModifier(today)}`}>
           {statusMessage(streak, today)}
-        </div>
-        <div className="streak-hero__freezes">
-          <FrostIcon size={12} className="streak-hero__inline-icon" />
-          {freezesRemaining} freeze{freezesRemaining === 1 ? "" : "s"} left this month
         </div>
       </div>
     </div>

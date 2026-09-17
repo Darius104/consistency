@@ -48,6 +48,22 @@
   border-color: var(--accent);
 }
 
+/* A frozen day gets its own icy wash so it reads as protected at a glance,
+   not just a plain gray badge in the corner - layered as a second
+   background-image on top of the heat-alpha tint (rather than replacing
+   it) so completion heat still shows through underneath. */
+.cal-day--frozen {
+  border-color: var(--frost);
+  background-image: linear-gradient(
+      rgba(var(--frost-rgb), 0.16),
+      rgba(var(--frost-rgb), 0.16)
+    ),
+    linear-gradient(
+      rgba(var(--accent-rgb), var(--heat-alpha, 0)),
+      rgba(var(--accent-rgb), var(--heat-alpha, 0))
+    );
+}
+
 .cal-day__number {
   font-size: var(--text-sm);
   color: var(--text-secondary);
@@ -98,8 +114,18 @@
 }
 
 .cal-day__frozen {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--frost);
+  color: #0d2733;
   display: inline-flex;
-  color: var(--text-secondary);
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  /* Same pop-in as .cal-day__check - only ever mounts the instant a day
+     actually becomes frozen, a deliberate moment worth the same emphasis. */
+  animation: cal-day-check-in 260ms var(--ease-out);
 }
 
 .cal-day__indicator {

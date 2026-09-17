@@ -1,0 +1,72 @@
+.offline-banner {
+  position: fixed;
+  top: var(--space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  animation: offline-banner-in 200ms var(--ease-out);
+  pointer-events: none;
+}
+
+.offline-banner__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.offline-banner--offline .offline-banner__dot {
+  background: var(--priority-medium);
+}
+
+.offline-banner--syncing .offline-banner__dot {
+  background: var(--success);
+  animation: offline-banner-pulse 1s ease-in-out infinite;
+}
+
+.offline-banner__check {
+  flex: none;
+  color: var(--success);
+}
+
+.offline-banner--success {
+  color: var(--text);
+}
+
+@keyframes offline-banner-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -6px);
+  }
+}
+
+.offline-banner--leaving {
+  animation: offline-banner-out 200ms var(--ease-out) forwards;
+}
+
+@keyframes offline-banner-out {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -6px);
+  }
+}
+
+@keyframes offline-banner-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}

@@ -13,8 +13,17 @@
   background: var(--success-soft);
 }
 
+/* The dragged group visually lifts and follows the pointer 1:1 (see
+   TaskList.tsx's onMove, which sets style.transform directly) instead of
+   just sitting dimmed in place. `scale` is a separate CSS property from
+   `transform`, so it composes with the JS-driven translateY instead of
+   fighting it. */
 .task-group--dragging {
-  opacity: 0.4;
+  position: relative;
+  z-index: 5;
+  transition: none;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  scale: 1.02;
 }
 
 .task-group__header {
@@ -26,23 +35,30 @@
   padding: 0;
   color: var(--text-secondary);
   width: 100%;
+  font: inherit;
+  cursor: pointer;
 }
 
+/* A dedicated handle (rather than grab-anywhere on the whole header) means
+   touch-action:none is scoped to just this small element - everywhere else
+   on the header (and the rest of the panel) keeps ordinary native touch
+   scrolling, with none of the manual scroll/momentum reimplementation
+   grab-anywhere would otherwise require (see useReorderDrag's
+   bindHandlePointerDown). */
 .task-group__handle {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   flex: none;
   color: var(--text-muted);
-  opacity: 0;
   cursor: grab;
+  touch-action: none;
   -webkit-user-select: none;
   user-select: none;
-  transition: opacity 0.12s ease;
 }
 
-.task-group:hover .task-group__handle {
-  opacity: 1;
+.task-group--dragging .task-group__handle {
+  cursor: grabbing;
 }
 
 .task-group--complete .task-group__header {
@@ -77,6 +93,14 @@
   white-space: nowrap;
   font-size: var(--text-sm);
   font-weight: 600;
+}
+
+/* Phone-sized screens: category titles read as too small at the desktop
+   size. */
+@media (max-width: 700px) {
+  .task-group__label {
+    font-size: var(--text-lg);
+  }
 }
 
 .task-group__count {

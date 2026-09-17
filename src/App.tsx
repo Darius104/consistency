@@ -4,22 +4,32 @@ import { useSession } from "./auth/useSession";
 import { CalendarView } from "./components/calendar/CalendarView";
 import { PhraseModal } from "./components/calendar/PhraseModal";
 import { DayPanel } from "./components/day-panel/DayPanel";
+import { NoteForm } from "./components/day-panel/NoteForm";
 import { TaskViewModal } from "./components/day-panel/TaskViewModal";
-import { ImportPrompt } from "./import/ImportPrompt";
-import { peekLegacyData } from "./import/importLegacyData";
 import { supabase } from "./lib/supabaseClient";
+import { clearAllCache } from "./db/localCache";
+import { ensureProfile, syncMyThemeToProfile, type Friend } from "./db/friends";
+import { onSyncComplete, trySync } from "./sync";
+import { useOnlineStatus } from "./hooks/useOnlineStatus";
+import { useRealtimeSync } from "./hooks/useRealtimeSync";
+import { OfflineBanner } from "./components/OfflineBanner";
+import { FriendCalendarView } from "./components/friends/FriendCalendarView";
 import { SettingsModal } from "./components/settings/SettingsModal";
 import { TaskForm } from "./components/task-form/TaskForm";
+import { ConfirmModal } from "./components/ui/ConfirmModal";
 import {
   addStreakFreeze,
   applyTemplate,
+  createNote,
   createTag,
   createTask,
   createTemplateFromTasks,
+  deleteNote,
   deleteTag,
   deleteTask,
   deleteTemplate,
   getAllCompletions,
+  getAllNotes,
   getAllTasks,
   getSetting,
   getStreakFreezes,
@@ -28,15 +38,18 @@ import {
   removeStreakFreeze,
   setCompletion,
   setSetting,
+  updateNote,
+  updateNotePositions,
   updateTag,
   updateTagOrder,
   updateTask,
   updateTaskOrder,
 } from "./db/queries";
-import type { NewTask, Tag, Task, Template, TemplateTaskBlueprint, ThemeId } from "./types";
+import type { DayNote, NewTask, Tag, Task, Template, TemplateTaskBlueprint, ThemeId } from "./types";
 import { startOfWeek, todayKey } from "./utils/dates";
 import { tasksScheduledOn } from "./utils/recurrence";
 import {
+  computeCategoryBreakdown,
   computeLongestStreak,
   computeStreak,
   computeTodayStatus,
@@ -45,12 +58,18 @@ import {
   getFreezeCandidates,
 } from "./utils/stats";
 import { DEFAULT_THEME } from "./utils/themes";
-import { generateRandomThemeColors, type RandomThemeColors } from "./utils/randomTheme";
+import {
+  generateRandomThemeColors,
+  RANDOM_THEME_CSS_VARS,
+  type RandomThemeColors,
+} from "./utils/randomTheme";
 import { getQuoteOfDay } from "./utils/quotes";
 import {
   DEFAULT_PANEL_ORDER,
   parsePanelOrder,
+  parseHiddenWidgets,
   type PanelBlockId,
+  type WidgetId,
 } from "./utils/panelOrder";
 import { useTaskReminders } from "./hooks/useTaskReminders";
 import "./App.css";
@@ -59,23 +78,8 @@ const THEME_SETTING_KEY = "theme";
 const RANDOM_THEME_SETTING_KEY = "randomThemeColors";
 const REMINDERS_SETTING_KEY = "remindersEnabled";
 const PANEL_ORDER_SETTING_KEY = "panelOrder";
+const HIDDEN_WIDGETS_SETTING_KEY = "hiddenWidgets";
 const PHRASE_VIEW_SETTING_KEY = "lastPhraseViewDate";
-const LEGACY_IMPORT_SETTING_KEY = "legacyImportStatus";
-
-const RANDOM_THEME_CSS_VARS: Record<keyof RandomThemeColors, string> = {
-  bg: "--bg",
-  bgElevated: "--bg-elevated",
-  surface: "--surface",
-  surfaceHover: "--surface-hover",
-  border: "--border",
-  borderStrong: "--border-strong",
-  text: "--text",
-  textSecondary: "--text-secondary",
-  textMuted: "--text-muted",
-  accent: "--accent",
-  accentRgb: "--accent-rgb",
-  accentSoft: "--accent-soft",
-};
 
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -83,11 +87,17 @@ export default function App() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [completions, setCompletions] = useState<Set<string>>(new Set());
   const [freezes, setFreezes] = useState<Set<string>>(new Set());
+  const [notes, setNotes] = useState<DayNote[]>([]);
   const [selectedDate, setSelectedDate] = useState(todayKey());
+  // Only meaningful on phone-sized screens (see the max-width:700px query in
+  // CalendarView.css/App.css) - lets the day panel take over the whole
+  // screen instead of always sharing it with the compact calendar above.
+  const [dayPanelExpanded, setDayPanelExpanded] = useState(false);
   const [theme, setTheme] = useState<ThemeId>(DEFAULT_THEME);
   const [randomColors, setRandomColors] = useState<RandomThemeColors | null>(null);
   const [remindersEnabled, setRemindersEnabled] = useState(false);
   const [panelOrder, setPanelOrder] = useState<PanelBlockId[]>(DEFAULT_PANEL_ORDER);
+  const [hiddenWidgets, setHiddenWidgets] = useState<WidgetId[]>([]);
   const [arranging, setArranging] = useState(false);
   const [loading, setLoading] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -97,42 +107,53 @@ export default function App() {
   const [formState, setFormState] = useState<
     { open: false } | { open: true; task?: Task }
   >({ open: false });
+  const [noteFormState, setNoteFormState] = useState<
+    { open: false } | { open: true; note?: DayNote }
+  >({ open: false });
+  // Non-null while confirming a task deletion - both the row's quick delete
+  // button and the task form's own Delete button set this instead of
+  // deleting immediately, so both paths get the same confirmation step.
+  const [pendingDeleteTask, setPendingDeleteTask] = useState<Task | null>(null);
+  // Non-null while looking at a friend's read-only calendar instead of your
+  // own - never persisted, always starts back at null (your own calendar)
+  // on a fresh launch.
+  const [viewingFriend, setViewingFriend] = useState<Friend | null>(null);
 
-  const { session, loading: sessionLoading } = useSession();
-  const [justSignedUp, setJustSignedUp] = useState(false);
-  const [legacyImportStatus, setLegacyImportStatus] = useState<string | null>(null);
-  const [importPeekCounts, setImportPeekCounts] = useState<
-    { tags: number; tasks: number; completions: number } | null
-  >(null);
+  const { session } = useSession();
+  const { online, syncing, syncNow } = useOnlineStatus(!!session);
+  useRealtimeSync(session?.user.id ?? null);
 
   useEffect(() => {
-    if (session) void refreshAll();
+    if (!session) return;
+    void refreshAll();
+    // Covers both cold start (empty cache, first sign-in on this device)
+    // and switching accounts without restarting the app - useOnlineStatus's
+    // own mount-time sync only ever fires once per app lifetime.
+    void trySync();
+    // A no-op after the first time (it never overwrites a name you've since
+    // customized) - safe to just call unconditionally every session.
+    void ensureProfile();
   }, [session]);
 
-  // Only ever probes for a local legacy database right after a brand-new
-  // sign-up, never on a plain sign-in - a returning user's data is already
-  // in their account, there's nothing to import.
-  useEffect(() => {
-    if (!justSignedUp || loading || legacyImportStatus !== null) return;
-    void peekLegacyData().then((peek) => {
-      if (peek.hasData) {
-        setImportPeekCounts(peek.counts);
-      } else {
-        setLegacyImportStatus("not_found");
-        void setSetting(LEGACY_IMPORT_SETTING_KEY, "not_found");
-      }
-    });
-  }, [justSignedUp, loading, legacyImportStatus]);
+  // Re-reads from the cache into React state whenever a background sync
+  // actually pulls fresh data (a queued write flushing, a reconnect, etc.)
+  // - not just in response to a user action in this window.
+  useEffect(() => onSyncComplete(() => void refreshAll()), []);
 
+  // Skipped while viewing a friend's calendar - FriendCalendarView takes over
+  // applying (and restoring) the document's theme for that duration instead,
+  // since it needs to show the friend's colors, not your own.
   useEffect(() => {
+    if (viewingFriend) return;
     document.documentElement.setAttribute("data-theme", theme);
-  }, [theme]);
+  }, [theme, viewingFriend]);
 
   // The eight hand-picked themes are static [data-theme] blocks in
   // tokens.css; "random" has no such block, so its colors are applied
   // directly as inline custom properties instead - and cleared again the
   // moment a real theme is picked, so its static block takes back over.
   useEffect(() => {
+    if (viewingFriend) return;
     const root = document.documentElement.style;
     const active = theme === "random" ? randomColors : null;
     for (const key of Object.keys(RANDOM_THEME_CSS_VARS) as (keyof RandomThemeColors)[]) {
@@ -140,9 +161,9 @@ export default function App() {
       if (active) root.setProperty(cssVar, active[key]);
       else root.removeProperty(cssVar);
     }
-  }, [theme, randomColors]);
+  }, [theme, randomColors, viewingFriend]);
 
-  useTaskReminders(tasks, completions, remindersEnabled);
+  const reminderStatus = useTaskReminders(tasks, completions, remindersEnabled);
 
   async function refreshAll() {
     const [
@@ -151,54 +172,55 @@ export default function App() {
       templateRows,
       completionRows,
       freezeRows,
+      noteRows,
       savedTheme,
       savedRandomColors,
       savedReminders,
       savedPanelOrder,
+      savedHiddenWidgets,
       savedPhraseViewDate,
-      savedLegacyImportStatus,
     ] = await Promise.all([
       getAllTasks(),
       getTags(),
       getTemplates(),
       getAllCompletions(),
       getStreakFreezes(),
+      getAllNotes(),
       getSetting(THEME_SETTING_KEY),
       getSetting(RANDOM_THEME_SETTING_KEY),
       getSetting(REMINDERS_SETTING_KEY),
       getSetting(PANEL_ORDER_SETTING_KEY),
+      getSetting(HIDDEN_WIDGETS_SETTING_KEY),
       getSetting(PHRASE_VIEW_SETTING_KEY),
-      getSetting(LEGACY_IMPORT_SETTING_KEY),
     ]);
     setTasks(taskRows);
     setTags(tagRows);
     setTemplates(templateRows);
     setCompletions(completionRows);
     setFreezes(freezeRows);
-    if (savedTheme) setTheme(savedTheme as ThemeId);
-    if (savedRandomColors) setRandomColors(JSON.parse(savedRandomColors));
+    setNotes(noteRows);
+    const resolvedTheme = savedTheme ? (savedTheme as ThemeId) : DEFAULT_THEME;
+    const resolvedRandomColors = savedRandomColors ? JSON.parse(savedRandomColors) : null;
+    if (savedTheme) setTheme(resolvedTheme);
+    if (savedRandomColors) setRandomColors(resolvedRandomColors);
     if (savedReminders !== null) setRemindersEnabled(savedReminders === "true");
     setPanelOrder(parsePanelOrder(savedPanelOrder));
+    setHiddenWidgets(parseHiddenWidgets(savedHiddenWidgets));
     setLastPhraseViewDate(savedPhraseViewDate);
-    setLegacyImportStatus(savedLegacyImportStatus);
     setLoading(false);
+    // Covers accounts whose theme was already set before profiles/friends
+    // existed - not just future changes via handleChangeTheme below.
+    void syncMyThemeToProfile(resolvedTheme, resolvedRandomColors).catch(() => {});
   }
 
   async function handleSignOut() {
     await supabase.auth.signOut();
-  }
-
-  async function handleImportDone() {
-    setImportPeekCounts(null);
-    await setSetting(LEGACY_IMPORT_SETTING_KEY, "done");
-    setLegacyImportStatus("done");
-    await refreshAll();
-  }
-
-  async function handleImportSkip() {
-    setImportPeekCounts(null);
-    await setSetting(LEGACY_IMPORT_SETTING_KEY, "skipped");
-    setLegacyImportStatus("skipped");
+    // A different account signing in on this same device must never see
+    // this account's cached rows or replay its queued writes.
+    await clearAllCache();
+    // Otherwise a different account signing in without an app restart could
+    // be left pointed at the previous account's friend.
+    setViewingFriend(null);
   }
 
   async function handleOpenPhrase() {
@@ -214,11 +236,13 @@ export default function App() {
     // Re-rolls every time "random" is picked, even if it's already active -
     // that's the whole point of it being random rather than just one more
     // fixed swatch.
+    let nextRandomColors: RandomThemeColors | null = null;
     if (next === "random") {
-      const colors = generateRandomThemeColors();
-      setRandomColors(colors);
-      await setSetting(RANDOM_THEME_SETTING_KEY, JSON.stringify(colors));
+      nextRandomColors = generateRandomThemeColors();
+      setRandomColors(nextRandomColors);
+      await setSetting(RANDOM_THEME_SETTING_KEY, JSON.stringify(nextRandomColors));
     }
+    await syncMyThemeToProfile(next, nextRandomColors);
   }
 
   async function handleChangeRemindersEnabled(next: boolean) {
@@ -229,6 +253,18 @@ export default function App() {
   async function handleReorderPanel(next: PanelBlockId[]) {
     setPanelOrder(next);
     await setSetting(PANEL_ORDER_SETTING_KEY, JSON.stringify(next));
+  }
+
+  async function handleHideWidget(id: WidgetId) {
+    const next = hiddenWidgets.includes(id) ? hiddenWidgets : [...hiddenWidgets, id];
+    setHiddenWidgets(next);
+    await setSetting(HIDDEN_WIDGETS_SETTING_KEY, JSON.stringify(next));
+  }
+
+  async function handleShowWidget(id: WidgetId) {
+    const next = hiddenWidgets.filter((w) => w !== id);
+    setHiddenWidgets(next);
+    await setSetting(HIDDEN_WIDGETS_SETTING_KEY, JSON.stringify(next));
   }
 
   function handleStartArranging() {
@@ -279,7 +315,13 @@ export default function App() {
     await refreshAll();
   }
 
-  async function handleReorderTasks(taskIds: number[]) {
+  async function handleConfirmDeleteTask() {
+    if (!pendingDeleteTask) return;
+    await handleDeleteTask(pendingDeleteTask);
+    setPendingDeleteTask(null);
+  }
+
+  async function handleReorderTasks(taskIds: string[]) {
     const orderMap = new Map(taskIds.map((id, i) => [id, i]));
     setTasks((prev) =>
       prev.map((t) => (orderMap.has(t.id) ? { ...t, sortOrder: orderMap.get(t.id)! } : t)),
@@ -295,17 +337,17 @@ export default function App() {
     return tag;
   }
 
-  async function handleUpdateTag(id: number, name: string, color: string) {
+  async function handleUpdateTag(id: string, name: string, color: string) {
     await updateTag(id, name, color);
     await refreshAll();
   }
 
-  async function handleDeleteTag(id: number) {
+  async function handleDeleteTag(id: string) {
     await deleteTag(id);
     await refreshAll();
   }
 
-  async function handleReorderTags(tagIds: number[]) {
+  async function handleReorderTags(tagIds: string[]) {
     const orderMap = new Map(tagIds.map((id, i) => [id, i]));
     setTags((prev) =>
       [...prev]
@@ -326,7 +368,7 @@ export default function App() {
     });
   }
 
-  async function handleApplyTemplate(templateId: number) {
+  async function handleApplyTemplate(templateId: string) {
     await applyTemplate(templateId, selectedDate);
     await refreshAll();
   }
@@ -337,27 +379,58 @@ export default function App() {
     setViewingTask(null);
   }
 
-  async function handleDeleteTemplate(id: number) {
+  async function handleDeleteTemplate(id: string) {
     await deleteTemplate(id);
     setTemplates((prev) => prev.filter((t) => t.id !== id));
   }
 
-  if (sessionLoading) {
-    return <div className="app-loading">Loading…</div>;
+  async function handleSaveNote(content: string) {
+    if (noteFormState.open && noteFormState.note) {
+      const id = noteFormState.note.id;
+      setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, content } : n)));
+      await updateNote(id, content);
+    } else {
+      const note = await createNote(selectedDate, content);
+      setNotes((prev) => [...prev, note]);
+    }
+    setNoteFormState({ open: false });
+  }
+
+  async function handleDeleteNote(id: string) {
+    setNotes((prev) => prev.filter((n) => n.id !== id));
+    await deleteNote(id);
+  }
+
+  async function handleReorderNotePositions(
+    updates: { id: string; afterGroupKey: string | null; sortOrder: number }[],
+  ) {
+    const byId = new Map(updates.map((u) => [u.id, u]));
+    setNotes((prev) =>
+      prev.map((n) => {
+        const u = byId.get(n.id);
+        return u ? { ...n, afterGroupKey: u.afterGroupKey, sortOrder: u.sortOrder } : n;
+      }),
+    );
+    await updateNotePositions(updates);
   }
 
   if (!session) {
-    return <AuthScreen onSignedUp={() => setJustSignedUp(true)} />;
+    return <AuthScreen />;
   }
 
   if (loading) {
     return <div className="app-loading">Loading…</div>;
   }
 
+  if (viewingFriend) {
+    return <FriendCalendarView friend={viewingFriend} onBack={() => setViewingFriend(null)} />;
+  }
+
   const occurrences = tasksScheduledOn(tasks, selectedDate).map((task) => ({
     task,
     completed: completions.has(`${task.id}:${selectedDate}`),
   }));
+  const dayNotes = notes.filter((n) => n.date === selectedDate);
 
   const streak = computeStreak(tasks, completions, freezes, todayKey());
   const bestStreak = Math.max(
@@ -378,9 +451,17 @@ export default function App() {
     .reverse();
   const freezeCandidates = getFreezeCandidates(tasks, completions, freezes, todayKey());
   const phraseUnseen = lastPhraseViewDate !== todayKey();
+  const quote = getQuoteOfDay(todayKey());
+
+  const categoryBreakdown = computeCategoryBreakdown(
+    tasks,
+    completions,
+    startOfWeek(selectedDate),
+  );
 
   return (
-    <div className="app">
+    <div className={`app ${dayPanelExpanded ? "app--day-expanded" : ""}`}>
+      <OfflineBanner online={online} syncing={syncing} />
       <CalendarView
         tasks={tasks}
         completions={completions}
@@ -390,7 +471,14 @@ export default function App() {
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenPhrase={handleOpenPhrase}
         phraseUnseen={phraseUnseen}
+        onSyncNow={syncNow}
+        syncing={syncing}
       />
+      {/* Mobile-only divider between the calendar and the day panel below it -
+          a separate element, not the day panel's own border, since that edge
+          is where the day panel's scroll-fade mask fades to transparent (see
+          DayPanel.css) and would fade a border drawn there away too. */}
+      <div className="mobile-divider" aria-hidden="true" />
       <DayPanel
         selectedDate={selectedDate}
         occurrences={occurrences}
@@ -399,14 +487,20 @@ export default function App() {
         bestStreak={bestStreak}
         todayStatus={todayStatus}
         weekly={weekly}
-        freezesRemainingThisMonth={freezesRemainingThisMonth}
+        freezesRemaining={freezesRemainingThisMonth}
+        categoryBreakdown={categoryBreakdown}
+        quote={quote}
         order={panelOrder}
         onReorder={handleReorderPanel}
+        hiddenWidgets={hiddenWidgets}
+        onHideWidget={handleHideWidget}
+        onShowWidget={handleShowWidget}
         arranging={arranging}
         onFinishArranging={() => setArranging(false)}
+        onStartArranging={() => setArranging(true)}
         onToggle={handleToggle}
         onView={setViewingTask}
-        onDelete={handleDeleteTask}
+        onDelete={setPendingDeleteTask}
         onReorderTasks={handleReorderTasks}
         onReorderTags={handleReorderTags}
         onSaveAsTemplate={handleSaveAsTemplate}
@@ -414,7 +508,22 @@ export default function App() {
         templates={templates}
         onApplyTemplate={handleApplyTemplate}
         onAddTask={() => setFormState({ open: true })}
+        notes={dayNotes}
+        onAddNote={() => setNoteFormState({ open: true })}
+        onEditNote={(note) => setNoteFormState({ open: true, note })}
+        onDeleteNote={handleDeleteNote}
+        onReorderNotePositions={handleReorderNotePositions}
+        expanded={dayPanelExpanded}
+        onToggleExpanded={() => setDayPanelExpanded((v) => !v)}
       />
+
+      {noteFormState.open && (
+        <NoteForm
+          note={noteFormState.note}
+          onSave={handleSaveNote}
+          onClose={() => setNoteFormState({ open: false })}
+        />
+      )}
 
       {formState.open && (
         <TaskForm
@@ -424,7 +533,7 @@ export default function App() {
           onCreateTag={handleCreateTag}
           onSave={handleSaveTask}
           onDelete={
-            formState.task ? () => handleDeleteTask(formState.task!) : undefined
+            formState.task ? () => setPendingDeleteTask(formState.task!) : undefined
           }
           onClose={() => setFormState({ open: false })}
         />
@@ -436,10 +545,16 @@ export default function App() {
           onChangeTheme={handleChangeTheme}
           remindersEnabled={remindersEnabled}
           onChangeRemindersEnabled={handleChangeRemindersEnabled}
+          reminderStatus={reminderStatus}
+          tasks={tasks}
+          completions={completions}
           tags={tags}
+          onCreateTag={handleCreateTag}
           onUpdateTag={handleUpdateTag}
           onDeleteTag={handleDeleteTag}
+          onReorderTags={handleReorderTags}
           templates={templates}
+          onSaveAsTemplate={handleSaveAsTemplate}
           onDeleteTemplate={handleDeleteTemplate}
           frozenDays={frozenDaysThisMonth}
           freezeCandidates={freezeCandidates}
@@ -447,22 +562,25 @@ export default function App() {
           onFreezeDay={handleFreezeDay}
           onUnfreezeDay={handleUnfreezeDay}
           onStartArranging={handleStartArranging}
+          hiddenWidgets={hiddenWidgets}
+          onHideWidget={handleHideWidget}
+          onShowWidget={handleShowWidget}
+          streak={streak}
+          bestStreak={bestStreak}
+          todayStatus={todayStatus}
+          weekly={weekly}
+          categoryBreakdown={categoryBreakdown}
+          quote={quote}
           onClose={() => setSettingsOpen(false)}
           onSignOut={handleSignOut}
-        />
-      )}
-
-      {importPeekCounts && (
-        <ImportPrompt
-          counts={importPeekCounts}
-          onDone={handleImportDone}
-          onSkip={handleImportSkip}
+          online={online}
+          onViewFriend={setViewingFriend}
         />
       )}
 
       {phraseModalOpen && (
         <PhraseModal
-          quote={getQuoteOfDay(todayKey())}
+          quote={quote}
           onClose={() => setPhraseModalOpen(false)}
         />
       )}
@@ -473,6 +591,15 @@ export default function App() {
           tag={tags.find((t) => t.id === viewingTask.tagId)}
           onEdit={handleEditFromView}
           onClose={() => setViewingTask(null)}
+        />
+      )}
+
+      {pendingDeleteTask && (
+        <ConfirmModal
+          title="Delete task"
+          message={`Delete "${pendingDeleteTask.title}"? This can't be undone.`}
+          onConfirm={handleConfirmDeleteTask}
+          onClose={() => setPendingDeleteTask(null)}
         />
       )}
     </div>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { ReactNode } from "react";
+import type { PointerEvent, ReactNode, SyntheticEvent } from "react";
 import { BookmarkIcon, CheckIcon, ChevronRightIcon, GripIcon } from "../ui/icons";
 import "./TaskGroup.css";
 
@@ -13,7 +13,8 @@ interface TaskGroupProps {
   children: ReactNode;
   draggable?: boolean;
   dragging?: boolean;
-  onDragHandleDown?: () => void;
+  onHandlePointerDown?: (e: PointerEvent) => void;
+  suppressClick?: (e: SyntheticEvent) => boolean;
   onSaveAsTemplate?: () => void;
   hasTemplate?: boolean;
 }
@@ -28,7 +29,8 @@ export function TaskGroup({
   children,
   draggable,
   dragging,
-  onDragHandleDown,
+  onHandlePointerDown,
+  suppressClick,
   onSaveAsTemplate,
   hasTemplate,
 }: TaskGroupProps) {
@@ -39,21 +41,27 @@ export function TaskGroup({
     <div
       className={`task-group ${isComplete ? "task-group--complete" : ""} ${dragging ? "task-group--dragging" : ""}`}
     >
-      <button
-        type="button"
+      <div
         className="task-group__header"
-        onClick={onToggle}
+        role="button"
+        tabIndex={0}
+        onClick={(e) => {
+          if (suppressClick?.(e)) return;
+          onToggle();
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onToggle();
+          }
+        }}
         aria-expanded={!collapsed}
       >
         {draggable && (
           <span
             className="task-group__handle"
+            onPointerDown={onHandlePointerDown}
             aria-hidden="true"
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              onDragHandleDown?.();
-            }}
-            onClick={(e) => e.stopPropagation()}
           >
             <GripIcon size={13} />
           </span>
@@ -93,7 +101,7 @@ export function TaskGroup({
             )}
           </button>
         )}
-      </button>
+      </div>
       <div
         className={`task-group__items-wrapper ${collapsed ? "task-group__items-wrapper--collapsed" : ""}`}
         aria-hidden={collapsed}

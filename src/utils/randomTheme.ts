@@ -33,6 +33,24 @@ function hex(h: number, s: number, l: number): string {
     .join("")}`;
 }
 
+// CSS custom property each RandomThemeColors field maps onto - shared by
+// App.tsx (applying your own random theme) and FriendCalendarView (applying
+// a friend's, while you're viewing their calendar).
+export const RANDOM_THEME_CSS_VARS: Record<keyof RandomThemeColors, string> = {
+  bg: "--bg",
+  bgElevated: "--bg-elevated",
+  surface: "--surface",
+  surfaceHover: "--surface-hover",
+  border: "--border",
+  borderStrong: "--border-strong",
+  text: "--text",
+  textSecondary: "--text-secondary",
+  textMuted: "--text-muted",
+  accent: "--accent",
+  accentRgb: "--accent-rgb",
+  accentSoft: "--accent-soft",
+};
+
 export function generateRandomThemeColors(): RandomThemeColors {
   const hue = Math.floor(Math.random() * 360);
   const [ar, ag, ab] = hslToRgb(hue, 72, 66);

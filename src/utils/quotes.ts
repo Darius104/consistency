@@ -5,6 +5,17 @@ export interface Quote {
   text: string;
 }
 
+// Reuses the app's existing semantic color tokens instead of inventing new
+// ones - each category gets a color that already means something similar
+// elsewhere (risk -> the same red as a high-priority task, life -> the
+// same green as a completed one).
+export const QUOTE_CATEGORY_COLOR_VAR: Record<QuoteCategory, string> = {
+  risk: "--priority-high",
+  mindset: "--accent",
+  patience: "--priority-medium",
+  life: "--success",
+};
+
 export const QUOTE_CATEGORY_LABEL: Record<QuoteCategory, string> = {
   risk: "Risk & losses",
   mindset: "Mindset & execution",

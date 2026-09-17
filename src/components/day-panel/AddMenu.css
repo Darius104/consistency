@@ -1,0 +1,83 @@
+.add-menu {
+  position: relative;
+}
+
+.add-menu__popup {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 10;
+  min-width: 190px;
+  max-width: 260px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transform-origin: top right;
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    transform: scale(0.95) translateY(-4px);
+  }
+}
+
+.add-menu__option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  text-align: left;
+  color: var(--text);
+  font-size: var(--text-sm);
+  transition: background-color 0.12s ease;
+}
+
+.add-menu__option:hover {
+  background: var(--surface-hover);
+}
+
+.add-menu__option-icon {
+  flex: none;
+  color: var(--text-muted);
+}
+
+.add-menu__option-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.add-menu__option-meta {
+  flex: none;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.add-menu__option-chevron {
+  flex: none;
+  color: var(--text-muted);
+}
+
+.add-menu__option--back {
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-bottom: 2px;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  padding-bottom: var(--space-2);
+}

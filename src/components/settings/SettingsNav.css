@@ -1,0 +1,74 @@
+.settings-nav {
+  flex: none;
+  width: 210px;
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-right: 1px solid var(--border);
+  background: var(--bg);
+  overflow-y: auto;
+}
+
+.settings-nav__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: var(--text-md);
+  color: var(--text-secondary);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.settings-nav__icon {
+  flex: none;
+  display: inline-flex;
+  color: var(--text-muted);
+}
+
+.settings-nav__label {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-nav__item:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.settings-nav__chevron {
+  flex: none;
+  color: var(--text-muted);
+}
+
+/* The "currently open section" highlight only means something on desktop,
+   where the nav sits permanently next to the detail pane it's describing.
+   On mobile, opening a section replaces the list with the detail pane
+   entirely (see .settings[data-mobile-pane] below) - by the time you're
+   looking at the list again you've navigated back to choose something
+   else, so a leftover highlight on whatever you looked at last doesn't
+   describe anything currently on screen; it just reads as a stray
+   highlighted row. */
+@media (min-width: 701px) {
+  .settings-nav__item--active {
+    background: var(--surface);
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .settings-nav__item--active .settings-nav__icon {
+    color: var(--accent);
+  }
+
+  /* On desktop the detail pane sits right next to the nav, so the chevron
+     affordance (which implies "tap to drill in") isn't needed. */
+  .settings-nav__chevron {
+    display: none;
+  }
+}

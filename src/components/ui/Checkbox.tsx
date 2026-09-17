@@ -59,10 +59,10 @@ export function Checkbox({ checked, onChange, ariaLabel, label }: CheckboxProps)
       role="checkbox"
       aria-checked={checked}
       aria-label={ariaLabel}
-      className={`checkbox ${checked ? "checkbox--checked" : ""}`}
+      className="checkbox-hit"
       onClick={handleClick}
     >
-      <span className="checkbox__check">{CHECKMARK}</span>
+      {box}
     </button>
   );
 }
