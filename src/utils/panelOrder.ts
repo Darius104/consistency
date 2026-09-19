@@ -53,12 +53,12 @@ export const WIDGET_LABELS: Record<WidgetId, string> = {
 // page doesn't reshuffle itself as the user reorders their actual panel.
 export const WIDGET_IDS: WidgetId[] = ["streak", "weekly", "freezes", "categories", "quote"];
 
-// Free accounts can have this many widgets visible at once (the default
-// on-boarding state already leaves only "streak" visible - see
-// DEFAULT_HIDDEN_WIDGETS below - so this allows exactly one more on top of
-// that before the paywall kicks in). Shared between App.tsx's gate and
-// SettingsModal's own "(Premium)" label so they can never disagree.
-export const FREE_WIDGET_LIMIT = 2;
+// Free accounts can have this many widgets visible at once - exactly the
+// default on-boarding state (only "streak" - see DEFAULT_HIDDEN_WIDGETS
+// below), so every other widget (including Weekly Progress) requires
+// Premium to turn on. Shared between App.tsx's gate and SettingsModal's own
+// "(Premium)" label so they can never disagree.
+export const FREE_WIDGET_LIMIT = 1;
 
 const VALID_WIDGET_IDS = new Set<WidgetId>(WIDGET_IDS);
 
