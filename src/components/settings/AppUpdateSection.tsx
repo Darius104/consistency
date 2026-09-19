@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useAppUpdater } from "../../hooks/useAppUpdater";
 import { Button } from "../ui/Button";
+import { Modal } from "../ui/Modal";
+import "../ui/ConfirmModal.css";
 
 /**
  * Desktop-only in practice (see useAppUpdater's own doc comment) - this
@@ -18,10 +20,13 @@ import { Button } from "../ui/Button";
 export function AppUpdateSection() {
   const { update, checking, installing, error, checkNow, installAndRestart } = useAppUpdater();
   const [justChecked, setJustChecked] = useState(false);
+  const [showUpToDateModal, setShowUpToDateModal] = useState(false);
 
   async function handleCheck() {
-    await checkNow();
+    const result = await checkNow();
     setJustChecked(true);
+    if (result) return;
+    setShowUpToDateModal(true);
   }
 
   const idleStatus = justChecked
@@ -42,12 +47,27 @@ export function AppUpdateSection() {
             {installing ? "Downloading…" : "Update & Restart"}
           </Button>
         ) : (
-          <Button onClick={handleCheck} disabled={checking}>
+          <Button onClick={() => void handleCheck()} disabled={checking}>
             {checking ? "Checking…" : "Check for Updates"}
           </Button>
         )}
       </div>
       {update && error && <span className="settings__hint settings__hint--warning">{error}</span>}
+
+      {showUpToDateModal && (
+        <Modal title="Check for Updates" onClose={() => setShowUpToDateModal(false)}>
+          <div className="confirm-modal">
+            <p className="confirm-modal__message">
+              You're up to date — this is the latest version of Consistency.
+            </p>
+            <div className="confirm-modal__actions">
+              <Button variant="primary" onClick={() => setShowUpToDateModal(false)}>
+                OK
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

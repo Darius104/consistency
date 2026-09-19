@@ -7,7 +7,7 @@ export interface AppUpdaterState {
   checking: boolean;
   installing: boolean;
   error: string | null;
-  checkNow: () => Promise<void>;
+  checkNow: () => Promise<Update | null>;
   installAndRestart: () => Promise<void>;
 }
 
@@ -34,9 +34,12 @@ export function useAppUpdater(): AppUpdaterState {
     setChecking(true);
     setError(null);
     try {
-      setUpdate(await check());
+      const result = await check();
+      setUpdate(result);
+      return result;
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      return null;
     } finally {
       setChecking(false);
     }
