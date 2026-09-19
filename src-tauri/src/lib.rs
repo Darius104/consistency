@@ -114,6 +114,21 @@ pub fn run() {
                 .add_migrations("sqlite:app.db", migrations())
                 .build(),
         )
+        // Desktop-only self-update check, published against this project's
+        // GitHub Releases (see RELEASING.md) - iOS can't self-update outside
+        // the App Store/TestFlight, and these two plugins aren't even
+        // compiled in for that target (see Cargo.toml's target cfg), so
+        // registering them has to happen in a .setup() closure rather than
+        // the plain .plugin() chain above, which runs unconditionally on
+        // every platform this same shared entry point builds for.
+        .setup(|app| {
+            #[cfg(desktop)]
+            {
+                app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
+                app.handle().plugin(tauri_plugin_process::init())?;
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![haptic_impact])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

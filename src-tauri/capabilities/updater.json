@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "updater",
+  "description": "Self-update capability - desktop only. iOS can't self-update outside the App Store/TestFlight, and the updater/process plugins aren't even compiled in for that target (see Cargo.toml), so this is kept in its own platform-scoped capability file instead of the shared default.json.",
+  "windows": ["main"],
+  "platforms": ["macOS", "windows", "linux"],
+  "permissions": ["updater:default", "process:default"]
+}

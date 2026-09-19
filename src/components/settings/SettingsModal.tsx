@@ -31,6 +31,7 @@ import {
   UserIcon,
   UsersIcon,
 } from "../ui/icons";
+import { AppUpdateSection } from "./AppUpdateSection";
 import { BackupSection } from "./BackupSection";
 import { CategoryManager } from "./CategoryManager";
 import { FriendsManager } from "./FriendsManager";
@@ -304,6 +305,7 @@ export function SettingsModal({
 
             {activeId === "account" && (
               <>
+                <AppUpdateSection />
                 <BackupSection />
                 <div className="settings__row">
                   <span className="settings__row-text">Sign out of your account on this device</span>

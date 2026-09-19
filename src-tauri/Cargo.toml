@@ -1,6 +1,6 @@
 [package]
 name = "tauri-app"
-version = "0.1.0"
+version = "0.1.1"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
@@ -29,4 +29,11 @@ tauri-plugin-fs = "2"
 
 [target.'cfg(target_os = "ios")'.dependencies]
 objc = "0.2"
+
+# Self-updates only make sense on desktop - iOS can't install anything
+# outside the App Store/TestFlight, so these are never even compiled in
+# for that target (mirrors the ios-only objc dependency above, inverted).
+[target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 

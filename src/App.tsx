@@ -73,6 +73,8 @@ import {
   type WidgetId,
 } from "./utils/panelOrder";
 import { useTaskReminders } from "./hooks/useTaskReminders";
+import { useAppUpdater } from "./hooks/useAppUpdater";
+import { UpdateAvailableModal } from "./components/UpdateAvailableModal";
 import "./App.css";
 
 const THEME_SETTING_KEY = "theme";
@@ -169,6 +171,18 @@ export default function App() {
   }, [theme, randomColors, viewingFriend]);
 
   const reminderStatus = useTaskReminders(tasks, completions, remindersEnabled);
+
+  // Desktop-only (see useAppUpdater's own doc comment) - checked once on
+  // launch here; Settings also exposes a manual "Check for updates" using
+  // the same hook. Dismissing ("Later") is tracked by version, not just a
+  // boolean, so dismissing this update doesn't also hide a newer one that
+  // shows up on a later check within the same session.
+  const appUpdater = useAppUpdater();
+  const [dismissedUpdateVersion, setDismissedUpdateVersion] = useState<string | null>(null);
+  const pendingUpdate =
+    appUpdater.update && appUpdater.update.version !== dismissedUpdateVersion
+      ? appUpdater.update
+      : null;
 
   // computeStreak/computeLongestStreak walk every day from the earliest
   // task's start date to today - that scales with how long this account has
@@ -642,6 +656,16 @@ export default function App() {
           }"? This can't be undone.`}
           onConfirm={handleConfirmDeleteNote}
           onClose={() => setPendingDeleteNote(null)}
+        />
+      )}
+
+      {pendingUpdate && (
+        <UpdateAvailableModal
+          update={pendingUpdate}
+          installing={appUpdater.installing}
+          error={appUpdater.error}
+          onInstall={() => void appUpdater.installAndRestart()}
+          onLater={() => setDismissedUpdateVersion(pendingUpdate.version)}
         />
       )}
     </div>
