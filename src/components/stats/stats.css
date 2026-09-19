@@ -291,6 +291,12 @@
   flex-direction: column;
   gap: var(--space-2);
   margin-top: var(--space-1);
+  /* Every other widget is a fixed, compact size - this is the one whose
+     row count scales with how many categories have tasks this week, so it
+     needs its own cap (about 5 rows) instead of growing arbitrarily tall
+     in the day panel's fixed-width column. Scrolls instead of clipping. */
+  max-height: 168px;
+  overflow-y: auto;
 }
 
 .category-breakdown__row {

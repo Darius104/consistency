@@ -72,7 +72,21 @@ export function TaskForm({
 
   return (
     <Modal title={task ? "Edit task" : "New task"} onClose={onClose}>
-      <div className="task-form">
+      <div
+        className="task-form"
+        onKeyDown={(e) => {
+          // Matches NoteForm's own shortcuts - bound on the outer form
+          // (not one specific field) since this form has several, and a
+          // synthetic keydown from any focused descendant still bubbles up
+          // to here. Cmd/Ctrl+Enter only (not plain Enter) so it never
+          // hijacks a newline in the notes textarea.
+          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+            e.preventDefault();
+            handleSubmit();
+          }
+          if (e.key === "Escape") onClose();
+        }}
+      >
         <label className="task-form__field">
           <span className="task-form__label">Title</span>
           <input

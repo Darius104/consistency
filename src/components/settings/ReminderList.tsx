@@ -1,10 +1,9 @@
+import { REMINDER_LOOKAHEAD_DAYS } from "../../hooks/useTaskReminders";
 import type { Task } from "../../types";
 import { addDays, parseDateKey, todayKey } from "../../utils/dates";
 import { upcomingReminders } from "../../utils/recurrence";
 import { BellIcon } from "../ui/icons";
 import "./ReminderList.css";
-
-const LOOKAHEAD_DAYS = 14;
 
 interface ReminderListProps {
   tasks: Task[];
@@ -27,7 +26,7 @@ function formatDay(dateKey: string): string {
  *  never drifts out of sync with what's really going to fire. */
 export function ReminderList({ tasks, completions }: ReminderListProps) {
   const tasksById = new Map(tasks.map((t) => [t.id, t]));
-  const entries = upcomingReminders(tasks, completions, todayKey(), LOOKAHEAD_DAYS)
+  const entries = upcomingReminders(tasks, completions, todayKey(), REMINDER_LOOKAHEAD_DAYS)
     .map(({ taskId, date }) => {
       const task = tasksById.get(taskId);
       return task ? { taskId, date, title: task.title, time: task.time as string } : null;

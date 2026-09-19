@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { FreezeCandidate } from "../../utils/stats";
+import { MAX_FREEZES_PER_MONTH, type FreezeCandidate } from "../../utils/stats";
 import { parseDateKey } from "../../utils/dates";
 import { Button } from "../ui/Button";
 import { FrostIcon, TrashIcon } from "../ui/icons";
@@ -54,7 +54,7 @@ export function StreakFreezeManager({
     <div className="freeze-manager">
       <span className="freeze-manager__remaining">
         <FrostIcon size={13} />
-        {freezesRemaining} of 3 freezes left this month
+        {freezesRemaining} of {MAX_FREEZES_PER_MONTH} freezes left this month
       </span>
 
       {confirmation && (

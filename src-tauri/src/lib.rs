@@ -15,9 +15,17 @@ fn haptic_impact() {
         use objc::{class, msg_send, sel, sel_impl};
 
         // UIImpactFeedbackStyleMedium = 1 (UIImpactFeedbackStyle enum).
+        // No `prepare` call here - it exists to let the Taptic Engine warm
+        // up *ahead of* the triggering event, which only helps when there's
+        // a real gap before `impactOccurred`. This command fires both back
+        // to back on a freshly allocated generator every time it's invoked
+        // (once per pull-to-refresh threshold crossing - see
+        // CalendarView.tsx), so `prepare` would give zero latency benefit
+        // here; keeping the generator alive across two separate IPC calls
+        // just to use it properly isn't worth the added complexity for a
+        // single haptic tick.
         let generator: *mut Object = msg_send![class!(UIImpactFeedbackGenerator), alloc];
         let generator: *mut Object = msg_send![generator, initWithStyle: 1i64];
-        let _: () = msg_send![generator, prepare];
         let _: () = msg_send![generator, impactOccurred];
         let _: () = msg_send![generator, release];
     }

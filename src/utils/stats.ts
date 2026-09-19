@@ -244,20 +244,6 @@ export function computeWeeklyCompletion(
   };
 }
 
-/** Map of dateKey -> completion rate (0..1), omitting days with nothing scheduled. */
-export function computeHeatmap(
-  tasks: Task[],
-  completions: Set<string>,
-  dateKeys: string[],
-): Map<string, number> {
-  const map = new Map<string, number>();
-  for (const key of dateKeys) {
-    const rate = dayCompletionRate(tasks, completions, key);
-    if (rate !== null) map.set(key, rate);
-  }
-  return map;
-}
-
 export interface CategoryBreakdownItem {
   /** null = tasks with no category assigned. */
   tagId: string | null;

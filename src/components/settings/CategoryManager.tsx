@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import { getTemplateTasks } from "../../db/queries";
 import { useReorderDrag } from "../../hooks/useReorderDrag";
 import type { Tag, Template, TemplateTaskBlueprint } from "../../types";
@@ -49,6 +49,12 @@ export function CategoryManager({
 
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
 
+  // Guards against startEditing's async getTemplateTasks() call landing
+  // after a newer one - switching from editing category A to category B
+  // before A's fetch resolves must never let A's stale result overwrite B's
+  // draft tasks.
+  const editRequestRef = useRef(0);
+
   // Press-and-hold (touch) / grab-anywhere-with-a-movement-threshold
   // (mouse) reordering - same interaction model now shared with the day
   // view's tag groups and tasks (see useReorderDrag), so nothing about this
@@ -62,11 +68,13 @@ export function CategoryManager({
     setDraftName(tag.name);
     setDraftColor(tag.color);
     setNewTaskTitle("");
+    const requestId = ++editRequestRef.current;
     const template = templates.find((t) => t.tagId === tag.id);
     if (template) {
       setDraftTasksLoading(true);
       setDraftTasks([]);
       getTemplateTasks(template.id).then((result) => {
+        if (editRequestRef.current !== requestId) return;
         setDraftTasks(result);
         setDraftTasksLoading(false);
       });

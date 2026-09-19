@@ -33,6 +33,7 @@ export interface FriendCalendarData {
   freezes: Set<string>;
   theme: ThemeId;
   randomColors: RandomThemeColors | null;
+  displayName: string;
   bio: string | null;
   avatarId: AvatarId;
 }
@@ -61,17 +62,6 @@ export async function ensureProfile(): Promise<void> {
       { onConflict: "user_id", ignoreDuplicates: true },
     );
   if (error) throw new Error(error.message);
-}
-
-export async function getMyDisplayName(): Promise<string> {
-  const userId = await currentUserId();
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("display_name")
-    .eq("user_id", userId)
-    .single();
-  if (error) throw new Error(error.message);
-  return (data as { display_name: string }).display_name;
 }
 
 export async function updateDisplayName(name: string): Promise<void> {
@@ -239,7 +229,7 @@ export async function fetchFriendCalendarData(friendUserId: string): Promise<Fri
     supabase.rpc("get_friend_calendar_data", { p_friend_id: friendUserId }),
     supabase
       .from("profiles")
-      .select("theme, random_theme_colors, bio, avatar_id")
+      .select("display_name, theme, random_theme_colors, bio, avatar_id")
       .eq("user_id", friendUserId)
       .single(),
   ]);
@@ -247,6 +237,7 @@ export async function fetchFriendCalendarData(friendUserId: string): Promise<Fri
   if (profileResult.error) throw new Error(profileResult.error.message);
 
   const profile = profileResult.data as {
+    display_name: string;
     theme: string | null;
     random_theme_colors: RandomThemeColors | null;
     bio: string | null;
@@ -291,6 +282,7 @@ export async function fetchFriendCalendarData(friendUserId: string): Promise<Fri
     freezes,
     theme: (profile.theme as ThemeId) ?? DEFAULT_THEME,
     randomColors: profile.random_theme_colors ?? null,
+    displayName: profile.display_name,
     bio: profile.bio,
     avatarId: parseAvatarId(profile.avatar_id),
   };

@@ -54,6 +54,7 @@
 }
 
 .friend-view__day {
+  position: relative;
   width: 340px;
   flex: none;
   border-left: 1px solid var(--border);
@@ -76,6 +77,7 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
+  flex: 1;
   min-width: 0;
 }
 
@@ -90,6 +92,10 @@
 .friend-view__profile-bio {
   font-size: var(--text-sm);
   color: var(--text-secondary);
+  /* Now that the text column fills the row's full width (see
+     .friend-view__profile-text), let a longer bio wrap across it instead
+     of forcing it onto one clipped line. */
+  overflow-wrap: anywhere;
 }
 
 

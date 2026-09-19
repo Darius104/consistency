@@ -24,11 +24,9 @@ import { Modal } from "../ui/Modal";
 import {
   BellIcon,
   ChevronLeftIcon,
-  DownloadIcon,
   FrostIcon,
   GridIcon,
   ProfileIcon,
-  SunIcon,
   TagIcon,
   UserIcon,
   UsersIcon,
@@ -81,14 +79,12 @@ interface SettingsModalProps {
 }
 
 const SECTIONS: SettingsSection[] = [
-  { id: "appearance", label: "Appearance", icon: SunIcon },
   { id: "profile", label: "Profile", icon: ProfileIcon },
   { id: "widgets", label: "Widgets", icon: GridIcon },
   { id: "categories", label: "Categories", icon: TagIcon },
   { id: "freezes", label: "Streak Freezes", icon: FrostIcon },
   { id: "reminders", label: "Reminders", icon: BellIcon },
   { id: "friends", label: "Friends", icon: UsersIcon },
-  { id: "backup", label: "Backup & Data", icon: DownloadIcon },
   { id: "account", label: "Account", icon: UserIcon },
 ];
 
@@ -176,14 +172,15 @@ export function SettingsModal({
 
           <div className="settings-detail__body">
           <div className="settings-detail__pane" key={activeId}>
-            {activeId === "appearance" && (
-              <div className="settings__section">
-                <span className="settings__label">Theme</span>
-                <ThemeCarousel themes={THEMES} selected={theme} onSelect={onChangeTheme} />
-              </div>
+            {activeId === "profile" && (
+              <>
+                <div className="settings__section">
+                  <span className="settings__label">Theme</span>
+                  <ThemeCarousel themes={THEMES} selected={theme} onSelect={onChangeTheme} />
+                </div>
+                <ProfileSection />
+              </>
             )}
-
-            {activeId === "profile" && <ProfileSection />}
 
             {activeId === "widgets" && (
               <div className="settings__section">
@@ -305,15 +302,16 @@ export function SettingsModal({
               />
             )}
 
-            {activeId === "backup" && <BackupSection />}
-
             {activeId === "account" && (
-              <div className="settings__row">
-                <span className="settings__row-text">Sign out of your account on this device</span>
-                <Button variant="danger" onClick={onSignOut}>
-                  Sign out
-                </Button>
-              </div>
+              <>
+                <BackupSection />
+                <div className="settings__row">
+                  <span className="settings__row-text">Sign out of your account on this device</span>
+                  <Button variant="danger" onClick={onSignOut}>
+                    Sign out
+                  </Button>
+                </div>
+              </>
             )}
           </div>
           </div>

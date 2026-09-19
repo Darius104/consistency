@@ -62,21 +62,67 @@ export interface PendingOp {
   attempts: number;
 }
 
-/** Bulk-overwrites a whole table's cached contents - used by the "pull" half of sync.ts. */
+/**
+ * Bulk-overwrites a whole table's cached contents - used by the "pull" half
+ * of sync.ts. Upserts every fresh row first, THEN prunes whatever's left
+ * that's no longer present remotely - deliberately never a plain
+ * delete-then-reinsert, and deliberately not wrapped in a BEGIN/COMMIT
+ * transaction either (tauri-plugin-sql holds a real connection *pool*
+ * under the hood - every db.execute() call is an independent IPC round
+ * trip that may land on a different pooled connection, so a JS-side
+ * BEGIN/…/COMMIT sequence doesn't actually produce one real transaction;
+ * it risks leaving a write lock BEGIN'd with no matching COMMIT, which
+ * showed up as real, intermittent "database is locked" failures - see
+ * client.ts's comment where that was tried and reverted).
+ *
+ * Upsert-then-prune means a failure partway through can, at worst, leave a
+ * stale row lingering an extra sync cycle (self-heals next time) - never a
+ * table that's actually missing rows it should have, which is the failure
+ * mode that destroyed real data once already, during the Phase 2
+ * offline-cache migration. `keyColumns` must name an existing PRIMARY KEY
+ * or UNIQUE constraint on `table` - this is what ON CONFLICT targets and
+ * what the prune step's NOT IN check is keyed by.
+ */
 export async function replaceTable<T extends object>(
   table: string,
   columns: readonly (keyof T & string)[],
   rows: T[],
+  keyColumns: readonly (keyof T & string)[],
 ): Promise<void> {
   const db = await getDb();
-  await db.execute(`DELETE FROM ${table}`);
+  const nonKeyColumns = columns.filter((c) => !keyColumns.includes(c));
   const placeholders = columns.map((_, i) => `$${i + 1}`).join(",");
+  const conflictAction =
+    nonKeyColumns.length > 0
+      ? `DO UPDATE SET ${nonKeyColumns.map((c) => `${c}=excluded.${c}`).join(", ")}`
+      : "DO NOTHING";
+
   for (const row of rows) {
     await db.execute(
-      `INSERT INTO ${table} (${columns.join(",")}) VALUES (${placeholders})`,
+      `INSERT INTO ${table} (${columns.join(",")}) VALUES (${placeholders})
+       ON CONFLICT(${keyColumns.join(",")}) ${conflictAction}`,
       columns.map((c) => row[c] ?? null),
     );
   }
+
+  if (rows.length === 0) {
+    await db.execute(`DELETE FROM ${table}`);
+    return;
+  }
+  // Row-value IN, e.g. WHERE (task_id,date) NOT IN ((?,?),(?,?)) - SQLite
+  // has supported this form (any number of key columns, including just
+  // one) since 3.15. Fine at this app's scale; not chunked for very large
+  // row counts (SQLite's own bound-parameter limit would matter first).
+  const keyTuples = rows
+    .map(
+      (_, i) => `(${keyColumns.map((_, j) => `$${i * keyColumns.length + j + 1}`).join(",")})`,
+    )
+    .join(",");
+  const keyValues = rows.flatMap((row) => keyColumns.map((c) => row[c]));
+  await db.execute(
+    `DELETE FROM ${table} WHERE (${keyColumns.join(",")}) NOT IN (${keyTuples})`,
+    keyValues,
+  );
 }
 
 // ---------- Tags ----------

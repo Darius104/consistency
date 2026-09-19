@@ -135,7 +135,11 @@ export function FriendCalendarView({ friend, onBack }: FriendCalendarViewProps) 
     <div className={`friend-view ${expanded ? "friend-view--day-expanded" : ""}`}>
       <div className="friend-view__bar">
         <span className="friend-view__bar-text">
-          Viewing <strong>{friend.displayName}</strong>'s calendar (read-only)
+          {/* Prefers the freshly-fetched name once loaded (data.displayName) over
+              the Friends-list prop, which can be stale if they've renamed
+              themselves since that list was last fetched - falls back to the
+              prop only for the brief moment before this view's own fetch resolves. */}
+          Viewing <strong>{data?.displayName ?? friend.displayName}</strong>'s calendar (read-only)
         </span>
         <Button onClick={onBack} className="friend-view__back">
           <ChevronLeftIcon size={14} /> Back to your calendar
@@ -160,7 +164,6 @@ export function FriendCalendarView({ friend, onBack }: FriendCalendarViewProps) 
           <div className="friend-view__divider" aria-hidden="true" />
           <div className="friend-view__day">
             <FriendDayContent
-              friend={friend}
               data={data}
               selectedDate={selectedDate}
               collapsed={collapsed}
@@ -176,7 +179,6 @@ export function FriendCalendarView({ friend, onBack }: FriendCalendarViewProps) 
 }
 
 function FriendDayContent({
-  friend,
   data,
   selectedDate,
   collapsed,
@@ -184,7 +186,6 @@ function FriendDayContent({
   expanded,
   onToggleExpanded,
 }: {
-  friend: Friend;
   data: FriendCalendarData;
   selectedDate: string;
   collapsed: Set<string>;
@@ -214,14 +215,7 @@ function FriendDayContent({
 
   return (
     <>
-      <div className="friend-view__profile">
-        <AvatarBadge avatarId={data.avatarId} size={48} />
-        <div className="friend-view__profile-text">
-          <span className="friend-view__profile-name">{friend.displayName}</span>
-          {data.bio && <span className="friend-view__profile-bio">{data.bio}</span>}
-        </div>
-      </div>
-      <div className="friend-view__day-header">
+      <div className="day-panel__expand-toggle-wrap">
         <button
           type="button"
           className="day-panel__expand-toggle"
@@ -230,6 +224,15 @@ function FriendDayContent({
         >
           {expanded ? <ChevronDownIcon size={16} /> : <ChevronUpIcon size={16} />}
         </button>
+      </div>
+      <div className="friend-view__profile">
+        <AvatarBadge avatarId={data.avatarId} size={48} />
+        <div className="friend-view__profile-text">
+          <span className="friend-view__profile-name">{data.displayName}</span>
+          {data.bio && <span className="friend-view__profile-bio">{data.bio}</span>}
+        </div>
+      </div>
+      <div className="friend-view__day-header">
         <h2 className="friend-view__date">{label}</h2>
       </div>
       <StreakCounter streak={streak} best={bestStreak} today={todayStatus} />

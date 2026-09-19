@@ -61,9 +61,20 @@ export function useOnlineStatus(ready: boolean) {
     function handleOffline() {
       setOnline(false);
     }
+    // Returning to a backgrounded app otherwise has to wait for the online
+    // event (unreliable in a WKWebView) or the next RETRY_INTERVAL_MS tick -
+    // and that tick only even runs while already believed offline, so data
+    // could sit stale for a while after resuming. A fresh sync attempt the
+    // moment the app becomes visible again closes that gap - regardless of
+    // whatever `online` currently reads, since that belief itself may be
+    // stale after however long the app was backgrounded.
+    function handleVisibilityChange() {
+      if (document.visibilityState === "visible") void attempt();
+    }
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     void attempt();
     const timer = window.setInterval(() => {
@@ -73,6 +84,7 @@ export function useOnlineStatus(ready: boolean) {
     return () => {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.clearInterval(timer);
     };
   }, [ready, attempt]);

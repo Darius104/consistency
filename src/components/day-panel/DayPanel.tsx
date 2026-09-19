@@ -343,7 +343,7 @@ export function DayPanel({
 
   return (
     <div className="day-panel">
-      <div className="day-panel__header">
+      <div className="day-panel__expand-toggle-wrap">
         <button
           type="button"
           className="day-panel__expand-toggle"
@@ -352,6 +352,8 @@ export function DayPanel({
         >
           {expanded ? <ChevronDownIcon size={16} /> : <ChevronUpIcon size={16} />}
         </button>
+      </div>
+      <div className="day-panel__header">
         <h2 className="day-panel__date">{label}</h2>
         <div className="day-panel__header-actions">
           <AddMenu

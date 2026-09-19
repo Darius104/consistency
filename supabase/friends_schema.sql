@@ -201,13 +201,35 @@ begin
   end if;
 
   select jsonb_build_object(
+    -- Explicit column lists (not jsonb_agg(t)/jsonb_agg(tg), which would
+    -- serialize the *entire* row) - a future column added to tasks/tags for
+    -- something private would otherwise leak to every friend automatically,
+    -- with no code change needed to cause it. Keep this in sync with
+    -- FriendTaskRow/FriendTagRow in src/db/friends.ts.
     'tasks', (
-      select coalesce(jsonb_agg(t), '[]'::jsonb)
+      select coalesce(jsonb_agg(jsonb_build_object(
+        'id', t.id,
+        'title', t.title,
+        'notes', t.notes,
+        'time', t.time,
+        'tag_id', t.tag_id,
+        'priority', t.priority,
+        'recurrence_type', t.recurrence_type,
+        'recurrence_days', t.recurrence_days,
+        'start_date', t.start_date,
+        'end_date', t.end_date,
+        'sort_order', t.sort_order
+      )), '[]'::jsonb)
       from public.tasks t
       where t.user_id = p_friend_id
     ),
     'tags', (
-      select coalesce(jsonb_agg(tg), '[]'::jsonb)
+      select coalesce(jsonb_agg(jsonb_build_object(
+        'id', tg.id,
+        'name', tg.name,
+        'color', tg.color,
+        'sort_order', tg.sort_order
+      )), '[]'::jsonb)
       from public.tags tg
       where tg.user_id = p_friend_id
     ),

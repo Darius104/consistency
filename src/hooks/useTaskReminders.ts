@@ -13,8 +13,10 @@ import { tasksScheduledOn, upcomingReminders } from "../utils/recurrence";
 
 // How far ahead reminders get scheduled with the OS - re-run in full every
 // time tasks/completions change, so this only needs to cover a comfortable
-// window, not "forever".
-const REMINDER_LOOKAHEAD_DAYS = 14;
+// window, not "forever". Exported so ReminderList (Settings) previews
+// exactly this same window instead of maintaining its own copy that could
+// silently drift out of sync with what's actually scheduled.
+export const REMINDER_LOOKAHEAD_DAYS = 14;
 
 /** Deterministic (not random) 31-bit positive id from a task+date pair -
  *  Options.id must be a 32-bit int, too small to hold a task's uuid, so this

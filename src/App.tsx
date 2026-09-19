@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AuthScreen } from "./auth/AuthScreen";
 import { useSession } from "./auth/useSession";
 import { CalendarView } from "./components/calendar/CalendarView";
@@ -13,6 +13,7 @@ import { onSyncComplete, trySync } from "./sync";
 import { useOnlineStatus } from "./hooks/useOnlineStatus";
 import { useRealtimeSync } from "./hooks/useRealtimeSync";
 import { OfflineBanner } from "./components/OfflineBanner";
+import { WriteErrorToast } from "./components/WriteErrorToast";
 import { FriendCalendarView } from "./components/friends/FriendCalendarView";
 import { SettingsModal } from "./components/settings/SettingsModal";
 import { TaskForm } from "./components/task-form/TaskForm";
@@ -114,6 +115,10 @@ export default function App() {
   // button and the task form's own Delete button set this instead of
   // deleting immediately, so both paths get the same confirmation step.
   const [pendingDeleteTask, setPendingDeleteTask] = useState<Task | null>(null);
+  // Same confirmation step for notes - free-typed content is just as easy
+  // to lose to a stray tap as a task, and previously had no confirmation
+  // at all, unlike every task-deletion path.
+  const [pendingDeleteNote, setPendingDeleteNote] = useState<DayNote | null>(null);
   // Non-null while looking at a friend's read-only calendar instead of your
   // own - never persisted, always starts back at null (your own calendar)
   // on a fresh launch.
@@ -164,6 +169,24 @@ export default function App() {
   }, [theme, randomColors, viewingFriend]);
 
   const reminderStatus = useTaskReminders(tasks, completions, remindersEnabled);
+
+  // computeStreak/computeLongestStreak walk every day from the earliest
+  // task's start date to today - that scales with how long this account has
+  // existed, not how many tasks it has, and App re-renders on almost any
+  // state change (toggling a single task, opening a modal, ...). Memoized so
+  // that full walk only re-runs when the inputs that could actually change
+  // its result do. Placed here (with the other hooks, before any early
+  // return below) rather than down near where streak is used, since Hooks
+  // can't be called conditionally.
+  const today = todayKey();
+  const streak = useMemo(
+    () => computeStreak(tasks, completions, freezes, today),
+    [tasks, completions, freezes, today],
+  );
+  const bestStreak = useMemo(
+    () => Math.max(streak, computeLongestStreak(tasks, completions, freezes, today)),
+    [streak, tasks, completions, freezes, today],
+  );
 
   async function refreshAll() {
     const [
@@ -401,6 +424,16 @@ export default function App() {
     await deleteNote(id);
   }
 
+  function handleRequestDeleteNote(id: string) {
+    setPendingDeleteNote(notes.find((n) => n.id === id) ?? null);
+  }
+
+  async function handleConfirmDeleteNote() {
+    if (!pendingDeleteNote) return;
+    await handleDeleteNote(pendingDeleteNote.id);
+    setPendingDeleteNote(null);
+  }
+
   async function handleReorderNotePositions(
     updates: { id: string; afterGroupKey: string | null; sortOrder: number }[],
   ) {
@@ -432,11 +465,6 @@ export default function App() {
   }));
   const dayNotes = notes.filter((n) => n.date === selectedDate);
 
-  const streak = computeStreak(tasks, completions, freezes, todayKey());
-  const bestStreak = Math.max(
-    streak,
-    computeLongestStreak(tasks, completions, freezes, todayKey()),
-  );
   const todayStatus = computeTodayStatus(tasks, completions, freezes, todayKey());
   const weekly = computeWeeklyCompletion(
     tasks,
@@ -462,6 +490,7 @@ export default function App() {
   return (
     <div className={`app ${dayPanelExpanded ? "app--day-expanded" : ""}`}>
       <OfflineBanner online={online} syncing={syncing} />
+      <WriteErrorToast />
       <CalendarView
         tasks={tasks}
         completions={completions}
@@ -511,7 +540,7 @@ export default function App() {
         notes={dayNotes}
         onAddNote={() => setNoteFormState({ open: true })}
         onEditNote={(note) => setNoteFormState({ open: true, note })}
-        onDeleteNote={handleDeleteNote}
+        onDeleteNote={handleRequestDeleteNote}
         onReorderNotePositions={handleReorderNotePositions}
         expanded={dayPanelExpanded}
         onToggleExpanded={() => setDayPanelExpanded((v) => !v)}
@@ -600,6 +629,19 @@ export default function App() {
           message={`Delete "${pendingDeleteTask.title}"? This can't be undone.`}
           onConfirm={handleConfirmDeleteTask}
           onClose={() => setPendingDeleteTask(null)}
+        />
+      )}
+
+      {pendingDeleteNote && (
+        <ConfirmModal
+          title="Delete note"
+          message={`Delete "${
+            pendingDeleteNote.content.length > 80
+              ? `${pendingDeleteNote.content.slice(0, 80)}…`
+              : pendingDeleteNote.content
+          }"? This can't be undone.`}
+          onConfirm={handleConfirmDeleteNote}
+          onClose={() => setPendingDeleteNote(null)}
         />
       )}
     </div>

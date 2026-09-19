@@ -54,6 +54,11 @@ export function ActionSheet({ title, actions, onClose }: ActionSheetProps) {
                 action.destructive ? "action-sheet__action--destructive" : ""
               }`}
               onClick={() => {
+                // Without this guard, tapping a second action while the
+                // sheet is still playing its 200ms close animation from a
+                // first tap would fire both onSelects - requestClose()
+                // alone no-ops on the second tap, but onSelect() doesn't.
+                if (closing) return;
                 requestClose();
                 action.onSelect();
               }}

@@ -204,15 +204,6 @@ export function BookmarkIcon({ size = 16, ...props }: IconProps) {
   );
 }
 
-export function SunIcon({ size = 16, ...props }: IconProps) {
-  return (
-    <svg {...base(size, props)}>
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
-    </svg>
-  );
-}
-
 export function TagIcon({ size = 16, ...props }: IconProps) {
   return (
     <svg {...base(size, props)}>
@@ -227,16 +218,6 @@ export function BellIcon({ size = 16, ...props }: IconProps) {
     <svg {...base(size, props)}>
       <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
       <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-    </svg>
-  );
-}
-
-export function DownloadIcon({ size = 16, ...props }: IconProps) {
-  return (
-    <svg {...base(size, props)}>
-      <path d="M12 3v12" />
-      <path d="M7 10l5 5 5-5" />
-      <path d="M4 19h16" />
     </svg>
   );
 }

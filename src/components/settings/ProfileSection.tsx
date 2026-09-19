@@ -132,7 +132,7 @@ export function ProfileSection() {
       {pickingAvatar && (
         <AvatarPickerModal
           currentAvatarId={avatarId}
-          onSave={(id) => {
+          onChoose={(id) => {
             setAvatarId(id);
             setPickingAvatar(false);
           }}

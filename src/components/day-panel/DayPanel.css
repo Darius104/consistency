@@ -1,4 +1,5 @@
 .day-panel {
+  position: relative;
   width: 340px;
   flex: none;
   border-left: 1px solid var(--border);
@@ -9,6 +10,38 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
+}
+
+/* Mobile-only: the expand/collapse button (a plain click, not a drag - see
+   .day-panel__expand-toggle, still shared with FriendCalendarView), taken
+   clean out of the flex flow so it costs no layout space of its own -
+   attached flush to the panel's own top border instead of sitting inline
+   with the date/add-menu. Hidden on wider screens exactly like the button
+   itself. */
+.day-panel__expand-toggle-wrap {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .day-panel__expand-toggle-wrap {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 50%;
+    translate: -50% 0;
+    z-index: 1;
+  }
+}
+
+/* Wider and shorter than the plain square button this is everywhere else
+   (FriendCalendarView) - a small flush-top tab reads more like "press me"
+   here than a tiny floating square would. Taller than the first pass so
+   it's easier to actually notice. */
+.day-panel__expand-toggle-wrap .day-panel__expand-toggle {
+  width: 100px;
+  height: 26px;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  border-top: none;
 }
 
 .day-panel__header {

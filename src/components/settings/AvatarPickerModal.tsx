@@ -7,11 +7,15 @@ import "./AvatarPickerModal.css";
 
 interface AvatarPickerModalProps {
   currentAvatarId: AvatarId;
-  onSave: (avatarId: AvatarId) => void;
+  /** Only applies the pick to the caller's own draft state - it does not
+   *  persist anything itself. The caller (ProfileSection) still needs its
+   *  own page-level Save clicked for this to actually reach the server,
+   *  which is why this button says "Done" rather than "Save". */
+  onChoose: (avatarId: AvatarId) => void;
   onClose: () => void;
 }
 
-export function AvatarPickerModal({ currentAvatarId, onSave, onClose }: AvatarPickerModalProps) {
+export function AvatarPickerModal({ currentAvatarId, onChoose, onClose }: AvatarPickerModalProps) {
   const [draftId, setDraftId] = useState(currentAvatarId);
 
   return (
@@ -41,8 +45,8 @@ export function AvatarPickerModal({ currentAvatarId, onSave, onClose }: AvatarPi
 
         <div className="avatar-picker__footer">
           <Button onClick={onClose}>Cancel</Button>
-          <Button variant="primary" onClick={() => onSave(draftId)}>
-            Save
+          <Button variant="primary" onClick={() => onChoose(draftId)}>
+            Done
           </Button>
         </div>
       </div>

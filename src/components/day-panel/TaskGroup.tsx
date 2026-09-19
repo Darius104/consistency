@@ -82,9 +82,9 @@ export function TaskGroup({
               justClicked ? "task-group__save-template--pop" : ""
             }`}
             aria-label={
-              hasTemplate ? `Update ${label} template` : `Save ${label} as a template`
+              hasTemplate ? `Remove ${label} template` : `Save ${label} as a template`
             }
-            title={hasTemplate ? "Saved as template - click to update" : "Save as template"}
+            title={hasTemplate ? "Saved as template - click to remove" : "Save as template"}
             onClick={(e) => {
               e.stopPropagation();
               onSaveAsTemplate();

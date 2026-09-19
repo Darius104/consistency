@@ -48,7 +48,7 @@ export function TagPicker({
           const activeStyle: CSSProperties | undefined = isActive
             ? {
                 borderColor: tag.color,
-                background: `${tag.color}2a`,
+                background: `color-mix(in srgb, ${tag.color} 16%, transparent)`,
                 color: tag.color,
               }
             : undefined;
