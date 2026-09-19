@@ -49,7 +49,13 @@ export function StreakCounter({ streak, best, today }: StreakCounterProps) {
   // streak (that's what the card's own cold/low/warm/hot/blazing tier
   // above is for). 0 tasks done today is a dim ember; all done is a
   // roaring fire. Resets every day along with `today` itself.
-  const power = today.hasTasks ? today.completed / today.scheduled : 0;
+  //
+  // Nothing scheduled or today already frozen both mean the streak isn't
+  // actually at risk - those must render as a full, alive flame rather
+  // than "0 done", or a perfectly safe day would look identical to one
+  // where the streak is dying (see the freeze-suggestion modal's own
+  // dying-flame animation, which relies on 0 meaning real danger).
+  const power = !today.hasTasks || today.frozen ? 1 : today.completed / today.scheduled;
 
   // Rare, once-a-day-at-most event (the streak only ever increments when a
   // day gets completed) - exactly the delight-tier moment this component
