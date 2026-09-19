@@ -12,6 +12,7 @@ import { ensureProfile, syncMyThemeToProfile, type Friend } from "./db/friends";
 import { onSyncComplete, trySync } from "./sync";
 import { useOnlineStatus } from "./hooks/useOnlineStatus";
 import { useRealtimeSync } from "./hooks/useRealtimeSync";
+import { FreezeSuggestionModal } from "./components/FreezeSuggestionModal";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { PremiumPaywallModal } from "./components/PremiumPaywallModal";
 import { WriteErrorToast } from "./components/WriteErrorToast";
@@ -48,7 +49,7 @@ import {
   updateTaskOrder,
 } from "./db/queries";
 import type { DayNote, NewTask, Tag, Task, Template, TemplateTaskBlueprint, ThemeId } from "./types";
-import { startOfWeek, todayKey } from "./utils/dates";
+import { addDays, startOfWeek, todayKey } from "./utils/dates";
 import { tasksScheduledOn } from "./utils/recurrence";
 import {
   computeCategoryBreakdown,
@@ -87,6 +88,7 @@ const REMINDERS_SETTING_KEY = "remindersEnabled";
 const PANEL_ORDER_SETTING_KEY = "panelOrder";
 const HIDDEN_WIDGETS_SETTING_KEY = "hiddenWidgets";
 const PHRASE_VIEW_SETTING_KEY = "lastPhraseViewDate";
+const FREEZE_SUGGESTION_DISMISSED_KEY = "freezeSuggestionDismissedDate";
 
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -110,6 +112,9 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [phraseModalOpen, setPhraseModalOpen] = useState(false);
   const [lastPhraseViewDate, setLastPhraseViewDate] = useState<string | null>(null);
+  const [freezeSuggestionDismissedDate, setFreezeSuggestionDismissedDate] = useState<
+    string | null
+  >(null);
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
   const [formState, setFormState] = useState<
     { open: false } | { open: true; task?: Task }
@@ -223,6 +228,7 @@ export default function App() {
       savedPanelOrder,
       savedHiddenWidgets,
       savedPhraseViewDate,
+      savedFreezeSuggestionDismissedDate,
     ] = await Promise.all([
       getAllTasks(),
       getTags(),
@@ -236,6 +242,7 @@ export default function App() {
       getSetting(PANEL_ORDER_SETTING_KEY),
       getSetting(HIDDEN_WIDGETS_SETTING_KEY),
       getSetting(PHRASE_VIEW_SETTING_KEY),
+      getSetting(FREEZE_SUGGESTION_DISMISSED_KEY),
     ]);
     setTasks(taskRows);
     setTags(tagRows);
@@ -251,6 +258,7 @@ export default function App() {
     setPanelOrder(parsePanelOrder(savedPanelOrder));
     setHiddenWidgets(parseHiddenWidgets(savedHiddenWidgets));
     setLastPhraseViewDate(savedPhraseViewDate);
+    setFreezeSuggestionDismissedDate(savedFreezeSuggestionDismissedDate);
     setLoading(false);
     // Covers accounts whose theme was already set before profiles/friends
     // existed - not just future changes via handleChangeTheme below.
@@ -271,6 +279,11 @@ export default function App() {
     setPhraseModalOpen(true);
     setLastPhraseViewDate(todayKey());
     await setSetting(PHRASE_VIEW_SETTING_KEY, todayKey());
+  }
+
+  async function handleDismissFreezeSuggestion(date: string) {
+    setFreezeSuggestionDismissedDate(date);
+    await setSetting(FREEZE_SUGGESTION_DISMISSED_KEY, date);
   }
 
   async function handleChangeTheme(next: ThemeId) {
@@ -512,6 +525,18 @@ export default function App() {
     .sort()
     .reverse();
   const freezeCandidates = getFreezeCandidates(tasks, completions, freezes, todayKey());
+  const yesterdayKey = addDays(todayKey(), -1);
+  const missedYesterday = freezeCandidates.some((c) => c.date === yesterdayKey);
+  // Free members always see the suggestion (it's the moment a paywall
+  // actually lands - a real broken streak, not an abstract feature list).
+  // Premium/admin only sees it while a freeze is actually available to use,
+  // since suggesting one they can't spend would just be a dead end.
+  const freezeSuggestionDate =
+    missedYesterday &&
+    freezeSuggestionDismissedDate !== yesterdayKey &&
+    (membership.isPremium ? freezesRemainingThisMonth > 0 : true)
+      ? yesterdayKey
+      : null;
   const phraseUnseen = lastPhraseViewDate !== todayKey();
   const quote = getQuoteOfDay(todayKey());
 
@@ -525,6 +550,21 @@ export default function App() {
     <div className={`app ${dayPanelExpanded ? "app--day-expanded" : ""}`}>
       <OfflineBanner online={online} syncing={syncing} />
       <WriteErrorToast />
+      {freezeSuggestionDate && (
+        <FreezeSuggestionModal
+          date={freezeSuggestionDate}
+          isPremium={membership.isPremium}
+          onFreeze={() => {
+            void handleFreezeDay(freezeSuggestionDate);
+            void handleDismissFreezeSuggestion(freezeSuggestionDate);
+          }}
+          onGoPremium={() => {
+            setPaywallFeature("Streak freezes");
+            void handleDismissFreezeSuggestion(freezeSuggestionDate);
+          }}
+          onClose={() => void handleDismissFreezeSuggestion(freezeSuggestionDate)}
+        />
+      )}
       <CalendarView
         tasks={tasks}
         completions={completions}
