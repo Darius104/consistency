@@ -59,7 +59,19 @@ without breaking updates for everyone already on a signed version.
      --title "Consistency v<new version>" \
      --notes "<release notes>"
    ```
-7. Deploy locally too (`rm -rf /Applications/Consistency.app && cp -R ... /Applications/`)
+7. Also upload a **fixed-name copy** of the dmg, so the download page's link
+   never has to change between releases (GitHub's `.../releases/latest/
+   download/<name>` always resolves to whatever the newest release's asset
+   with that exact name is - same trick `latest.json` already relies on):
+   ```sh
+   cp "src-tauri/target/release/bundle/dmg/Consistency_<new version>_aarch64.dmg" /tmp/Consistency-aarch64.dmg
+   gh release upload v<new version> /tmp/Consistency-aarch64.dmg
+   rm /tmp/Consistency-aarch64.dmg
+   ```
+   The download page (`docs/index.html`, published via GitHub Pages) links
+   straight to `https://github.com/Darius104/consistency/releases/latest/download/Consistency-aarch64.dmg` -
+   nothing on that page needs updating when a new version ships.
+8. Deploy locally too (`rm -rf /Applications/Consistency.app && cp -R ... /Applications/`)
    so this Mac's own install stays current, same as every other build this
    session does.
 

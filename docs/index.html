@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Consistency — Download</title>
+<meta name="description" content="Download Consistency, a native macOS habit-tracking app." />
+<link rel="icon" href="icon.png" />
+<style>
+  :root {
+    --bg: #0f1720;
+    --card: #161f2c;
+    --border: #2a3644;
+    --text: #e8edf2;
+    --muted: #9aa8b6;
+    --accent: #4da3ff;
+    --accent-hover: #6fb5ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(circle at 50% -10%, #1b2836 0%, var(--bg) 60%);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  main {
+    max-width: 480px;
+    width: 100%;
+    text-align: center;
+  }
+  img.icon {
+    width: 96px;
+    height: 96px;
+    border-radius: 22px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+    margin-bottom: 20px;
+  }
+  h1 {
+    font-size: 32px;
+    margin: 0 0 8px;
+    letter-spacing: -0.02em;
+  }
+  p.tagline {
+    color: var(--muted);
+    font-size: 16px;
+    line-height: 1.5;
+    margin: 0 0 32px;
+  }
+  a.download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--accent);
+    color: #06121f;
+    font-weight: 600;
+    font-size: 17px;
+    text-decoration: none;
+    padding: 14px 28px;
+    border-radius: 12px;
+    transition: background 0.15s ease;
+  }
+  a.download-btn:hover { background: var(--accent-hover); }
+  p.req {
+    color: var(--muted);
+    font-size: 13px;
+    margin: 14px 0 0;
+  }
+  .card {
+    text-align: left;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 22px;
+    margin-top: 36px;
+  }
+  .card h2 {
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    margin: 0 0 12px;
+  }
+  .card ol {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+  .card ol li::marker { color: var(--muted); }
+  footer {
+    margin-top: 28px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <img class="icon" src="icon.png" alt="Consistency app icon" />
+  <h1>Consistency</h1>
+  <p class="tagline">A calendar-first habit &amp; task tracker for Mac,<br />with streaks, freeze days, and friends.</p>
+
+  <a class="download-btn" href="https://github.com/Darius104/consistency/releases/latest/download/Consistency-aarch64.dmg" download>
+    ⬇ Download for Mac
+  </a>
+  <p class="req">Requires macOS on Apple Silicon (M1 or later)</p>
+
+  <div class="card">
+    <h2>First time opening it</h2>
+    <ol>
+      <li>Open the downloaded <code>.dmg</code> and drag Consistency into Applications.</li>
+      <li>When you first launch it, macOS will warn it's from an "unidentified developer" — this app isn't notarized by Apple yet.</li>
+      <li>Go to <strong>System Settings → Privacy &amp; Security</strong>, scroll down, and click <strong>Open Anyway</strong> next to Consistency, then confirm.</li>
+      <li>You only need to do this once — after that, the app checks for and installs future updates automatically.</li>
+    </ol>
+  </div>
+
+  <footer>
+    <a href="https://github.com/Darius104/consistency">Source on GitHub</a> · <a href="https://github.com/Darius104/consistency/releases">Release notes</a>
+  </footer>
+</main>
+</body>
+</html>
