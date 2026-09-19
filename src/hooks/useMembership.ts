@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { getMyMembership, type MembershipTier } from "../db/friends";
+import { supabase } from "../lib/supabaseClient";
 
 const PREVIEW_KEY = "consistency:membershipPreviewTier";
 
@@ -34,15 +35,40 @@ export function useMembership(): MembershipState {
 
   useEffect(() => {
     let cancelled = false;
-    getMyMembership()
-      .then((result) => {
-        if (!cancelled) setActualTier(result);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
-      });
+
+    function refetch() {
+      getMyMembership()
+        .then((result) => {
+          if (!cancelled) setActualTier(result);
+        })
+        .catch((err) => {
+          if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+        });
+    }
+
+    refetch();
+
+    // Reaches an already-open app the moment an admin changes this
+    // account's tier, instead of only taking effect on next launch. Scoped
+    // to this user's own row via the filter (RLS would enforce that anyway
+    // - see supabase/realtime_profiles_schema.sql for the publication side
+    // of this, which is what actually turns broadcasts on).
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user || cancelled) return;
+      channel = supabase
+        .channel(`membership:${user.id}`)
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "profiles", filter: `user_id=eq.${user.id}` },
+          refetch,
+        )
+        .subscribe();
+    });
+
     return () => {
       cancelled = true;
+      if (channel) void supabase.removeChannel(channel);
     };
   }, []);
 

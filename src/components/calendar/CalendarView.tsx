@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import type { MembershipTier } from "../../db/friends";
 import type { Task } from "../../types";
 import {
   buildMonthGrid,
@@ -47,6 +48,7 @@ interface CalendarViewProps {
   selectedDate: string;
   onSelectDate: (dateKey: string) => void;
   /** Omitted while viewing a friend's read-only calendar - see CalendarHeader. */
+  tier?: MembershipTier;
   onOpenSettings?: () => void;
   onOpenPhrase?: () => void;
   phraseUnseen?: boolean;
@@ -60,6 +62,7 @@ export function CalendarView({
   freezes,
   selectedDate,
   onSelectDate,
+  tier,
   onOpenSettings,
   onOpenPhrase,
   phraseUnseen,
@@ -194,6 +197,7 @@ export function CalendarView({
       >
         <CalendarHeader
           monthLabel={monthLabel}
+          tier={tier}
           onPrev={() => shiftMonth(-1)}
           onNext={() => shiftMonth(1)}
           onToday={goToday}

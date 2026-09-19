@@ -571,6 +571,7 @@ export default function App() {
         freezes={freezes}
         selectedDate={selectedDate}
         onSelectDate={setSelectedDate}
+        tier={membership.effectiveTier ?? undefined}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenPhrase={handleOpenPhrase}
         phraseUnseen={phraseUnseen}

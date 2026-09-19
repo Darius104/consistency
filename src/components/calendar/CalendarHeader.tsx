@@ -1,3 +1,4 @@
+import type { MembershipTier } from "../../db/friends";
 import { Button } from "../ui/Button";
 import {
   ChevronLeftIcon,
@@ -8,8 +9,17 @@ import {
 } from "../ui/icons";
 import "./CalendarHeader.css";
 
+const TIER_PLAN_LABEL: Record<MembershipTier, string> = {
+  free: "Free Plan",
+  premium: "Premium Plan",
+  admin: "Admin Plan",
+};
+
 interface CalendarHeaderProps {
   monthLabel: string;
+  /** Omitted while viewing a friend's read-only calendar - that's their
+   *  plan to show, not yours, and this component has no way to know it. */
+  tier?: MembershipTier;
   onPrev: () => void;
   onNext: () => void;
   onToday: () => void;
@@ -28,6 +38,7 @@ interface CalendarHeaderProps {
 
 export function CalendarHeader({
   monthLabel,
+  tier,
   onPrev,
   onNext,
   onToday,
@@ -39,7 +50,10 @@ export function CalendarHeader({
 }: CalendarHeaderProps) {
   return (
     <div className="cal-header">
-      <h1 className="cal-header__title">{monthLabel}</h1>
+      <div className="cal-header__title-group">
+        <h1 className="cal-header__title">{monthLabel}</h1>
+        {tier && <span className={`cal-header__tier cal-header__tier--${tier}`}>{TIER_PLAN_LABEL[tier]}</span>}
+      </div>
       <div className="cal-header__nav">
         {onOpenPhrase && (
           <span className="cal-header__phrase-wrap">
