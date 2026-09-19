@@ -252,3 +252,12 @@ export function UsersIcon({ size = 16, ...props }: IconProps) {
   );
 }
 
+export function CrownIcon({ size = 16, ...props }: IconProps) {
+  return (
+    <svg {...base(size, props)}>
+      <path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7Z" />
+      <path d="M5 20h14" />
+    </svg>
+  );
+}
+

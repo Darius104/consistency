@@ -26,6 +26,8 @@ export interface MyProfile {
   avatarId: AvatarId;
 }
 
+export type MembershipTier = "free" | "premium";
+
 export interface FriendCalendarData {
   tasks: Task[];
   tags: Tag[];
@@ -91,6 +93,22 @@ export async function getMyProfile(): Promise<MyProfile> {
     bio: row.bio,
     avatarId: parseAvatarId(row.avatar_id),
   };
+}
+
+/** Read-only - there's no self-service billing yet, so this is set by hand
+ *  in the Supabase dashboard (see supabase/membership_schema.sql). The
+ *  "update own profile" RLS policy can't write this column even if some
+ *  future code accidentally tried to. */
+export async function getMyMembership(): Promise<MembershipTier> {
+  const userId = await currentUserId();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("membership_tier")
+    .eq("user_id", userId)
+    .single();
+  if (error) throw new Error(error.message);
+  const row = data as { membership_tier: MembershipTier };
+  return row.membership_tier;
 }
 
 export async function updateMyProfile(update: {

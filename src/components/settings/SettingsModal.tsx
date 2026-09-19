@@ -24,6 +24,7 @@ import { Modal } from "../ui/Modal";
 import {
   BellIcon,
   ChevronLeftIcon,
+  CrownIcon,
   FrostIcon,
   GridIcon,
   ProfileIcon,
@@ -35,6 +36,7 @@ import { AppUpdateSection } from "./AppUpdateSection";
 import { BackupSection } from "./BackupSection";
 import { CategoryManager } from "./CategoryManager";
 import { FriendsManager } from "./FriendsManager";
+import { MembershipSection } from "./MembershipSection";
 import { ProfileSection } from "./ProfileSection";
 import { ReminderList } from "./ReminderList";
 import { SettingsNav, type SettingsSection } from "./SettingsNav";
@@ -86,6 +88,7 @@ const SECTIONS: SettingsSection[] = [
   { id: "freezes", label: "Streak Freezes", icon: FrostIcon },
   { id: "reminders", label: "Reminders", icon: BellIcon },
   { id: "friends", label: "Friends", icon: UsersIcon },
+  { id: "membership", label: "Membership", icon: CrownIcon },
   { id: "account", label: "Account", icon: UserIcon },
 ];
 
@@ -302,6 +305,8 @@ export function SettingsModal({
                 }}
               />
             )}
+
+            {activeId === "membership" && <MembershipSection />}
 
             {activeId === "account" && (
               <>

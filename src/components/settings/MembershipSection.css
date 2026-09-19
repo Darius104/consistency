@@ -1,0 +1,36 @@
+.membership-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.membership-badge--premium {
+  border-color: rgba(217, 164, 65, 0.4);
+  background: rgba(217, 164, 65, 0.1);
+  color: var(--priority-medium);
+}
+
+.membership-badge--free {
+  color: var(--text-secondary);
+}
+
+.membership-badge__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.membership-badge__tier {
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.membership-badge__hint {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
