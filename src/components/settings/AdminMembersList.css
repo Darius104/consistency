@@ -64,3 +64,25 @@
   color: var(--accent);
   background: var(--accent-soft);
 }
+
+.admin-members__view {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.admin-members__view:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.admin-members__view:disabled {
+  opacity: 0.4;
+}

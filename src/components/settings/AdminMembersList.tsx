@@ -1,14 +1,21 @@
 import { useEffect, useState } from "react";
-import { listAllMembers, setMemberTier, type Member } from "../../db/friends";
+import { listAllMembers, setMemberTier, type Friend, type Member } from "../../db/friends";
+import { DEFAULT_AVATAR_ID } from "../../utils/avatars";
 import { Button } from "../ui/Button";
+import { EyeIcon } from "../ui/icons";
 import "./AdminMembersList.css";
+
+interface AdminMembersListProps {
+  online: boolean;
+  onView: (friend: Friend) => void;
+}
 
 /** Only ever rendered by MembershipSection when the signed-in account's own
  *  tier is "admin" - the actual access control lives server-side though
  *  (see supabase/membership_admin_schema.sql's RLS policy and
  *  admin_set_membership_tier() function), so this component being visible
  *  is a convenience, not the security boundary. */
-export function AdminMembersList() {
+export function AdminMembersList({ online, onView }: AdminMembersListProps) {
   const [members, setMembers] = useState<Member[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
@@ -39,6 +46,13 @@ export function AdminMembersList() {
 
   const premiumCount = members?.filter((m) => m.tier === "premium").length ?? 0;
 
+  function handleView(member: Member) {
+    // FriendCalendarView never actually renders friend.avatarId (it uses
+    // the avatar_id it fetches fresh as part of the calendar data itself),
+    // so this placeholder is never shown - see FriendCalendarView.tsx.
+    onView({ userId: member.userId, displayName: member.displayName, avatarId: DEFAULT_AVATAR_ID });
+  }
+
   return (
     <div className="admin-members">
       <div className="admin-members__header">
@@ -59,6 +73,15 @@ export function AdminMembersList() {
               <span className={`admin-members__tier admin-members__tier--${member.tier}`}>
                 {member.tier}
               </span>
+              <button
+                type="button"
+                className="admin-members__view"
+                aria-label={`View ${member.displayName}'s calendar`}
+                onClick={() => handleView(member)}
+                disabled={!online}
+              >
+                <EyeIcon size={15} />
+              </button>
               {member.tier !== "admin" && (
                 <Button
                   onClick={() => void handleToggle(member)}

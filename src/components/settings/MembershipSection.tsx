@@ -1,8 +1,13 @@
 import { useEffect, useState } from "react";
-import { getMyMembership, type MembershipTier } from "../../db/friends";
+import { getMyMembership, type Friend, type MembershipTier } from "../../db/friends";
 import { CrownIcon } from "../ui/icons";
 import { AdminMembersList } from "./AdminMembersList";
 import "./MembershipSection.css";
+
+interface MembershipSectionProps {
+  online: boolean;
+  onViewMember: (friend: Friend) => void;
+}
 
 const TIER_LABEL: Record<MembershipTier, string> = {
   free: "Free Member",
@@ -46,7 +51,7 @@ const PREVIEW_OPTIONS: { value: "admin" | "free" | "premium"; label: string }[] 
  * per-device viewing preference, not real account state, and it only ever
  * takes effect on top of an *actual* admin tier (see effectiveTier below).
  */
-export function MembershipSection() {
+export function MembershipSection({ online, onViewMember }: MembershipSectionProps) {
   const [actualTier, setActualTier] = useState<MembershipTier | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [previewTier, setPreviewTier] = useState<"free" | "premium" | null>(loadPreview);
@@ -119,7 +124,7 @@ export function MembershipSection() {
         </div>
       )}
 
-      {effectiveTier === "admin" && <AdminMembersList />}
+      {effectiveTier === "admin" && <AdminMembersList online={online} onView={onViewMember} />}
     </div>
   );
 }

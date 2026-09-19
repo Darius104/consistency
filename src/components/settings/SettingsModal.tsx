@@ -306,7 +306,15 @@ export function SettingsModal({
               />
             )}
 
-            {activeId === "membership" && <MembershipSection />}
+            {activeId === "membership" && (
+              <MembershipSection
+                online={online}
+                onViewMember={(member) => {
+                  onViewFriend(member);
+                  onClose();
+                }}
+              />
+            )}
 
             {activeId === "account" && (
               <>

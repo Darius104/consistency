@@ -252,6 +252,15 @@ export function UsersIcon({ size = 16, ...props }: IconProps) {
   );
 }
 
+export function EyeIcon({ size = 16, ...props }: IconProps) {
+  return (
+    <svg {...base(size, props)}>
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
 export function CrownIcon({ size = 16, ...props }: IconProps) {
   return (
     <svg {...base(size, props)}>
