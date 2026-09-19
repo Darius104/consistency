@@ -1,9 +1,10 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import type { Friend } from "../../db/friends";
+import type { MembershipState } from "../../hooks/useMembership";
 import type { ReminderStatus } from "../../hooks/useTaskReminders";
 import type { Tag, Task, Template, TemplateTaskBlueprint, ThemeId } from "../../types";
-import { WIDGET_IDS, WIDGET_LABELS, type WidgetId } from "../../utils/panelOrder";
+import { FREE_WIDGET_LIMIT, WIDGET_IDS, WIDGET_LABELS, type WidgetId } from "../../utils/panelOrder";
 import type { Quote } from "../../utils/quotes";
 import {
   MAX_FREEZES_PER_MONTH,
@@ -79,6 +80,7 @@ interface SettingsModalProps {
   onSignOut: () => void;
   online: boolean;
   onViewFriend: (friend: Friend) => void;
+  membership: MembershipState;
 }
 
 const SECTIONS: SettingsSection[] = [
@@ -127,6 +129,7 @@ export function SettingsModal({
   onSignOut,
   online,
   onViewFriend,
+  membership,
 }: SettingsModalProps) {
   const [activeId, setActiveId] = useState(SECTIONS[0].id);
   // Only meaningful on phone-sized modal widths, where the nav list and the
@@ -195,6 +198,8 @@ export function SettingsModal({
                 <div className="widget-gallery">
                   {WIDGET_IDS.map((id) => {
                     const visible = !hiddenWidgets.includes(id);
+                    const visibleCount = WIDGET_IDS.length - hiddenWidgets.length;
+                    const locked = !visible && !membership.isPremium && visibleCount >= FREE_WIDGET_LIMIT;
                     return (
                       <div className="widget-gallery__item" key={id}>
                         <div
@@ -206,7 +211,7 @@ export function SettingsModal({
                         <Checkbox
                           checked={visible}
                           onChange={(checked) => (checked ? onShowWidget(id) : onHideWidget(id))}
-                          label={WIDGET_LABELS[id]}
+                          label={locked ? `${WIDGET_LABELS[id]} (Premium)` : WIDGET_LABELS[id]}
                         />
                       </div>
                     );
@@ -309,6 +314,7 @@ export function SettingsModal({
             {activeId === "membership" && (
               <MembershipSection
                 online={online}
+                membership={membership}
                 onViewMember={(member) => {
                   onViewFriend(member);
                   onClose();

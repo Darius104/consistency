@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { getMyMembership, type Friend, type MembershipTier } from "../../db/friends";
+import type { Friend, MembershipTier } from "../../db/friends";
+import type { MembershipState } from "../../hooks/useMembership";
 import { CrownIcon } from "../ui/icons";
 import { AdminMembersList } from "./AdminMembersList";
 import "./MembershipSection.css";
@@ -7,6 +7,7 @@ import "./MembershipSection.css";
 interface MembershipSectionProps {
   online: boolean;
   onViewMember: (friend: Friend) => void;
+  membership: MembershipState;
 }
 
 const TIER_LABEL: Record<MembershipTier, string> = {
@@ -16,21 +17,10 @@ const TIER_LABEL: Record<MembershipTier, string> = {
 };
 
 const TIER_HINT: Record<MembershipTier, string> = {
-  free: "Everything's currently free - premium perks are coming later.",
+  free: "Upgrade for templates, extra widgets, and streak freezes.",
   premium: "Thanks for supporting Consistency.",
   admin: "You can see every member below and change their tier.",
 };
-
-const PREVIEW_KEY = "consistency:membershipPreviewTier";
-
-function loadPreview(): "free" | "premium" | null {
-  try {
-    const v = localStorage.getItem(PREVIEW_KEY);
-    return v === "free" || v === "premium" ? v : null;
-  } catch {
-    return null;
-  }
-}
 
 const PREVIEW_OPTIONS: { value: "admin" | "free" | "premium"; label: string }[] = [
   { value: "admin", label: "Admin (You)" },
@@ -41,48 +31,13 @@ const PREVIEW_OPTIONS: { value: "admin" | "free" | "premium"; label: string }[] 
 /**
  * Read-only for now - there's no self-service billing yet (see
  * supabase/membership_schema.sql), so nothing here can change your real
- * tier. Self-contained like AppUpdateSection, since App.tsx has no other
- * reason to know a user's membership tier yet.
- *
- * Admins additionally get a local-only "preview as" toggle, so you can see
- * what Free/Premium looks like without actually changing your own account
- * (which would also be visible to anyone who can see your profile). It's
- * stored in localStorage rather than the database on purpose - it's a
- * per-device viewing preference, not real account state, and it only ever
- * takes effect on top of an *actual* admin tier (see effectiveTier below).
+ * tier. Tier/preview state itself lives in useMembership (App.tsx owns the
+ * one instance) since App.tsx also needs it for feature gating - this
+ * component just renders it.
  */
-export function MembershipSection({ online, onViewMember }: MembershipSectionProps) {
-  const [actualTier, setActualTier] = useState<MembershipTier | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [previewTier, setPreviewTier] = useState<"free" | "premium" | null>(loadPreview);
-
-  useEffect(() => {
-    let cancelled = false;
-    getMyMembership()
-      .then((result) => {
-        if (!cancelled) setActualTier(result);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  function setPreview(next: "admin" | "free" | "premium") {
-    const value = next === "admin" ? null : next;
-    setPreviewTier(value);
-    try {
-      if (value) localStorage.setItem(PREVIEW_KEY, value);
-      else localStorage.removeItem(PREVIEW_KEY);
-    } catch {
-      // Best-effort - a preview that doesn't persist across restarts is fine.
-    }
-  }
-
+export function MembershipSection({ online, onViewMember, membership }: MembershipSectionProps) {
+  const { actualTier, effectiveTier, previewTier, setPreview, error } = membership;
   const isAdmin = actualTier === "admin";
-  const effectiveTier = isAdmin ? (previewTier ?? "admin") : actualTier;
 
   return (
     <div className="settings__section">

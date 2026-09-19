@@ -13,6 +13,7 @@ import { onSyncComplete, trySync } from "./sync";
 import { useOnlineStatus } from "./hooks/useOnlineStatus";
 import { useRealtimeSync } from "./hooks/useRealtimeSync";
 import { OfflineBanner } from "./components/OfflineBanner";
+import { PremiumPaywallModal } from "./components/PremiumPaywallModal";
 import { WriteErrorToast } from "./components/WriteErrorToast";
 import { FriendCalendarView } from "./components/friends/FriendCalendarView";
 import { SettingsModal } from "./components/settings/SettingsModal";
@@ -69,10 +70,13 @@ import {
   DEFAULT_PANEL_ORDER,
   parsePanelOrder,
   parseHiddenWidgets,
+  FREE_WIDGET_LIMIT,
+  WIDGET_IDS,
   type PanelBlockId,
   type WidgetId,
 } from "./utils/panelOrder";
 import { useTaskReminders } from "./hooks/useTaskReminders";
+import { useMembership } from "./hooks/useMembership";
 import { useAppUpdater } from "./hooks/useAppUpdater";
 import { UpdateAvailableModal } from "./components/UpdateAvailableModal";
 import "./App.css";
@@ -171,6 +175,9 @@ export default function App() {
   }, [theme, randomColors, viewingFriend]);
 
   const reminderStatus = useTaskReminders(tasks, completions, remindersEnabled);
+
+  const membership = useMembership();
+  const [paywallFeature, setPaywallFeature] = useState<string | null>(null);
 
   // Desktop-only (see useAppUpdater's own doc comment) - checked once on
   // launch here; Settings also exposes a manual "Check for updates" using
@@ -300,6 +307,11 @@ export default function App() {
 
   async function handleShowWidget(id: WidgetId) {
     const next = hiddenWidgets.filter((w) => w !== id);
+    const visibleCount = WIDGET_IDS.length - next.length;
+    if (!membership.isPremium && visibleCount > FREE_WIDGET_LIMIT) {
+      setPaywallFeature("More widgets");
+      return;
+    }
     setHiddenWidgets(next);
     await setSetting(HIDDEN_WIDGETS_SETTING_KEY, JSON.stringify(next));
   }
@@ -322,6 +334,10 @@ export default function App() {
   }
 
   async function handleFreezeDay(date: string) {
+    if (!membership.isPremium) {
+      setPaywallFeature("Streak freezes");
+      return;
+    }
     if (freezesRemainingInMonth(freezes, date) === 0) return;
     setFreezes((prev) => new Set(prev).add(date));
     await addStreakFreeze(date);
@@ -395,6 +411,10 @@ export default function App() {
   }
 
   async function handleSaveAsTemplate(tag: Tag, tasks: TemplateTaskBlueprint[]) {
+    if (!membership.isPremium) {
+      setPaywallFeature("Saving templates");
+      return;
+    }
     const template = await createTemplateFromTasks(tag.name, tag.id, tasks);
     setTemplates((prev) => {
       const exists = prev.some((t) => t.id === template.id);
@@ -618,7 +638,12 @@ export default function App() {
           onSignOut={handleSignOut}
           online={online}
           onViewFriend={setViewingFriend}
+          membership={membership}
         />
+      )}
+
+      {paywallFeature && (
+        <PremiumPaywallModal feature={paywallFeature} onClose={() => setPaywallFeature(null)} />
       )}
 
       {phraseModalOpen && (
