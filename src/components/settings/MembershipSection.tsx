@@ -1,7 +1,20 @@
 import { useEffect, useState } from "react";
 import { getMyMembership, type MembershipTier } from "../../db/friends";
 import { CrownIcon } from "../ui/icons";
+import { AdminMembersList } from "./AdminMembersList";
 import "./MembershipSection.css";
+
+const TIER_LABEL: Record<MembershipTier, string> = {
+  free: "Free Member",
+  premium: "Premium Member",
+  admin: "Admin",
+};
+
+const TIER_HINT: Record<MembershipTier, string> = {
+  free: "Everything's currently free - premium perks are coming later.",
+  premium: "Thanks for supporting Consistency.",
+  admin: "You can see every member below and change their tier.",
+};
 
 /**
  * Read-only for now - there's no self-service billing yet (see
@@ -35,17 +48,12 @@ export function MembershipSection() {
         <div className={`membership-badge membership-badge--${tier}`}>
           <CrownIcon size={18} />
           <div className="membership-badge__text">
-            <span className="membership-badge__tier">
-              {tier === "premium" ? "Premium Member" : "Free Member"}
-            </span>
-            <span className="membership-badge__hint">
-              {tier === "premium"
-                ? "Thanks for supporting Consistency."
-                : "Everything's currently free - premium perks are coming later."}
-            </span>
+            <span className="membership-badge__tier">{TIER_LABEL[tier]}</span>
+            <span className="membership-badge__hint">{TIER_HINT[tier]}</span>
           </div>
         </div>
       )}
+      {tier === "admin" && <AdminMembersList />}
     </div>
   );
 }

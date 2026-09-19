@@ -26,7 +26,13 @@ export interface MyProfile {
   avatarId: AvatarId;
 }
 
-export type MembershipTier = "free" | "premium";
+export type MembershipTier = "free" | "premium" | "admin";
+
+export interface Member {
+  userId: string;
+  displayName: string;
+  tier: MembershipTier;
+}
 
 export interface FriendCalendarData {
   tasks: Task[];
@@ -109,6 +115,35 @@ export async function getMyMembership(): Promise<MembershipTier> {
   if (error) throw new Error(error.message);
   const row = data as { membership_tier: MembershipTier };
   return row.membership_tier;
+}
+
+/** Admin-only in practice: the "admins can select all profiles" RLS policy
+ *  (see supabase/membership_admin_schema.sql) means a non-admin calling
+ *  this just gets back their own row (same as getMyMembership), not an
+ *  error - so this is safe to call, but only actually useful for admins. */
+export async function listAllMembers(): Promise<Member[]> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("user_id, display_name, membership_tier")
+    .order("display_name");
+  if (error) throw new Error(error.message);
+  const rows = data as { user_id: string; display_name: string; membership_tier: MembershipTier }[];
+  return rows.map((row) => ({
+    userId: row.user_id,
+    displayName: row.display_name,
+    tier: row.membership_tier,
+  }));
+}
+
+/** Calls a SECURITY DEFINER function that re-checks admin status itself
+ *  server-side and only ever accepts "free"/"premium" - see
+ *  admin_set_membership_tier() in supabase/membership_admin_schema.sql. */
+export async function setMemberTier(userId: string, tier: "free" | "premium"): Promise<void> {
+  const { error } = await supabase.rpc("admin_set_membership_tier", {
+    target_user_id: userId,
+    new_tier: tier,
+  });
+  if (error) throw new Error(error.message);
 }
 
 export async function updateMyProfile(update: {
