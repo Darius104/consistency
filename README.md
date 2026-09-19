@@ -11,16 +11,23 @@ usable offline and syncs automatically once you're back online.
 
 ## Download (macOS)
 
-Grab the latest `.dmg` from the [Releases page](../../releases/latest).
+Easiest: use the [download page](https://darius104.github.io/consistency/),
+which always links the latest build. Or grab the `.dmg` directly from the
+[Releases page](../../releases/latest).
 
 This build isn't notarized by Apple (that requires a paid developer
-account), so macOS's Gatekeeper will warn that it's from an "unidentified
-developer" the first time you open it. To run it anyway:
+account), so the first time you try to open it, macOS will say it "can't be
+opened because it is damaged" and offer to move it to the Trash. **It isn't
+actually damaged** - this is just what modern macOS shows for an
+unnotarized app instead of the old "unidentified developer" warning. Fix it
+once with:
 
-1. Try to open the app - you'll see a warning dialog.
-2. Open **System Settings → Privacy & Security**, scroll down, and click
-   **Open Anyway** next to the mention of Consistency.
-3. Confirm in the dialog that appears. You only need to do this once.
+```sh
+xattr -cr /Applications/Consistency.app
+```
+
+Then open it again - it'll launch normally. You only need to do this once;
+future updates install automatically from inside the app.
 
 iOS isn't distributed this way (Apple doesn't allow installing iOS apps
 outside the App Store or TestFlight) - this repo is desktop-only for now.

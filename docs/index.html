@@ -93,6 +93,22 @@
     line-height: 1.7;
   }
   .card ol li::marker { color: var(--muted); }
+  .card code {
+    background: #0d141d;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 2px 6px;
+    font-size: 13px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .card pre {
+    margin: 8px 0 0;
+    overflow-x: auto;
+  }
+  .card pre code {
+    display: block;
+    padding: 10px 12px;
+  }
   footer {
     margin-top: 28px;
     font-size: 13px;
@@ -116,9 +132,11 @@
     <h2>First time opening it</h2>
     <ol>
       <li>Open the downloaded <code>.dmg</code> and drag Consistency into Applications.</li>
-      <li>When you first launch it, macOS will warn it's from an "unidentified developer" — this app isn't notarized by Apple yet.</li>
-      <li>Go to <strong>System Settings → Privacy &amp; Security</strong>, scroll down, and click <strong>Open Anyway</strong> next to Consistency, then confirm.</li>
-      <li>You only need to do this once — after that, the app checks for and installs future updates automatically.</li>
+      <li>When you try to open it, macOS will say it "can't be opened because it is damaged" and offer to move it to the Trash. <strong>It isn't actually damaged</strong> — this just means the app isn't notarized by Apple yet (that requires a paid developer account), and modern macOS shows this instead of the old "unidentified developer" warning.</li>
+      <li>Open <strong>Terminal</strong> (search for it with Spotlight) and paste this, then press Return:
+        <pre><code>xattr -cr /Applications/Consistency.app</code></pre>
+      </li>
+      <li>Open Consistency again — it'll launch normally this time. You only need to do this once — after that, the app checks for and installs future updates automatically.</li>
     </ol>
   </div>
 
