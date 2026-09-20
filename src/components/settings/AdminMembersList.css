@@ -16,6 +16,24 @@
   color: var(--text-secondary);
 }
 
+.admin-members__search {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  font-size: var(--text-sm);
+  color: var(--text);
+}
+
+.admin-members__search:focus {
+  border-color: var(--accent);
+}
+
+.admin-members__empty {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
 .admin-members__list {
   display: flex;
   flex-direction: column;

@@ -19,6 +19,7 @@ export function AdminMembersList({ online, onView }: AdminMembersListProps) {
   const [members, setMembers] = useState<Member[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   function load() {
     listAllMembers()
@@ -45,6 +46,9 @@ export function AdminMembersList({ online, onView }: AdminMembersListProps) {
   }
 
   const premiumCount = members?.filter((m) => m.tier === "premium").length ?? 0;
+  const visibleMembers = members?.filter((m) =>
+    m.displayName.toLowerCase().includes(query.trim().toLowerCase()),
+  );
 
   function handleView(member: Member) {
     // FriendCalendarView never actually renders friend.avatarId (it uses
@@ -66,8 +70,20 @@ export function AdminMembersList({ online, onView }: AdminMembersListProps) {
       {error && <span className="settings__hint settings__hint--warning">{error}</span>}
       {!members && !error && <span className="settings__hint">Loading members…</span>}
       {members && (
+        <input
+          type="text"
+          className="admin-members__search"
+          placeholder="Search members by name…"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      )}
+      {members && visibleMembers && visibleMembers.length === 0 && (
+        <span className="admin-members__empty">No members match "{query}".</span>
+      )}
+      {visibleMembers && visibleMembers.length > 0 && (
         <div className="admin-members__list">
-          {members.map((member) => (
+          {visibleMembers.map((member) => (
             <div className="admin-members__row" key={member.userId}>
               <span className="admin-members__name">{member.displayName}</span>
               <span className={`admin-members__tier admin-members__tier--${member.tier}`}>
