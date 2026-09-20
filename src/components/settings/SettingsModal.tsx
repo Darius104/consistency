@@ -28,6 +28,7 @@ import {
   CrownIcon,
   FrostIcon,
   GridIcon,
+  HelpIcon,
   ProfileIcon,
   TagIcon,
   UserIcon,
@@ -42,6 +43,7 @@ import { ProfileSection } from "./ProfileSection";
 import { ReminderList } from "./ReminderList";
 import { SettingsNav, type SettingsSection } from "./SettingsNav";
 import { StreakFreezeManager } from "./StreakFreezeManager";
+import { SupportSection } from "./SupportSection";
 import { ThemeCarousel } from "./ThemeCarousel";
 import "./SettingsModal.css";
 
@@ -91,6 +93,7 @@ const SECTIONS: SettingsSection[] = [
   { id: "reminders", label: "Reminders", icon: BellIcon },
   { id: "friends", label: "Friends", icon: UsersIcon },
   { id: "membership", label: "Membership", icon: CrownIcon },
+  { id: "support", label: "Support", icon: HelpIcon },
   { id: "account", label: "Account", icon: UserIcon },
 ];
 
@@ -321,6 +324,8 @@ export function SettingsModal({
                 }}
               />
             )}
+
+            {activeId === "support" && <SupportSection membership={membership} />}
 
             {activeId === "account" && (
               <>
