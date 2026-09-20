@@ -44,6 +44,7 @@ interface TaskListProps {
   onSaveAsTemplate: (tag: Tag, tasks: TemplateTaskBlueprint[]) => void;
   onRemoveTemplate: (templateId: string) => void;
   templates: Template[];
+  templateTaskBlueprints: Record<string, TemplateTaskBlueprint[]>;
   notes: DayNote[];
   onEditNote: (note: DayNote) => void;
   onDeleteNote: (id: string) => void;
@@ -58,6 +59,32 @@ function sortOccurrences(occurrences: Occurrence[]): Occurrence[] {
   );
 }
 
+/** Whether today's actual tasks for a category are exactly the template's
+ *  saved starter tasks - order-independent, but every task must have a
+ *  one-to-one match (same title/notes/time/priority) with no leftovers on
+ *  either side. Used to tell "a template exists" apart from "today still
+ *  matches it", since adding or removing a task after saving is exactly
+ *  the case that should un-light the bookmark (see TaskGroup's hasTemplate). */
+function occurrencesMatchTemplate(
+  occurrences: Occurrence[],
+  blueprint: TemplateTaskBlueprint[],
+): boolean {
+  if (occurrences.length !== blueprint.length) return false;
+  const remaining = [...blueprint];
+  for (const { task } of occurrences) {
+    const idx = remaining.findIndex(
+      (b) =>
+        b.title === task.title &&
+        b.notes === task.notes &&
+        b.time === task.time &&
+        b.priority === task.priority,
+    );
+    if (idx === -1) return false;
+    remaining.splice(idx, 1);
+  }
+  return true;
+}
+
 export function TaskList({
   selectedDate,
   occurrences,
@@ -70,6 +97,7 @@ export function TaskList({
   onSaveAsTemplate,
   onRemoveTemplate,
   templates,
+  templateTaskBlueprints,
   notes,
   onEditNote,
   onDeleteNote,
@@ -328,9 +356,21 @@ export function TaskList({
                   tag
                     ? () => {
                         const existing = templates.find((t) => t.tagId === tag.id);
-                        if (existing) {
+                        const matches =
+                          existing &&
+                          occurrencesMatchTemplate(
+                            groupOccurrences,
+                            templateTaskBlueprints[existing.id] ?? [],
+                          );
+                        if (existing && matches) {
                           onRemoveTemplate(existing.id);
                         } else {
+                          // Either no template exists yet, or one does but
+                          // today's tasks have drifted from it - either way
+                          // this (over)writes it to match today exactly.
+                          // createTemplateFromTasks upserts by tagId, so an
+                          // existing template is updated in place, not
+                          // duplicated.
                           onSaveAsTemplate(
                             tag,
                             groupOccurrences.map(({ task }) => ({
@@ -344,7 +384,15 @@ export function TaskList({
                       }
                     : undefined
                 }
-                hasTemplate={tag ? templates.some((t) => t.tagId === tag.id) : false}
+                hasTemplate={(() => {
+                  if (!tag) return false;
+                  const existing = templates.find((t) => t.tagId === tag.id);
+                  if (!existing) return false;
+                  return occurrencesMatchTemplate(
+                    groupOccurrences,
+                    templateTaskBlueprints[existing.id] ?? [],
+                  );
+                })()}
               >
                 {groupOccurrences.map(({ task, completed }, index) => (
                   <Fragment key={task.id}>

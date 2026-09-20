@@ -15,6 +15,7 @@ import { useRealtimeSync } from "./hooks/useRealtimeSync";
 import { FreezeSuggestionModal } from "./components/FreezeSuggestionModal";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { PremiumPaywallModal } from "./components/PremiumPaywallModal";
+import { TaskDeletedToast } from "./components/TaskDeletedToast";
 import { WriteErrorToast } from "./components/WriteErrorToast";
 import { FriendCalendarView } from "./components/friends/FriendCalendarView";
 import { SettingsModal } from "./components/settings/SettingsModal";
@@ -38,7 +39,9 @@ import {
   getStreakFreezes,
   getTags,
   getTemplates,
+  getTemplateTasks,
   removeStreakFreeze,
+  restoreTask,
   setCompletion,
   setSetting,
   updateNote,
@@ -94,6 +97,13 @@ export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
+  // Keyed by template id - loaded whenever `templates` changes so the day
+  // panel can tell "this category has a template" apart from "today's
+  // tasks for this category actually still match it" (see TaskList.tsx's
+  // hasTemplate computation).
+  const [templateTaskBlueprints, setTemplateTaskBlueprints] = useState<
+    Record<string, TemplateTaskBlueprint[]>
+  >({});
   const [completions, setCompletions] = useState<Set<string>>(new Set());
   const [freezes, setFreezes] = useState<Set<string>>(new Set());
   const [notes, setNotes] = useState<DayNote[]>([]);
@@ -125,7 +135,14 @@ export default function App() {
   // Non-null while confirming a task deletion - both the row's quick delete
   // button and the task form's own Delete button set this instead of
   // deleting immediately, so both paths get the same confirmation step.
+  // Desktop-width windows skip this entirely (see handleRequestDeleteTask) -
+  // a deliberate click on the small trash icon is unlikely to be
+  // accidental the way a touch tap/swipe is, and deleting several tasks in
+  // a row without a modal per task is exactly what desktop users asked for.
   const [pendingDeleteTask, setPendingDeleteTask] = useState<Task | null>(null);
+  // Non-null right after a desktop delete went through without confirmation
+  // - shows the Undo toast for a few seconds instead of a modal beforehand.
+  const [deletedTaskUndo, setDeletedTaskUndo] = useState<Task | null>(null);
   // Same confirmation step for notes - free-typed content is just as easy
   // to lose to a stray tap as a task, and previously had no confirmation
   // at all, unlike every task-deletion path.
@@ -155,6 +172,21 @@ export default function App() {
   // actually pulls fresh data (a queued write flushing, a reconnect, etc.)
   // - not just in response to a user action in this window.
   useEffect(() => onSyncComplete(() => void refreshAll()), []);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all(templates.map((t) => getTemplateTasks(t.id).then((tasks) => [t.id, tasks] as const)))
+      .then((entries) => {
+        if (!cancelled) setTemplateTaskBlueprints(Object.fromEntries(entries));
+      })
+      .catch(() => {
+        // Best-effort - a stale/missing entry here just means hasTemplate
+        // falls back to "no template" for that category, not a crash.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [templates]);
 
   // Skipped while viewing a friend's calendar - FriendCalendarView takes over
   // applying (and restoring) the document's theme for that duration instead,
@@ -381,6 +413,29 @@ export default function App() {
     await refreshAll();
   }
 
+  // Matches the same 700px breakpoint SettingsModal.css already uses for
+  // its own desktop/mobile split (see .only-desktop/.only-mobile there) -
+  // this is about window width/interaction model, not actual OS.
+  function isDesktopWidth(): boolean {
+    return window.matchMedia("(min-width: 701px)").matches;
+  }
+
+  function handleRequestDeleteTask(task: Task) {
+    if (isDesktopWidth()) {
+      void handleDeleteTask(task);
+      setDeletedTaskUndo(task);
+    } else {
+      setPendingDeleteTask(task);
+    }
+  }
+
+  async function handleUndoDeleteTask() {
+    if (!deletedTaskUndo) return;
+    await restoreTask(deletedTaskUndo);
+    setDeletedTaskUndo(null);
+    await refreshAll();
+  }
+
   async function handleConfirmDeleteTask() {
     if (!pendingDeleteTask) return;
     await handleDeleteTask(pendingDeleteTask);
@@ -550,6 +605,14 @@ export default function App() {
     <div className={`app ${dayPanelExpanded ? "app--day-expanded" : ""}`}>
       <OfflineBanner online={online} syncing={syncing} />
       <WriteErrorToast />
+      {deletedTaskUndo && (
+        <TaskDeletedToast
+          key={deletedTaskUndo.id}
+          taskTitle={deletedTaskUndo.title}
+          onUndo={() => void handleUndoDeleteTask()}
+          onDismiss={() => setDeletedTaskUndo(null)}
+        />
+      )}
       {freezeSuggestionDate && (
         <FreezeSuggestionModal
           date={freezeSuggestionDate}
@@ -604,12 +667,13 @@ export default function App() {
         onStartArranging={() => setArranging(true)}
         onToggle={handleToggle}
         onView={setViewingTask}
-        onDelete={setPendingDeleteTask}
+        onDelete={handleRequestDeleteTask}
         onReorderTasks={handleReorderTasks}
         onReorderTags={handleReorderTags}
         onSaveAsTemplate={handleSaveAsTemplate}
         onRemoveTemplate={handleDeleteTemplate}
         templates={templates}
+        templateTaskBlueprints={templateTaskBlueprints}
         onApplyTemplate={handleApplyTemplate}
         onAddTask={() => setFormState({ open: true })}
         notes={dayNotes}
@@ -637,7 +701,7 @@ export default function App() {
           onCreateTag={handleCreateTag}
           onSave={handleSaveTask}
           onDelete={
-            formState.task ? () => setPendingDeleteTask(formState.task!) : undefined
+            formState.task ? () => handleRequestDeleteTask(formState.task!) : undefined
           }
           onClose={() => setFormState({ open: false })}
         />

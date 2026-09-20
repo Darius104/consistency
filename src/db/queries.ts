@@ -164,6 +164,19 @@ export async function deleteTask(id: string): Promise<void> {
   kickSync();
 }
 
+/** Undoes a just-deleted task by re-inserting the exact same row (same id
+ *  and sortOrder) - used by the desktop "Undo" toast, not a general
+ *  restore feature. Doesn't attempt to bring back that task's completion
+ *  history, since deleteTask already discarded it locally and any
+ *  server-side row was removed via cascade - acceptable for a few-seconds
+ *  "oops" window right after deleting. */
+export async function restoreTask(task: Task): Promise<void> {
+  const row = taskRowFrom(task.id, task, task.sortOrder);
+  await cacheUpsertTask(row);
+  await enqueueOp({ table: "tasks", op: "upsert", rowId: task.id, payload: row });
+  kickSync();
+}
+
 /** Persists a manually-dragged order via a single batched RPC call. */
 export async function updateTaskOrder(taskIds: string[]): Promise<void> {
   const orderMap = new Map(taskIds.map((id, i) => [id, i]));

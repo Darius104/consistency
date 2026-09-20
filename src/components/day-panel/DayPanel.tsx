@@ -79,6 +79,7 @@ interface DayPanelProps {
   onSaveAsTemplate: (tag: Tag, tasks: TemplateTaskBlueprint[]) => void;
   onRemoveTemplate: (templateId: string) => void;
   templates: Template[];
+  templateTaskBlueprints: Record<string, TemplateTaskBlueprint[]>;
   onApplyTemplate: (templateId: string) => void;
   onAddTask: () => void;
   notes: DayNote[];
@@ -121,6 +122,7 @@ export function DayPanel({
   onSaveAsTemplate,
   onRemoveTemplate,
   templates,
+  templateTaskBlueprints,
   onApplyTemplate,
   onAddTask,
   notes,
@@ -326,6 +328,7 @@ export function DayPanel({
         onSaveAsTemplate={onSaveAsTemplate}
         onRemoveTemplate={onRemoveTemplate}
         templates={templates}
+        templateTaskBlueprints={templateTaskBlueprints}
         notes={notes}
         onEditNote={onEditNote}
         onDeleteNote={onDeleteNote}
