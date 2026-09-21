@@ -101,6 +101,25 @@
   color: var(--danger);
 }
 
+.settings-status-banner {
+  font-size: var(--text-sm);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+
+.settings-status-banner--warning {
+  color: var(--danger);
+  background: rgba(229, 104, 107, 0.1);
+  border-color: rgba(229, 104, 107, 0.35);
+}
+
+.settings-status-banner--success {
+  color: var(--success);
+  background: var(--success-soft);
+  border-color: rgba(70, 201, 143, 0.35);
+}
+
 .settings__row {
   display: flex;
   align-items: center;

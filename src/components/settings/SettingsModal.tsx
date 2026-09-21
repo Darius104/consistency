@@ -193,48 +193,53 @@ export function SettingsModal({
             )}
 
             {activeId === "widgets" && (
-              <div className="settings__section">
-                <span className="settings__hint">
-                  Choose which widgets show up on your day panel, and preview what
-                  each one looks like with your real data.
-                </span>
-                <div className="widget-gallery">
-                  {WIDGET_IDS.map((id) => {
-                    const visible = !hiddenWidgets.includes(id);
-                    const visibleCount = WIDGET_IDS.length - hiddenWidgets.length;
-                    const locked = !visible && !membership.isPremium && visibleCount >= FREE_WIDGET_LIMIT;
-                    return (
-                      <div className="widget-gallery__item" key={id}>
-                        <div
-                          className={`widget-gallery__preview ${visible ? "" : "widget-gallery__preview--hidden"}`}
-                          aria-hidden="true"
-                        >
-                          {renderWidgetPreview(id)}
-                        </div>
-                        <Checkbox
-                          checked={visible}
-                          onChange={(checked) => (checked ? onShowWidget(id) : onHideWidget(id))}
-                          label={locked ? `${WIDGET_LABELS[id]} (Premium)` : WIDGET_LABELS[id]}
-                        />
-                      </div>
-                    );
-                  })}
+              <>
+                <div className="settings__section">
+                  <div className="settings__row">
+                    <span className="settings__row-text">
+                      <span className="only-desktop">
+                        Reorder the streak, weekly %, and task list on the right panel
+                      </span>
+                      <span className="only-mobile">
+                        Reorder the streak, weekly %, and task list sections
+                      </span>
+                    </span>
+                    <Button onClick={onStartArranging}>
+                      <span className="only-desktop">Arrange right panel</span>
+                      <span className="only-mobile">Arrange panel</span>
+                    </Button>
+                  </div>
                 </div>
-                <div className="settings__row">
-                  <span className="settings__row-text">
-                    <span className="only-desktop">
-                      Reorder the streak, weekly %, and task list on the right panel
-                    </span>
-                    <span className="only-mobile">
-                      Reorder the streak, weekly %, and task list sections
-                    </span>
+
+                <div className="settings__section">
+                  <span className="settings__hint">
+                    Choose which widgets show up on your day panel, and preview what
+                    each one looks like with your real data.
                   </span>
-                  <Button onClick={onStartArranging}>
-                    <span className="only-desktop">Arrange right panel</span>
-                    <span className="only-mobile">Arrange panel</span>
-                  </Button>
+                  <div className="widget-gallery">
+                    {WIDGET_IDS.map((id) => {
+                      const visible = !hiddenWidgets.includes(id);
+                      const visibleCount = WIDGET_IDS.length - hiddenWidgets.length;
+                      const locked = !visible && !membership.isPremium && visibleCount >= FREE_WIDGET_LIMIT;
+                      return (
+                        <div className="widget-gallery__item" key={id}>
+                          <div
+                            className={`widget-gallery__preview ${visible ? "" : "widget-gallery__preview--hidden"}`}
+                            aria-hidden="true"
+                          >
+                            {renderWidgetPreview(id)}
+                          </div>
+                          <Checkbox
+                            checked={visible}
+                            onChange={(checked) => (checked ? onShowWidget(id) : onHideWidget(id))}
+                            label={locked ? `${WIDGET_LABELS[id]} (Premium)` : WIDGET_LABELS[id]}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              </>
             )}
 
             {activeId === "categories" && (
@@ -261,47 +266,50 @@ export function SettingsModal({
             )}
 
             {activeId === "reminders" && (
-              <div className="settings__section">
-                <Checkbox
-                  checked={remindersEnabled}
-                  onChange={onChangeRemindersEnabled}
-                  label="Notify me when a scheduled task's time arrives"
-                />
-                <span className="settings__hint">
-                  Needs notification permission - once granted, these arrive even if
-                  the app isn't open.
-                </span>
-                {remindersEnabled && reminderStatus.permission === "denied" && (
-                  <span className="settings__hint settings__hint--warning">
-                    Notifications permission was denied - enable it for this app in
-                    your device's system Settings.
+              <>
+                <div className="settings__section">
+                  <Checkbox
+                    checked={remindersEnabled}
+                    onChange={onChangeRemindersEnabled}
+                    label="Notify me when a scheduled task's time arrives"
+                  />
+                  <span className="settings__hint">
+                    Needs notification permission - once granted, these arrive even if
+                    the app isn't open.
                   </span>
-                )}
-                {remindersEnabled && reminderStatus.lastError && (
-                  <span className="settings__hint settings__hint--warning">
-                    Couldn't schedule reminders: {reminderStatus.lastError}
-                  </span>
-                )}
-                {remindersEnabled && reminderStatus.permission === "granted" && (
-                  <span
-                    className={`settings__hint ${
-                      reminderStatus.attemptedCount > reminderStatus.confirmedCount
-                        ? "settings__hint--warning"
-                        : ""
-                    }`}
-                  >
-                    {reminderStatus.attemptedCount > reminderStatus.confirmedCount
-                      ? `${reminderStatus.attemptedCount - reminderStatus.confirmedCount} of ${reminderStatus.attemptedCount} reminders didn't actually register with the system - they may not arrive.`
-                      : `${reminderStatus.confirmedCount} reminder${reminderStatus.confirmedCount === 1 ? "" : "s"} confirmed with the system.`}
-                  </span>
-                )}
+                  {remindersEnabled && reminderStatus.permission === "denied" && (
+                    <div className="settings-status-banner settings-status-banner--warning">
+                      Notifications permission was denied - enable it for this app in
+                      your device's system Settings.
+                    </div>
+                  )}
+                  {remindersEnabled && reminderStatus.lastError && (
+                    <div className="settings-status-banner settings-status-banner--warning">
+                      Couldn't schedule reminders: {reminderStatus.lastError}
+                    </div>
+                  )}
+                  {remindersEnabled && reminderStatus.permission === "granted" && (
+                    <div
+                      className={`settings-status-banner ${
+                        reminderStatus.attemptedCount > reminderStatus.confirmedCount
+                          ? "settings-status-banner--warning"
+                          : "settings-status-banner--success"
+                      }`}
+                    >
+                      {reminderStatus.attemptedCount > reminderStatus.confirmedCount
+                        ? `${reminderStatus.attemptedCount - reminderStatus.confirmedCount} of ${reminderStatus.attemptedCount} reminders didn't actually register with the system - they may not arrive.`
+                        : `${reminderStatus.confirmedCount} reminder${reminderStatus.confirmedCount === 1 ? "" : "s"} confirmed with the system.`}
+                    </div>
+                  )}
+                </div>
+
                 {remindersEnabled && (
-                  <>
-                    <span className="settings__label">Upcoming reminders</span>
+                  <div className="settings__section">
+                    <span className="settings__label">Upcoming Reminders</span>
                     <ReminderList tasks={tasks} completions={completions} />
-                  </>
+                  </div>
                 )}
-              </div>
+              </>
             )}
 
             {activeId === "friends" && (

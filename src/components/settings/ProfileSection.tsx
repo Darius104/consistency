@@ -3,6 +3,7 @@ import { getMyProfile, updateDisplayName, updateMyProfile } from "../../db/frien
 import { DEFAULT_AVATAR_ID, MAX_BIO_LENGTH, type AvatarId } from "../../utils/avatars";
 import { AvatarBadge } from "../stats/AvatarBadge";
 import { Button } from "../ui/Button";
+import { EditIcon } from "../ui/icons";
 import { AvatarPickerModal } from "./AvatarPickerModal";
 import "./ProfileSection.css";
 
@@ -87,46 +88,50 @@ export function ProfileSection() {
     <div className="profile-section">
       {error && <div className="profile-section__error">{error}</div>}
 
-      <div className="settings__section">
-        <span className="settings__label">Avatar</span>
-        <button
-          type="button"
-          className="profile-section__avatar-trigger"
-          onClick={() => setPickingAvatar(true)}
-        >
-          <AvatarBadge avatarId={avatarId} size={64} />
-          <span className="profile-section__avatar-change">Change avatar</span>
-        </button>
-      </div>
+      <div className="settings__section profile-card">
+        <div className="profile-card__header">
+          <button
+            type="button"
+            className="profile-card__avatar-trigger"
+            onClick={() => setPickingAvatar(true)}
+            aria-label="Change avatar"
+          >
+            <AvatarBadge avatarId={avatarId} size={72} />
+            <span className="profile-card__avatar-edit">
+              <EditIcon size={12} />
+            </span>
+          </button>
+          <div className="profile-card__name-field">
+            <span className="settings__label">Name (shown to friends)</span>
+            <input
+              className="profile-section__input"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="Your name"
+            />
+          </div>
+        </div>
 
-      <div className="settings__section">
-        <span className="settings__label">Your name (shown to friends)</span>
-        <input
-          className="profile-section__input"
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-        />
-      </div>
+        <div className="profile-card__bio-field">
+          <span className="settings__label">Bio</span>
+          <textarea
+            className="profile-section__bio"
+            value={bio}
+            onChange={(e) => setBio(e.target.value.slice(0, MAX_BIO_LENGTH))}
+            placeholder="A short line about you…"
+            rows={2}
+          />
+          <span className="settings__hint">
+            {bio.length}/{MAX_BIO_LENGTH}
+          </span>
+        </div>
 
-      <div className="settings__section">
-        <span className="settings__label">Bio</span>
-        <textarea
-          className="profile-section__bio"
-          value={bio}
-          onChange={(e) => setBio(e.target.value.slice(0, MAX_BIO_LENGTH))}
-          placeholder="A short line about you…"
-          rows={2}
-        />
-        <span className="settings__hint">
-          {bio.length}/{MAX_BIO_LENGTH}
-        </span>
-      </div>
-
-      <div className="profile-section__save-row">
-        <Button variant="primary" onClick={handleSave} disabled={saving || !dirty}>
-          {saving ? "Saving…" : "Save"}
-        </Button>
-        {saved && <span className="profile-section__saved">Saved.</span>}
+        <div className="profile-section__save-row">
+          <Button variant="primary" onClick={handleSave} disabled={saving || !dirty}>
+            {saving ? "Saving…" : "Save"}
+          </Button>
+          {saved && <span className="profile-section__saved">Saved.</span>}
+        </div>
       </div>
 
       {pickingAvatar && (
