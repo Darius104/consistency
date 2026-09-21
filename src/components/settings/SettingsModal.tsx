@@ -197,12 +197,8 @@ export function SettingsModal({
                 <div className="settings__section">
                   <div className="settings__row">
                     <span className="settings__row-text">
-                      <span className="only-desktop">
-                        Reorder the streak, weekly %, and task list on the right panel
-                      </span>
-                      <span className="only-mobile">
-                        Reorder the streak, weekly %, and task list sections
-                      </span>
+                      <span className="only-desktop">Reorder widgets on the right panel</span>
+                      <span className="only-mobile">Reorder your widgets</span>
                     </span>
                     <Button onClick={onStartArranging}>
                       <span className="only-desktop">Arrange right panel</span>
