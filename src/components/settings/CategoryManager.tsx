@@ -131,7 +131,7 @@ export function CategoryManager({
   }
 
   return (
-    <div className="category-manager">
+    <div className="category-manager settings__section">
       {creating ? (
         <div className="category-manager__row category-manager__row--editing">
           <div className="category-manager__editing-fields">

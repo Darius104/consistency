@@ -331,11 +331,13 @@ export function SettingsModal({
               <>
                 <AppUpdateSection />
                 <BackupSection />
-                <div className="settings__row">
-                  <span className="settings__row-text">Sign out of your account on this device</span>
-                  <Button variant="danger" onClick={onSignOut}>
-                    Sign out
-                  </Button>
+                <div className="settings__section">
+                  <div className="settings__row">
+                    <span className="settings__row-text">Sign out of your account on this device</span>
+                    <Button variant="danger" onClick={onSignOut}>
+                      Sign out
+                    </Button>
+                  </div>
                 </div>
               </>
             )}

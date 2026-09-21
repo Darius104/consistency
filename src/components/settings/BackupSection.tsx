@@ -40,7 +40,7 @@ export function BackupSection() {
   }
 
   return (
-    <div className="backup-section">
+    <div className="backup-section settings__section">
       <div className="settings__row">
         <span className="settings__row-text">
           Save a copy of your tasks, categories, and history to a file

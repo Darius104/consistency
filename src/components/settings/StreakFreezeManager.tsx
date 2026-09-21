@@ -52,20 +52,22 @@ export function StreakFreezeManager({
 
   return (
     <div className="freeze-manager">
-      <span className="freeze-manager__remaining">
-        <FrostIcon size={13} />
-        {freezesRemaining} of {MAX_FREEZES_PER_MONTH} freezes left this month
-      </span>
-
-      {confirmation && (
-        <div className="freeze-manager__confirm" key={confirmation.id}>
+      <div className="settings__section">
+        <span className="freeze-manager__remaining">
           <FrostIcon size={13} />
-          {formatDate(confirmation.date)} frozen - streak protected.
-        </div>
-      )}
+          {freezesRemaining} of {MAX_FREEZES_PER_MONTH} freezes left this month
+        </span>
+
+        {confirmation && (
+          <div className="freeze-manager__confirm" key={confirmation.id}>
+            <FrostIcon size={13} />
+            {formatDate(confirmation.date)} frozen - streak protected.
+          </div>
+        )}
+      </div>
 
       {frozenDays.length > 0 && (
-        <div className="freeze-manager__group">
+        <div className="freeze-manager__group settings__section">
           <span className="settings__label">Frozen days</span>
           <div className="freeze-manager__list">
             {frozenDays.map((date) => (
@@ -88,7 +90,7 @@ export function StreakFreezeManager({
         </div>
       )}
 
-      <div className="freeze-manager__group">
+      <div className="freeze-manager__group settings__section">
         <span className="settings__label">Freeze a missed day</span>
         {candidates.length === 0 ? (
           <span className="freeze-manager__empty">
