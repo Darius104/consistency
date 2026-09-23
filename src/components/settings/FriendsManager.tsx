@@ -188,15 +188,15 @@ export function FriendsManager({ online, onlineFriendIds, onViewFriend }: Friend
                       <AvatarBadge avatarId={friend.avatarId} size={28} />
                       <span
                         className={`friends-manager__status-dot ${isOnline ? "friends-manager__status-dot--online" : ""}`}
-                        aria-hidden="true"
-                        title={
-                          isOnline
+                      >
+                        <span className="friends-manager__status-tooltip" role="tooltip">
+                          {isOnline
                             ? "Online"
                             : friend.lastSeenAt
                               ? `Last seen ${formatRelativeTime(friend.lastSeenAt)}`
-                              : "Offline"
-                        }
-                      />
+                              : "Offline"}
+                        </span>
+                      </span>
                     </span>
                     <span className="friends-manager__name">{friend.displayName}</span>
                   </div>

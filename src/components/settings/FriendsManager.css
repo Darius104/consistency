@@ -114,9 +114,42 @@
   border: 2px solid var(--surface);
 }
 
+/* Invisible larger hit area around the dot - hovering precisely on a 9px
+   circle would otherwise be fiddly. */
+.friends-manager__status-dot::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
+
 .friends-manager__status-dot--online {
   background: var(--success);
   box-shadow: 0 0 4px rgba(70, 201, 143, 0.6);
+}
+
+.friends-manager__status-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  translate: -50% 0;
+  z-index: 20;
+  width: max-content;
+  max-width: 140px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  box-shadow: var(--shadow-md);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.friends-manager__status-dot:hover .friends-manager__status-tooltip {
+  opacity: 1;
 }
 
 .friends-manager__row-actions {
