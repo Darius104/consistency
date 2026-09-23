@@ -88,6 +88,13 @@
   min-width: 0;
 }
 
+.friends-manager__name-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
 .friends-manager__name {
   font-size: var(--text-sm);
   font-weight: 500;
@@ -95,6 +102,31 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.friends-manager__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.friends-manager__status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  flex: none;
+}
+
+.friends-manager__status--online {
+  color: var(--success);
+}
+
+.friends-manager__status--online .friends-manager__status-dot {
+  background: var(--success);
+  box-shadow: 0 0 4px rgba(70, 201, 143, 0.6);
 }
 
 .friends-manager__row-actions {

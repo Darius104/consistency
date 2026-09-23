@@ -54,7 +54,12 @@ export function AdminMembersList({ online, onView }: AdminMembersListProps) {
     // FriendCalendarView never actually renders friend.avatarId (it uses
     // the avatar_id it fetches fresh as part of the calendar data itself),
     // so this placeholder is never shown - see FriendCalendarView.tsx.
-    onView({ userId: member.userId, displayName: member.displayName, avatarId: DEFAULT_AVATAR_ID });
+    onView({
+      userId: member.userId,
+      displayName: member.displayName,
+      avatarId: DEFAULT_AVATAR_ID,
+      lastSeenAt: null,
+    });
   }
 
   return (

@@ -12,6 +12,7 @@ import { ensureProfile, syncMyThemeToProfile, type Friend } from "./db/friends";
 import { onSyncComplete, trySync } from "./sync";
 import { useOnlineStatus } from "./hooks/useOnlineStatus";
 import { useRealtimeSync } from "./hooks/useRealtimeSync";
+import { usePresence } from "./hooks/usePresence";
 import { FreezeSuggestionModal } from "./components/FreezeSuggestionModal";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { PremiumPaywallModal } from "./components/PremiumPaywallModal";
@@ -155,6 +156,7 @@ export default function App() {
   const { session } = useSession();
   const { online, syncing, syncNow } = useOnlineStatus(!!session);
   useRealtimeSync(session?.user.id ?? null);
+  const onlineFriendIds = usePresence(session?.user.id ?? null);
 
   useEffect(() => {
     if (!session) return;
@@ -744,6 +746,7 @@ export default function App() {
           online={online}
           onViewFriend={setViewingFriend}
           membership={membership}
+          onlineFriendIds={onlineFriendIds}
         />
       )}
 

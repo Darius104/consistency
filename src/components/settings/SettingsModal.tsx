@@ -83,6 +83,7 @@ interface SettingsModalProps {
   online: boolean;
   onViewFriend: (friend: Friend) => void;
   membership: MembershipState;
+  onlineFriendIds: Set<string>;
 }
 
 const SECTIONS: SettingsSection[] = [
@@ -133,6 +134,7 @@ export function SettingsModal({
   online,
   onViewFriend,
   membership,
+  onlineFriendIds,
 }: SettingsModalProps) {
   const [activeId, setActiveId] = useState(SECTIONS[0].id);
   // Only meaningful on phone-sized modal widths, where the nav list and the
@@ -311,6 +313,7 @@ export function SettingsModal({
             {activeId === "friends" && (
               <FriendsManager
                 online={online}
+                onlineFriendIds={onlineFriendIds}
                 onViewFriend={(friend) => {
                   onViewFriend(friend);
                   onClose();

@@ -6,6 +6,7 @@ import {
   redeemFriendCode,
   removeFriend,
 } from "../../db/friends";
+import { formatRelativeTime } from "../../utils/relativeTime";
 import { AvatarBadge } from "../stats/AvatarBadge";
 import { Button } from "../ui/Button";
 import { TrashIcon } from "../ui/icons";
@@ -13,10 +14,11 @@ import "./FriendsManager.css";
 
 interface FriendsManagerProps {
   online: boolean;
+  onlineFriendIds: Set<string>;
   onViewFriend: (friend: Friend) => void;
 }
 
-export function FriendsManager({ online, onViewFriend }: FriendsManagerProps) {
+export function FriendsManager({ online, onlineFriendIds, onViewFriend }: FriendsManagerProps) {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -167,8 +169,9 @@ export function FriendsManager({ online, onViewFriend }: FriendsManagerProps) {
           <span className="friends-manager__empty">No friends linked yet.</span>
         ) : (
           <div className="friends-manager__list">
-            {friends.map((friend) =>
-              confirmingRemoveId === friend.userId ? (
+            {friends.map((friend) => {
+              const isOnline = onlineFriendIds.has(friend.userId);
+              return confirmingRemoveId === friend.userId ? (
                 <div className="friends-manager__row" key={friend.userId}>
                   <span className="friends-manager__name">Remove {friend.displayName}?</span>
                   <div className="friends-manager__row-actions">
@@ -182,7 +185,19 @@ export function FriendsManager({ online, onViewFriend }: FriendsManagerProps) {
                 <div className="friends-manager__row" key={friend.userId}>
                   <div className="friends-manager__identity">
                     <AvatarBadge avatarId={friend.avatarId} size={28} />
-                    <span className="friends-manager__name">{friend.displayName}</span>
+                    <div className="friends-manager__name-col">
+                      <span className="friends-manager__name">{friend.displayName}</span>
+                      <span
+                        className={`friends-manager__status ${isOnline ? "friends-manager__status--online" : ""}`}
+                      >
+                        <span className="friends-manager__status-dot" aria-hidden="true" />
+                        {isOnline
+                          ? "Online"
+                          : friend.lastSeenAt
+                            ? `Last seen ${formatRelativeTime(friend.lastSeenAt)}`
+                            : "Offline"}
+                      </span>
+                    </div>
                   </div>
                   <div className="friends-manager__row-actions">
                     <Button variant="primary" onClick={() => onViewFriend(friend)} disabled={!online}>
@@ -198,8 +213,8 @@ export function FriendsManager({ online, onViewFriend }: FriendsManagerProps) {
                     </button>
                   </div>
                 </div>
-              ),
-            )}
+              );
+            })}
           </div>
         )}
       </div>

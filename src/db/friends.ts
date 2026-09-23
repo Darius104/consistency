@@ -13,6 +13,10 @@ export interface Friend {
   userId: string;
   displayName: string;
   avatarId: AvatarId;
+  /** Null if they've never been recorded online (or the column predates
+   *  them). Live online/offline itself comes from usePresence, not this -
+   *  this is only ever shown as "last seen X ago" for an offline friend. */
+  lastSeenAt: string | null;
 }
 
 export interface FriendCode {
@@ -214,7 +218,12 @@ export async function redeemFriendCode(code: string): Promise<Friend> {
   // this just shows the default shape until the next listFriends() refresh
   // (FriendsManager already polls every 4s), rather than needing to touch
   // that already-applied SQL function for a cosmetic, self-correcting gap.
-  return { userId: result.user_id, displayName: result.display_name, avatarId: DEFAULT_AVATAR_ID };
+  return {
+    userId: result.user_id,
+    displayName: result.display_name,
+    avatarId: DEFAULT_AVATAR_ID,
+    lastSeenAt: null,
+  };
 }
 
 export async function listFriends(): Promise<Friend[]> {
@@ -234,7 +243,7 @@ export async function listFriends(): Promise<Friend[]> {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("user_id, display_name, avatar_id")
+    .select("user_id, display_name, avatar_id, last_seen_at")
     .in("user_id", otherIds);
   if (error) throw new Error(error.message);
 
@@ -242,7 +251,20 @@ export async function listFriends(): Promise<Friend[]> {
     userId: row.user_id as string,
     displayName: row.display_name as string,
     avatarId: parseAvatarId(row.avatar_id as string | null),
+    lastSeenAt: row.last_seen_at as string | null,
   }));
+}
+
+/** Best-effort heartbeat, not the source of truth for "online now" (that's
+ *  Realtime Presence - see usePresence.ts) - this only ever back-fills
+ *  "last seen X ago" for whenever they're next viewed while offline. */
+export async function touchLastSeen(): Promise<void> {
+  const userId = await currentUserId();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ last_seen_at: new Date().toISOString() })
+    .eq("user_id", userId);
+  if (error) throw new Error(error.message);
 }
 
 export async function removeFriend(otherUserId: string): Promise<void> {
