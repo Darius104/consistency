@@ -80,10 +80,10 @@ export function CalendarHeader({
             )}
           </span>
         )}
-        <Button onClick={onToday}>Today</Button>
         <Button className="btn--icon" onClick={onPrev} aria-label="Previous month">
           <ChevronLeftIcon size={15} />
         </Button>
+        <Button onClick={onToday}>Today</Button>
         <Button className="btn--icon" onClick={onNext} aria-label="Next month">
           <ChevronRightIcon size={15} />
         </Button>
