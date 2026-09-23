@@ -72,7 +72,7 @@
 .streak-hero__value {
   display: flex;
   flex-direction: column;
-  font-size: 32px;
+  font-size: var(--text-hero);
   font-weight: 800;
   line-height: 1.05;
   color: var(--text);

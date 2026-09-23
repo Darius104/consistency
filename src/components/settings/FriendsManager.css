@@ -18,8 +18,19 @@
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 6px 10px;
+  padding: var(--space-2) var(--space-3);
   font-size: var(--text-sm);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.friends-manager__input:hover {
+  border-color: var(--border-strong);
+}
+
+.friends-manager__input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .friends-manager__input--code {
@@ -137,7 +148,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 6px;
+  padding: var(--space-2);
   border-radius: var(--radius-sm);
   background: transparent;
   border: none;

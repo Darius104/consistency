@@ -20,13 +20,20 @@
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 7px 10px;
+  padding: var(--space-2) var(--space-3);
   font-size: var(--text-sm);
   color: var(--text);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.admin-members__search:hover {
+  border-color: var(--border-strong);
 }
 
 .admin-members__search:focus {
+  outline: none;
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .admin-members__empty {
@@ -49,7 +56,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 8px 10px;
+  padding: var(--space-2) var(--space-3);
 }
 
 .admin-members__name {

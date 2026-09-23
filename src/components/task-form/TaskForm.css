@@ -30,14 +30,19 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 8px 10px;
+  padding: var(--space-2) var(--space-3);
   width: 100%;
-  transition: border-color 0.12s ease;
+  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+
+.task-form__input:hover {
+  border-color: var(--border-strong);
 }
 
 .task-form__input:focus {
   outline: none;
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .task-form__textarea {
@@ -47,7 +52,7 @@
 
 .task-form__priority {
   display: flex;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .task-form__priority-btn {
@@ -56,7 +61,7 @@
   background: var(--surface);
   color: var(--text-secondary);
   border-radius: var(--radius-sm);
-  padding: 8px 6px;
+  padding: var(--space-2);
   font-size: var(--text-sm);
   transition: border-color 0.12s ease, background-color 0.12s ease, color 0.12s ease,
     transform 120ms var(--ease-out);

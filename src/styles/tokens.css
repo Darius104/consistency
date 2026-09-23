@@ -65,6 +65,7 @@
   --text-lg: 15px;
   --text-xl: 18px;
   --text-2xl: 22px;
+  --text-hero: 32px;
 }
 
 /* Themes only ever change background/text/accent tokens. Priority colors
