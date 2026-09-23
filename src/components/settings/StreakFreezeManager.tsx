@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { MAX_FREEZES_PER_MONTH, type FreezeCandidate } from "../../utils/stats";
 import { parseDateKey } from "../../utils/dates";
 import { Button } from "../ui/Button";
+import { Card } from "../ui/Card";
 import { FrostIcon, TrashIcon } from "../ui/icons";
 import "./StreakFreezeManager.css";
 
@@ -52,7 +53,7 @@ export function StreakFreezeManager({
 
   return (
     <div className="freeze-manager">
-      <div className="settings__section">
+      <Card>
         <span className="freeze-manager__remaining">
           <FrostIcon size={13} />
           {freezesRemaining} of {MAX_FREEZES_PER_MONTH} freezes left this month
@@ -64,10 +65,10 @@ export function StreakFreezeManager({
             {formatDate(confirmation.date)} frozen - streak protected.
           </div>
         )}
-      </div>
+      </Card>
 
       {frozenDays.length > 0 && (
-        <div className="freeze-manager__group settings__section">
+        <Card className="freeze-manager__group">
           <span className="settings__label">Frozen days</span>
           <div className="freeze-manager__list">
             {frozenDays.map((date) => (
@@ -87,10 +88,10 @@ export function StreakFreezeManager({
               </div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
 
-      <div className="freeze-manager__group settings__section">
+      <Card className="freeze-manager__group">
         <span className="settings__label">Freeze a missed day</span>
         {candidates.length === 0 ? (
           <span className="freeze-manager__empty">
@@ -113,7 +114,7 @@ export function StreakFreezeManager({
             ))}
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

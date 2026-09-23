@@ -4,6 +4,7 @@ import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { exportAllData } from "../../db/queries";
 import { todayKey } from "../../utils/dates";
 import { Button } from "../ui/Button";
+import { Card } from "../ui/Card";
 import "./BackupSection.css";
 
 type Status = { kind: "idle" } | { kind: "success"; path: string } | { kind: "error"; message: string };
@@ -40,7 +41,7 @@ export function BackupSection() {
   }
 
   return (
-    <div className="backup-section settings__section">
+    <Card className="backup-section">
       <div className="settings__row">
         <span className="settings__row-text">
           Save a copy of your tasks, categories, and history to a file
@@ -65,6 +66,6 @@ export function BackupSection() {
         Your data lives in your account now, not on this device - this export is a
         readable snapshot for your own records, not a restore point yet.
       </span>
-    </div>
+    </Card>
   );
 }

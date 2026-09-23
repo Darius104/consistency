@@ -1,5 +1,6 @@
 import type { Friend, MembershipTier } from "../../db/friends";
 import type { MembershipState } from "../../hooks/useMembership";
+import { Card } from "../ui/Card";
 import { CrownIcon } from "../ui/icons";
 import { AdminMembersList } from "./AdminMembersList";
 import "./MembershipSection.css";
@@ -40,7 +41,7 @@ export function MembershipSection({ online, onViewMember, membership }: Membersh
   const isAdmin = actualTier === "admin";
 
   return (
-    <div className="settings__section">
+    <Card>
       <span className="settings__label">Membership</span>
       {error && <span className="settings__hint settings__hint--warning">{error}</span>}
       {effectiveTier && (
@@ -80,6 +81,6 @@ export function MembershipSection({ online, onViewMember, membership }: Membersh
       )}
 
       {effectiveTier === "admin" && <AdminMembersList online={online} onView={onViewMember} />}
-    </div>
+    </Card>
   );
 }

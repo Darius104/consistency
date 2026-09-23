@@ -69,16 +69,6 @@
   }
 }
 
-.settings__section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4);
-}
-
 /* One consistent "section label" language used everywhere something needs
    a small heading above it - Theme/Layout here, but also each Friends
    subsection and (via StreakFreezeManager reusing this same class) the

@@ -4,6 +4,7 @@ import { useReorderDrag } from "../../hooks/useReorderDrag";
 import type { Tag, Template, TemplateTaskBlueprint } from "../../types";
 import { PRESET_COLORS } from "../../utils/tagColors";
 import { Button } from "../ui/Button";
+import { Card } from "../ui/Card";
 import { EditIcon, TrashIcon } from "../ui/icons";
 import "./CategoryManager.css";
 
@@ -131,7 +132,7 @@ export function CategoryManager({
   }
 
   return (
-    <div className="category-manager settings__section">
+    <Card className="category-manager">
       {creating ? (
         <div className="category-manager__row category-manager__row--editing">
           <div className="category-manager__editing-fields">
@@ -343,7 +344,7 @@ export function CategoryManager({
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 

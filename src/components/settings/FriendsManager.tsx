@@ -9,6 +9,7 @@ import {
 import { formatRelativeTime } from "../../utils/relativeTime";
 import { AvatarBadge } from "../stats/AvatarBadge";
 import { Button } from "../ui/Button";
+import { Card } from "../ui/Card";
 import { TrashIcon } from "../ui/icons";
 import "./FriendsManager.css";
 
@@ -118,7 +119,7 @@ export function FriendsManager({ online, onlineFriendIds, onViewFriend }: Friend
     <div className="friends-manager">
       {error && <div className="friends-manager__error">{error}</div>}
 
-      <div className="settings__section">
+      <Card>
         <span className="settings__label">Invite a friend</span>
         <span className="settings__hint">
           Ask them for a code (or generate your own here and send it to them) - entering a valid
@@ -135,9 +136,9 @@ export function FriendsManager({ online, onlineFriendIds, onViewFriend }: Friend
           </Button>
         )}
         {!online && <span className="settings__hint">Needs a connection.</span>}
-      </div>
+      </Card>
 
-      <div className="settings__section">
+      <Card>
         <span className="settings__label">Redeem a code</span>
         <div className="friends-manager__redeem">
           <input
@@ -159,9 +160,9 @@ export function FriendsManager({ online, onlineFriendIds, onViewFriend }: Friend
           </Button>
         </div>
         {redeemMessage && <span className="friends-manager__success">{redeemMessage}</span>}
-      </div>
+      </Card>
 
-      <div className="settings__section">
+      <Card>
         <span className="settings__label">Your friends</span>
         {loading ? (
           <span className="settings__hint">Loading…</span>
@@ -215,7 +216,7 @@ export function FriendsManager({ online, onlineFriendIds, onViewFriend }: Friend
             })}
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

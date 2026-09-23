@@ -3,6 +3,7 @@ import { getMyProfile, updateDisplayName, updateMyProfile } from "../../db/frien
 import { DEFAULT_AVATAR_ID, MAX_BIO_LENGTH, type AvatarId } from "../../utils/avatars";
 import { AvatarBadge } from "../stats/AvatarBadge";
 import { Button } from "../ui/Button";
+import { Card } from "../ui/Card";
 import { EditIcon } from "../ui/icons";
 import { AvatarPickerModal } from "./AvatarPickerModal";
 import "./ProfileSection.css";
@@ -88,7 +89,7 @@ export function ProfileSection() {
     <div className="profile-section">
       {error && <div className="profile-section__error">{error}</div>}
 
-      <div className="settings__section profile-card">
+      <Card className="profile-card">
         <div className="profile-card__header">
           <button
             type="button"
@@ -132,7 +133,7 @@ export function ProfileSection() {
           </Button>
           {saved && <span className="profile-section__saved">Saved.</span>}
         </div>
-      </div>
+      </Card>
 
       {pickingAvatar && (
         <AvatarPickerModal

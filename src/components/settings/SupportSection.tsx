@@ -7,6 +7,7 @@ import {
 } from "../../db/support";
 import type { MembershipState } from "../../hooks/useMembership";
 import { Button } from "../ui/Button";
+import { Card } from "../ui/Card";
 import { AdminTicketsList } from "./AdminTicketsList";
 import "./SupportSection.css";
 
@@ -80,7 +81,7 @@ function MemberSupportForm() {
   }
 
   return (
-    <div className="settings__section">
+    <Card>
       <span className="settings__label">Contact Support</span>
       <span className="settings__hint">
         Only visible to you and the app's admin - not shared with other members.
@@ -138,6 +139,6 @@ function MemberSupportForm() {
           ))}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

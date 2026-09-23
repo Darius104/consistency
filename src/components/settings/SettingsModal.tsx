@@ -20,6 +20,7 @@ import { QuoteWidget } from "../stats/QuoteWidget";
 import { StreakCounter } from "../stats/StreakCounter";
 import { WeeklyCompletion } from "../stats/WeeklyCompletion";
 import { Button } from "../ui/Button";
+import { Card } from "../ui/Card";
 import { Checkbox } from "../ui/Checkbox";
 import { Modal } from "../ui/Modal";
 import {
@@ -186,17 +187,17 @@ export function SettingsModal({
           <div className="settings-detail__pane" key={activeId}>
             {activeId === "profile" && (
               <>
-                <div className="settings__section">
+                <Card>
                   <span className="settings__label">Theme</span>
                   <ThemeCarousel themes={THEMES} selected={theme} onSelect={onChangeTheme} />
-                </div>
+                </Card>
                 <ProfileSection />
               </>
             )}
 
             {activeId === "widgets" && (
               <>
-                <div className="settings__section">
+                <Card>
                   <div className="settings__row">
                     <span className="settings__row-text">
                       <span className="only-desktop">Reorder widgets on the right panel</span>
@@ -207,9 +208,9 @@ export function SettingsModal({
                       <span className="only-mobile">Arrange panel</span>
                     </Button>
                   </div>
-                </div>
+                </Card>
 
-                <div className="settings__section">
+                <Card>
                   <span className="settings__hint">
                     Choose which widgets show up on your day panel, and preview what
                     each one looks like with your real data.
@@ -236,7 +237,7 @@ export function SettingsModal({
                       );
                     })}
                   </div>
-                </div>
+                </Card>
               </>
             )}
 
@@ -265,7 +266,7 @@ export function SettingsModal({
 
             {activeId === "reminders" && (
               <>
-                <div className="settings__section">
+                <Card>
                   <Checkbox
                     checked={remindersEnabled}
                     onChange={onChangeRemindersEnabled}
@@ -299,13 +300,13 @@ export function SettingsModal({
                         : `${reminderStatus.confirmedCount} reminder${reminderStatus.confirmedCount === 1 ? "" : "s"} confirmed with the system.`}
                     </div>
                   )}
-                </div>
+                </Card>
 
                 {remindersEnabled && (
-                  <div className="settings__section">
+                  <Card>
                     <span className="settings__label">Upcoming Reminders</span>
                     <ReminderList tasks={tasks} completions={completions} />
-                  </div>
+                  </Card>
                 )}
               </>
             )}
@@ -338,14 +339,14 @@ export function SettingsModal({
               <>
                 <AppUpdateSection />
                 <BackupSection />
-                <div className="settings__section">
+                <Card>
                   <div className="settings__row">
                     <span className="settings__row-text">Sign out of your account on this device</span>
                     <Button variant="danger" onClick={onSignOut}>
                       Sign out
                     </Button>
                   </div>
-                </div>
+                </Card>
               </>
             )}
           </div>

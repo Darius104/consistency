@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { listAllTickets, setTicketStatus, type AdminSupportTicket } from "../../db/support";
 import { Button } from "../ui/Button";
+import { Card } from "../ui/Card";
 import "./SupportSection.css";
 
 const TICKET_TYPE_LABEL: Record<AdminSupportTicket["type"], string> = {
@@ -53,7 +54,7 @@ export function AdminTicketsList() {
   const openCount = tickets?.filter((t) => t.status === "open").length ?? 0;
 
   return (
-    <div className="settings__section">
+    <Card>
       <div className="support-list__header">
         <span className="settings__label">Support Tickets</span>
         {tickets && (
@@ -93,6 +94,6 @@ export function AdminTicketsList() {
           ))}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

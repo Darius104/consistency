@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAppUpdater } from "../../hooks/useAppUpdater";
 import { Button } from "../ui/Button";
+import { Card } from "../ui/Card";
 import { Modal } from "../ui/Modal";
 import "../ui/ConfirmModal.css";
 
@@ -36,7 +37,7 @@ export function AppUpdateSection() {
     : "Check for a newer version of the app.";
 
   return (
-    <div className="settings__section">
+    <Card>
       <span className="settings__label">Updates</span>
       <div className="settings__row">
         <span className="settings__row-text">
@@ -68,6 +69,6 @@ export function AppUpdateSection() {
           </div>
         </Modal>
       )}
-    </div>
+    </Card>
   );
 }
