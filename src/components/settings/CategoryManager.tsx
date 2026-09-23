@@ -5,7 +5,8 @@ import type { Tag, Template, TemplateTaskBlueprint } from "../../types";
 import { PRESET_COLORS } from "../../utils/tagColors";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
-import { EditIcon, TrashIcon } from "../ui/icons";
+import { EmptyState } from "../ui/EmptyState";
+import { EditIcon, TagIcon, TrashIcon } from "../ui/icons";
 import "./CategoryManager.css";
 
 interface CategoryManagerProps {
@@ -174,7 +175,7 @@ export function CategoryManager({
       )}
 
       {tags.length === 0 ? (
-        <span className="category-manager__empty">No categories yet - create one above.</span>
+        <EmptyState icon={<TagIcon size={16} />}>No categories yet - create one above.</EmptyState>
       ) : (
         <div className="category-manager__list">
           {tags.map((tag, index) => {

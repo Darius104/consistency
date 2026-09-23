@@ -10,7 +10,9 @@ import { formatRelativeTime } from "../../utils/relativeTime";
 import { AvatarBadge } from "../stats/AvatarBadge";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
-import { TrashIcon } from "../ui/icons";
+import { EmptyState } from "../ui/EmptyState";
+import { UsersIcon, TrashIcon } from "../ui/icons";
+import { Skeleton } from "../ui/Skeleton";
 import "./FriendsManager.css";
 
 interface FriendsManagerProps {
@@ -165,9 +167,18 @@ export function FriendsManager({ online, onlineFriendIds, onViewFriend }: Friend
       <Card>
         <span className="settings__label">Your friends</span>
         {loading ? (
-          <span className="settings__hint">Loading…</span>
+          <div className="friends-manager__list">
+            {[0, 1].map((i) => (
+              <div className="friends-manager__row" key={i}>
+                <div className="friends-manager__identity">
+                  <Skeleton width={28} height={28} radius="50%" />
+                  <Skeleton width={90} height="0.85em" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : friends.length === 0 ? (
-          <span className="friends-manager__empty">No friends linked yet.</span>
+          <EmptyState icon={<UsersIcon size={16} />}>No friends linked yet.</EmptyState>
         ) : (
           <div className="friends-manager__list">
             {friends.map((friend) => {

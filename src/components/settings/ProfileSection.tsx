@@ -5,6 +5,7 @@ import { AvatarBadge } from "../stats/AvatarBadge";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { EditIcon } from "../ui/icons";
+import { Skeleton } from "../ui/Skeleton";
 import { AvatarPickerModal } from "./AvatarPickerModal";
 import "./ProfileSection.css";
 
@@ -82,7 +83,21 @@ export function ProfileSection() {
   }
 
   if (loading) {
-    return <span className="settings__hint">Loading…</span>;
+    return (
+      <Card className="profile-card">
+        <div className="profile-card__header">
+          <Skeleton width={72} height={72} radius="50%" />
+          <div className="profile-card__name-field">
+            <Skeleton width="40%" height="0.75em" />
+            <Skeleton height="2.2em" />
+          </div>
+        </div>
+        <div className="profile-card__bio-field">
+          <Skeleton width="25%" height="0.75em" />
+          <Skeleton height="3.5em" />
+        </div>
+      </Card>
+    );
   }
 
   return (

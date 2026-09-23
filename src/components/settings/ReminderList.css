@@ -6,11 +6,6 @@
   overflow-y: auto;
 }
 
-.reminder-list__empty {
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-}
-
 .reminder-list__row {
   display: flex;
   align-items: center;

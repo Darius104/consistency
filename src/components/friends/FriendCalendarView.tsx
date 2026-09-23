@@ -11,7 +11,8 @@ import { TaskGroup } from "../day-panel/TaskGroup";
 import { AvatarBadge } from "../stats/AvatarBadge";
 import { StreakCounter } from "../stats/StreakCounter";
 import { Button } from "../ui/Button";
-import { ChevronDownIcon, ChevronLeftIcon, ChevronUpIcon } from "../ui/icons";
+import { EmptyState } from "../ui/EmptyState";
+import { CheckIcon, ChevronDownIcon, ChevronLeftIcon, ChevronUpIcon } from "../ui/icons";
 import { FriendTaskRow } from "./FriendTaskRow";
 import "./FriendCalendarView.css";
 
@@ -237,7 +238,9 @@ function FriendDayContent({
       </div>
       <StreakCounter streak={streak} best={bestStreak} today={todayStatus} />
       {occurrences.length === 0 ? (
-        <div className="friend-view__empty">Nothing scheduled for this day.</div>
+        <EmptyState icon={<CheckIcon size={16} />} iconClassName="empty-state__icon--success">
+          Nothing scheduled for this day.
+        </EmptyState>
       ) : (
         groups.map((group) => (
           <TaskGroup

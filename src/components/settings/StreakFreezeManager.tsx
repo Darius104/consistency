@@ -3,6 +3,7 @@ import { MAX_FREEZES_PER_MONTH, type FreezeCandidate } from "../../utils/stats";
 import { parseDateKey } from "../../utils/dates";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
+import { EmptyState } from "../ui/EmptyState";
 import { FrostIcon, TrashIcon } from "../ui/icons";
 import "./StreakFreezeManager.css";
 
@@ -94,9 +95,9 @@ export function StreakFreezeManager({
       <Card className="freeze-manager__group">
         <span className="settings__label">Freeze a missed day</span>
         {candidates.length === 0 ? (
-          <span className="freeze-manager__empty">
+          <EmptyState icon={<FrostIcon size={16} />}>
             Nothing to freeze - no incomplete days this month.
-          </span>
+          </EmptyState>
         ) : (
           <div className="freeze-manager__list">
             {candidates.map((c) => (

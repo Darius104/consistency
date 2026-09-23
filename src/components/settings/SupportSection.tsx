@@ -8,6 +8,7 @@ import {
 import type { MembershipState } from "../../hooks/useMembership";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
+import { Skeleton } from "../ui/Skeleton";
 import { AdminTicketsList } from "./AdminTicketsList";
 import "./SupportSection.css";
 
@@ -119,7 +120,16 @@ function MemberSupportForm() {
       {error && <span className="settings__hint settings__hint--warning">{error}</span>}
 
       <span className="settings__label">Your Tickets</span>
-      {!tickets && !error && <span className="settings__hint">Loading…</span>}
+      {!tickets && !error && (
+        <div className="support-list">
+          {[0, 1].map((i) => (
+            <div className="support-list__row" key={i}>
+              <Skeleton width="40%" height="0.85em" />
+              <Skeleton width="90%" height="0.85em" />
+            </div>
+          ))}
+        </div>
+      )}
       {tickets && tickets.length === 0 && (
         <span className="settings__hint">You haven't sent any tickets yet.</span>
       )}

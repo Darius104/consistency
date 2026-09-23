@@ -70,8 +70,9 @@
 }
 
 .cal-day__number--today {
-  color: var(--bg);
-  background: var(--text);
+  color: #10131f;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
   border-radius: 50%;
   width: 18px;
   height: 18px;

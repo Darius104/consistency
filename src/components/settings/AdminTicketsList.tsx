@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { listAllTickets, setTicketStatus, type AdminSupportTicket } from "../../db/support";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
+import { Skeleton } from "../ui/Skeleton";
 import "./SupportSection.css";
 
 const TICKET_TYPE_LABEL: Record<AdminSupportTicket["type"], string> = {
@@ -64,7 +65,16 @@ export function AdminTicketsList() {
         )}
       </div>
       {error && <span className="settings__hint settings__hint--warning">{error}</span>}
-      {!tickets && !error && <span className="settings__hint">Loading tickets…</span>}
+      {!tickets && !error && (
+        <div className="support-list">
+          {[0, 1, 2].map((i) => (
+            <div className="support-list__row" key={i}>
+              <Skeleton width="50%" height="0.85em" />
+              <Skeleton width="85%" height="0.85em" />
+            </div>
+          ))}
+        </div>
+      )}
       {tickets && tickets.length === 0 && (
         <span className="settings__hint">No tickets yet.</span>
       )}

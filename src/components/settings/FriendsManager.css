@@ -70,11 +70,6 @@
   color: var(--text-muted);
 }
 
-.friends-manager__empty {
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-}
-
 .friends-manager__list {
   display: flex;
   flex-direction: column;

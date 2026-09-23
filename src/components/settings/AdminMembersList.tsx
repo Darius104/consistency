@@ -3,6 +3,7 @@ import { listAllMembers, setMemberTier, type Friend, type Member } from "../../d
 import { DEFAULT_AVATAR_ID } from "../../utils/avatars";
 import { Button } from "../ui/Button";
 import { EyeIcon } from "../ui/icons";
+import { Skeleton } from "../ui/Skeleton";
 import "./AdminMembersList.css";
 
 interface AdminMembersListProps {
@@ -73,7 +74,15 @@ export function AdminMembersList({ online, onView }: AdminMembersListProps) {
         )}
       </div>
       {error && <span className="settings__hint settings__hint--warning">{error}</span>}
-      {!members && !error && <span className="settings__hint">Loading members…</span>}
+      {!members && !error && (
+        <div className="admin-members__list">
+          {[0, 1, 2].map((i) => (
+            <div className="admin-members__row" key={i}>
+              <Skeleton width="35%" height="0.85em" />
+            </div>
+          ))}
+        </div>
+      )}
       {members && (
         <input
           type="text"

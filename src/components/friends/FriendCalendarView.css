@@ -113,11 +113,6 @@
   min-width: 0;
 }
 
-.friend-view__empty {
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-}
-
 .friend-view__divider {
   display: none;
 }

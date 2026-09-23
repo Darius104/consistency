@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useReorderDrag } from "../../hooks/useReorderDrag";
 import type { DayNote, Tag, Task, Template, TemplateTaskBlueprint } from "../../types";
+import { EmptyState } from "../ui/EmptyState";
 import { CheckIcon } from "../ui/icons";
 import { NoteRow } from "./NoteRow";
 import { TaskGroup } from "./TaskGroup";
@@ -285,12 +286,13 @@ export function TaskList({
 
   if (occurrences.length === 0 && notes.length === 0) {
     return (
-      <div className="task-list__empty" key={selectedDate}>
-        <span className="task-list__empty-icon" aria-hidden="true">
-          <CheckIcon size={16} />
-        </span>
+      <EmptyState
+        key={selectedDate}
+        icon={<CheckIcon size={16} />}
+        iconClassName="empty-state__icon--success"
+      >
         Nothing scheduled for this day.
-      </div>
+      </EmptyState>
     );
   }
 

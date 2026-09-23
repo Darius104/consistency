@@ -2,6 +2,7 @@ import { REMINDER_LOOKAHEAD_DAYS } from "../../hooks/useTaskReminders";
 import type { Task } from "../../types";
 import { addDays, parseDateKey, todayKey } from "../../utils/dates";
 import { upcomingReminders } from "../../utils/recurrence";
+import { EmptyState } from "../ui/EmptyState";
 import { BellIcon } from "../ui/icons";
 import "./ReminderList.css";
 
@@ -35,7 +36,7 @@ export function ReminderList({ tasks, completions }: ReminderListProps) {
     .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
 
   if (entries.length === 0) {
-    return <span className="reminder-list__empty">No upcoming reminders.</span>;
+    return <EmptyState icon={<BellIcon size={16} />}>No upcoming reminders.</EmptyState>;
   }
 
   return (
