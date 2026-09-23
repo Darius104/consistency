@@ -1,29 +1,69 @@
 .auth-screen {
+  position: relative;
   height: 100vh;
   height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--bg);
+  overflow: hidden;
+}
+
+/* A quiet accent glow behind the card, not a hard spotlight - reads as
+   "considered" rather than flashy, and follows the active theme's own
+   --accent automatically so every theme gets its own tint for free. */
+.auth-screen__glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse 700px 500px at 50% 35%,
+    var(--accent-soft),
+    transparent 70%
+  );
+  pointer-events: none;
 }
 
 .auth-screen__form {
+  position: relative;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: var(--space-4);
-  width: 320px;
+  width: 340px;
   padding: var(--space-6) var(--space-5);
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition: opacity 240ms var(--ease-out), transform 240ms var(--ease-out);
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+}
+
+.auth-screen__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
 }
 
 .auth-screen__title {
-  margin: 0 0 var(--space-2);
+  margin: 0;
   font-size: var(--text-xl);
   font-weight: 700;
   color: var(--text);
+  text-align: center;
+}
+
+.auth-screen__subtitle {
+  margin: calc(var(--space-2) * -1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
   text-align: center;
 }
 
@@ -31,6 +71,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  width: 100%;
 }
 
 .auth-screen__label {
@@ -43,17 +84,23 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 8px 10px;
+  padding: var(--space-2) var(--space-3);
   width: 100%;
-  transition: border-color 0.12s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.auth-screen__input:hover {
+  border-color: var(--border-strong);
 }
 
 .auth-screen__input:focus {
   outline: none;
   border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .auth-screen__error {
+  width: 100%;
   font-size: var(--text-sm);
   color: var(--danger);
   opacity: 1;

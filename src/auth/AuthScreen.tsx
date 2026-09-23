@@ -32,8 +32,13 @@ export function AuthScreen() {
 
   return (
     <div className="auth-screen">
+      <div className="auth-screen__glow" aria-hidden="true" />
       <form className="auth-screen__form" onSubmit={handleSubmit}>
+        <img className="auth-screen__icon" src="/app-icon.png" alt="" />
         <h1 className="auth-screen__title">Consistency</h1>
+        <p className="auth-screen__subtitle">
+          {mode === "signup" ? "Create an account to get started" : "Welcome back"}
+        </p>
         <label className="auth-screen__field">
           <span className="auth-screen__label">Email</span>
           <input
