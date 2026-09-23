@@ -184,20 +184,21 @@ export function FriendsManager({ online, onlineFriendIds, onViewFriend }: Friend
               ) : (
                 <div className="friends-manager__row" key={friend.userId}>
                   <div className="friends-manager__identity">
-                    <AvatarBadge avatarId={friend.avatarId} size={28} />
-                    <div className="friends-manager__name-col">
-                      <span className="friends-manager__name">{friend.displayName}</span>
+                    <span className="friends-manager__avatar-wrap">
+                      <AvatarBadge avatarId={friend.avatarId} size={28} />
                       <span
-                        className={`friends-manager__status ${isOnline ? "friends-manager__status--online" : ""}`}
-                      >
-                        <span className="friends-manager__status-dot" aria-hidden="true" />
-                        {isOnline
-                          ? "Online"
-                          : friend.lastSeenAt
-                            ? `Last seen ${formatRelativeTime(friend.lastSeenAt)}`
-                            : "Offline"}
-                      </span>
-                    </div>
+                        className={`friends-manager__status-dot ${isOnline ? "friends-manager__status-dot--online" : ""}`}
+                        aria-hidden="true"
+                        title={
+                          isOnline
+                            ? "Online"
+                            : friend.lastSeenAt
+                              ? `Last seen ${formatRelativeTime(friend.lastSeenAt)}`
+                              : "Offline"
+                        }
+                      />
+                    </span>
+                    <span className="friends-manager__name">{friend.displayName}</span>
                   </div>
                   <div className="friends-manager__row-actions">
                     <Button variant="primary" onClick={() => onViewFriend(friend)} disabled={!online}>
