@@ -556,7 +556,11 @@ export default function App() {
   }
 
   if (loading) {
-    return <div className="app-loading">Loading…</div>;
+    return (
+      <div className="app-loading">
+        <img className="app-loading__icon" src="/app-icon.png" alt="" />
+      </div>
+    );
   }
 
   if (viewingFriend) {
@@ -642,6 +646,8 @@ export default function App() {
         phraseUnseen={phraseUnseen}
         onSyncNow={syncNow}
         syncing={syncing}
+        onViewFriend={setViewingFriend}
+        onlineFriendIds={onlineFriendIds}
       />
       {/* Mobile-only divider between the calendar and the day panel below it -
           a separate element, not the day panel's own border, since that edge

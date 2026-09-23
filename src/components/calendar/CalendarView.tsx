@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { MembershipTier } from "../../db/friends";
+import type { Friend, MembershipTier } from "../../db/friends";
 import type { Task } from "../../types";
 import {
   buildMonthGrid,
@@ -54,6 +54,8 @@ interface CalendarViewProps {
   phraseUnseen?: boolean;
   onSyncNow?: () => void;
   syncing?: boolean;
+  onViewFriend?: (friend: Friend) => void;
+  onlineFriendIds?: Set<string>;
 }
 
 export function CalendarView({
@@ -68,6 +70,8 @@ export function CalendarView({
   phraseUnseen,
   onSyncNow,
   syncing,
+  onViewFriend,
+  onlineFriendIds,
 }: CalendarViewProps) {
   const today = todayKey();
   const [cursor, setCursor] = useState(() => {
@@ -206,6 +210,8 @@ export function CalendarView({
           phraseUnseen={phraseUnseen}
           onSyncNow={onSyncNow}
           syncing={syncing}
+          onViewFriend={onViewFriend}
+          onlineFriendIds={onlineFriendIds}
         />
         <div className="cal-view__weekdays">
           {WEEKDAY_LABELS.map((label) => (

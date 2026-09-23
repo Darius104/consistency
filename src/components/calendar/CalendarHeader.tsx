@@ -1,4 +1,4 @@
-import type { MembershipTier } from "../../db/friends";
+import type { Friend, MembershipTier } from "../../db/friends";
 import { Button } from "../ui/Button";
 import {
   ChevronLeftIcon,
@@ -7,6 +7,7 @@ import {
   RefreshIcon,
   SettingsIcon,
 } from "../ui/icons";
+import { FriendSwitcher } from "./FriendSwitcher";
 import "./CalendarHeader.css";
 
 const TIER_PLAN_LABEL: Record<MembershipTier, string> = {
@@ -34,6 +35,10 @@ interface CalendarHeaderProps {
    *  giving the same action two different triggers on the same platform. */
   onSyncNow?: () => void;
   syncing?: boolean;
+  /** Omitted entirely (not just a no-op) while viewing a friend's read-only
+   *  calendar - there's no friends list to jump to from in there. */
+  onViewFriend?: (friend: Friend) => void;
+  onlineFriendIds?: Set<string>;
 }
 
 export function CalendarHeader({
@@ -47,6 +52,8 @@ export function CalendarHeader({
   phraseUnseen,
   onSyncNow,
   syncing,
+  onViewFriend,
+  onlineFriendIds,
 }: CalendarHeaderProps) {
   return (
     <div className="cal-header">
@@ -93,6 +100,9 @@ export function CalendarHeader({
               className={syncing ? "cal-header__sync-icon--spinning" : ""}
             />
           </Button>
+        )}
+        {onViewFriend && (
+          <FriendSwitcher onlineFriendIds={onlineFriendIds ?? new Set()} onViewFriend={onViewFriend} />
         )}
         {onOpenSettings && (
           <Button className="btn--icon" onClick={onOpenSettings} aria-label="Settings">

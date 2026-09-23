@@ -13,6 +13,7 @@ import { StreakCounter } from "../stats/StreakCounter";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { CheckIcon, ChevronDownIcon, ChevronLeftIcon, ChevronUpIcon } from "../ui/icons";
+import { Skeleton } from "../ui/Skeleton";
 import { FriendTaskRow } from "./FriendTaskRow";
 import "./FriendCalendarView.css";
 
@@ -147,7 +148,24 @@ export function FriendCalendarView({ friend, onBack }: FriendCalendarViewProps) 
         </Button>
       </div>
 
-      {loading && <div className="friend-view__status">Loading…</div>}
+      {loading && (
+        <div className="friend-view__body">
+          <div className="friend-view__calendar-skeleton">
+            {Array.from({ length: 35 }).map((_, i) => (
+              <Skeleton key={i} height="auto" />
+            ))}
+          </div>
+          <div className="friend-view__divider" aria-hidden="true" />
+          <div className="friend-view__day">
+            <Skeleton height={64} radius="var(--radius-lg)" />
+            <div className="friend-view__day-skeleton-rows">
+              {[0, 1, 2].map((i) => (
+                <Skeleton key={i} height={52} radius="var(--radius-md)" />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {error && !loading && (
         <div className="friend-view__status friend-view__status--error">{error}</div>

@@ -48,8 +48,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-muted);
-  font-size: var(--text-sm);
+  background: var(--bg);
+}
+
+.app-loading__icon {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
   animation: app-loading-pulse 1.4s ease-in-out infinite;
 }
 
@@ -57,8 +63,10 @@
   0%,
   100% {
     opacity: 0.5;
+    scale: 0.96;
   }
   50% {
     opacity: 1;
+    scale: 1;
   }
 }

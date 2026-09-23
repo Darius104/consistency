@@ -53,6 +53,26 @@
   overflow: hidden;
 }
 
+.friend-view__calendar-skeleton {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: var(--space-2);
+  align-content: start;
+  padding: var(--space-5);
+}
+
+.friend-view__calendar-skeleton .skeleton {
+  aspect-ratio: 1;
+}
+
+.friend-view__day-skeleton-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
 .friend-view__day {
   position: relative;
   width: 340px;

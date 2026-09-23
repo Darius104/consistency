@@ -7,6 +7,7 @@ import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { EmptyState } from "../ui/EmptyState";
 import { EditIcon, TagIcon, TrashIcon } from "../ui/icons";
+import { Skeleton } from "../ui/Skeleton";
 import "./CategoryManager.css";
 
 interface CategoryManagerProps {
@@ -220,7 +221,11 @@ export function CategoryManager({
                       picker.
                     </span>
                     {draftTasksLoading ? (
-                      <span className="category-manager__hint">Loading…</span>
+                      <div className="category-manager__starter-list">
+                        {[0, 1].map((i) => (
+                          <Skeleton key={i} height={28} radius="var(--radius-sm)" />
+                        ))}
+                      </div>
                     ) : (
                       <>
                         {draftTasks.length === 0 && (
