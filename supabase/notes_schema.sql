@@ -42,6 +42,12 @@ create index if not exists idx_notes_user_date on public.notes(user_id, date);
 
 alter table public.notes enable row level security;
 
+-- Supabase stops auto-granting Data API access to new tables from
+-- 2026-10-30 onward - without this, a fresh project running this script
+-- after that date would create the table above but the client library
+-- would get "permission denied" despite correct RLS.
+grant select, insert, update, delete on public.notes to authenticated;
+
 drop policy if exists "select own notes" on public.notes;
 create policy "select own notes" on public.notes
   for select

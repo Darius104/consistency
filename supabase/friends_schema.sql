@@ -63,6 +63,19 @@ alter table public.profiles enable row level security;
 alter table public.friend_codes enable row level security;
 alter table public.friendships enable row level security;
 
+-- ---------- grants ----------
+-- Supabase stops auto-granting Data API access to new tables from
+-- 2026-10-30 onward - without these, a fresh project running this script
+-- after that date would create the tables above but the client library
+-- would get "permission denied" on all of them despite correct RLS. Scoped
+-- to exactly what each table's policies above actually allow: friendships
+-- has no insert policy for normal users (only redeem_friend_code(), which
+-- is SECURITY DEFINER and doesn't need this grant), so insert is
+-- deliberately left out here too.
+grant select, insert, update on public.profiles to authenticated;
+grant select, insert, update, delete on public.friend_codes to authenticated;
+grant select, delete on public.friendships to authenticated;
+
 -- ---------- policies ----------
 -- Each one is dropped first if it already exists, so this whole script is
 -- safe to paste and run again from scratch regardless of how far a

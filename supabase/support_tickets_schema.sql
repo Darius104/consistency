@@ -17,6 +17,13 @@ create table if not exists public.support_tickets (
 
 alter table public.support_tickets enable row level security;
 
+-- Supabase stops auto-granting Data API access to new tables from
+-- 2026-10-30 onward - without this, a fresh project running this script
+-- after that date would create the table above but the client library
+-- would get "permission denied" despite correct RLS. No delete here since
+-- no policy below allows it either.
+grant select, insert, update on public.support_tickets to authenticated;
+
 -- A member sees their own tickets; an admin sees everyone's (same
 -- is_admin() helper the membership admin panel already uses).
 drop policy if exists "select own or admin tickets" on public.support_tickets;
