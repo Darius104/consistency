@@ -265,16 +265,45 @@ function FriendDayContent({
   const weekly = computeWeeklyCompletion(data.tasks, data.completions, weekStart);
   const templateBreakdown = computeTemplateBreakdown(data.tasks, data.completions, weekStart);
 
-  const widgetBlocks: Partial<Record<PanelBlockId, ReactNode>> = {
+  const groups = groupByTag(occurrences, data.tags);
+
+  // "tasks" is included here (unlike REPLICABLE_WIDGET_IDS, which only
+  // covers the hideable widgets) so the task list renders in its actual
+  // position in the friend's order - it's a fixed anchor in their own
+  // panelOrder, not always last, so hardcoding it after every widget would
+  // misplace it for anyone who's dragged it above one.
+  const blocks: Partial<Record<PanelBlockId, ReactNode>> = {
     streak: <StreakCounter streak={streak} best={bestStreak} today={todayStatus} />,
     weekly: <WeeklyCompletion data={weekly} />,
     templates: <TemplateBreakdown data={templateBreakdown} tags={data.tags} />,
+    tasks:
+      occurrences.length === 0 ? (
+        <EmptyState icon={<CheckIcon size={16} />} iconClassName="empty-state__icon--success">
+          Nothing scheduled for this day.
+        </EmptyState>
+      ) : (
+        <>
+          {groups.map((group) => (
+            <TaskGroup
+              key={group.key}
+              label={group.tag?.name ?? "No template"}
+              color={group.tag?.color}
+              totalCount={group.occurrences.length}
+              doneCount={group.occurrences.filter((o) => o.completed).length}
+              collapsed={collapsed.has(group.key)}
+              onToggle={() => onToggleGroup(group.key)}
+            >
+              {group.occurrences.map(({ task, completed }) => (
+                <FriendTaskRow key={task.id} task={task} completed={completed} />
+              ))}
+            </TaskGroup>
+          ))}
+        </>
+      ),
   };
-  const visibleWidgetIds = data.panelOrder.filter(
-    (id) => REPLICABLE_WIDGET_IDS.includes(id) && !data.hiddenWidgets.includes(id as WidgetId),
+  const visibleOrder = data.panelOrder.filter(
+    (id) => id === "tasks" || (REPLICABLE_WIDGET_IDS.includes(id) && !data.hiddenWidgets.includes(id as WidgetId)),
   );
-
-  const groups = groupByTag(occurrences, data.tags);
 
   return (
     <>
@@ -298,32 +327,11 @@ function FriendDayContent({
       <div className="friend-view__day-header">
         <h2 className="friend-view__date">{label}</h2>
       </div>
-      {visibleWidgetIds.map((id) => (
+      {visibleOrder.map((id) => (
         <div className="day-panel__block" key={id}>
-          <div className="day-panel__block-content">{widgetBlocks[id]}</div>
+          <div className="day-panel__block-content">{blocks[id]}</div>
         </div>
       ))}
-      {occurrences.length === 0 ? (
-        <EmptyState icon={<CheckIcon size={16} />} iconClassName="empty-state__icon--success">
-          Nothing scheduled for this day.
-        </EmptyState>
-      ) : (
-        groups.map((group) => (
-          <TaskGroup
-            key={group.key}
-            label={group.tag?.name ?? "No template"}
-            color={group.tag?.color}
-            totalCount={group.occurrences.length}
-            doneCount={group.occurrences.filter((o) => o.completed).length}
-            collapsed={collapsed.has(group.key)}
-            onToggle={() => onToggleGroup(group.key)}
-          >
-            {group.occurrences.map(({ task, completed }) => (
-              <FriendTaskRow key={task.id} task={task} completed={completed} />
-            ))}
-          </TaskGroup>
-        ))
-      )}
     </>
   );
 }

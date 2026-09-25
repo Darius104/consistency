@@ -81,7 +81,11 @@ export function FriendsManager({
             .catch(() => {});
         }
       })
-      .catch(() => {});
+      // Previously swallowed silently - a failure here left the badge lit
+      // with nothing explaining why the notes card never appeared.
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Couldn't load your notes.");
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
