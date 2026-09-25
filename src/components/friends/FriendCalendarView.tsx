@@ -16,6 +16,7 @@ import {
 import { CalendarView } from "../calendar/CalendarView";
 import "../day-panel/DayPanel.css";
 import { TaskGroup } from "../day-panel/TaskGroup";
+import "../day-panel/TaskList.css";
 import { AvatarBadge } from "../stats/AvatarBadge";
 import { StreakCounter } from "../stats/StreakCounter";
 import { TemplateBreakdown } from "../stats/TemplateBreakdown";
@@ -282,7 +283,11 @@ function FriendDayContent({
           Nothing scheduled for this day.
         </EmptyState>
       ) : (
-        <>
+        // Bare siblings here have no spacing of their own (unlike TaskList,
+        // which bakes its own gap in) - this reuses that same .task-list
+        // gap so groups aren't left touching each other once they're
+        // sitting inside .day-panel__block-content, which has none itself.
+        <div className="task-list">
           {groups.map((group) => (
             <TaskGroup
               key={group.key}
@@ -298,7 +303,7 @@ function FriendDayContent({
               ))}
             </TaskGroup>
           ))}
-        </>
+        </div>
       ),
   };
   const visibleOrder = data.panelOrder.filter(

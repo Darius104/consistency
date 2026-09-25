@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { listAllMembers, setMemberTier, type Friend, type Member } from "../../db/friends";
-import { DEFAULT_AVATAR_ID } from "../../utils/avatars";
+import { AvatarBadge } from "../stats/AvatarBadge";
 import { Button } from "../ui/Button";
 import { EyeIcon } from "../ui/icons";
 import { Skeleton } from "../ui/Skeleton";
@@ -52,13 +52,10 @@ export function AdminMembersList({ online, onView }: AdminMembersListProps) {
   );
 
   function handleView(member: Member) {
-    // FriendCalendarView never actually renders friend.avatarId (it uses
-    // the avatar_id it fetches fresh as part of the calendar data itself),
-    // so this placeholder is never shown - see FriendCalendarView.tsx.
     onView({
       userId: member.userId,
       displayName: member.displayName,
-      avatarId: DEFAULT_AVATAR_ID,
+      avatarId: member.avatarId,
       lastSeenAt: null,
     });
   }
@@ -99,7 +96,11 @@ export function AdminMembersList({ online, onView }: AdminMembersListProps) {
         <div className="admin-members__list">
           {visibleMembers.map((member) => (
             <div className="admin-members__row" key={member.userId}>
-              <span className="admin-members__name">{member.displayName}</span>
+              <AvatarBadge avatarId={member.avatarId} size={28} />
+              <span className="admin-members__identity">
+                <span className="admin-members__name">{member.displayName}</span>
+                {member.bio && <span className="admin-members__bio">{member.bio}</span>}
+              </span>
               <span className={`admin-members__tier admin-members__tier--${member.tier}`}>
                 {member.tier}
               </span>

@@ -42,6 +42,8 @@ export interface Member {
   userId: string;
   displayName: string;
   tier: MembershipTier;
+  avatarId: AvatarId;
+  bio: string | null;
 }
 
 export interface FriendCalendarData {
@@ -141,14 +143,22 @@ export async function getMyMembership(): Promise<MembershipTier> {
 export async function listAllMembers(): Promise<Member[]> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("user_id, display_name, membership_tier")
+    .select("user_id, display_name, membership_tier, avatar_id, bio")
     .order("display_name");
   if (error) throw new Error(error.message);
-  const rows = data as { user_id: string; display_name: string; membership_tier: MembershipTier }[];
+  const rows = data as {
+    user_id: string;
+    display_name: string;
+    membership_tier: MembershipTier;
+    avatar_id: string | null;
+    bio: string | null;
+  }[];
   return rows.map((row) => ({
     userId: row.user_id,
     displayName: row.display_name,
     tier: row.membership_tier,
+    avatarId: parseAvatarId(row.avatar_id),
+    bio: row.bio,
   }));
 }
 

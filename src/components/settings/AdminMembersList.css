@@ -59,14 +59,28 @@
   padding: var(--space-2) var(--space-3);
 }
 
-.admin-members__name {
+.admin-members__identity {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.admin-members__name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--text-md);
   color: var(--text);
+}
+
+.admin-members__bio {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
 }
 
 .admin-members__tier {
