@@ -67,6 +67,90 @@
   text-align: center;
 }
 
+/* A real segmented control, not just a small text link at the bottom - the
+   two modes used to look almost identical (same subtitle position, same
+   two fields), so the active tab's fill color is the one thing that's
+   never subtle: sign-in stays the app's own accent, create-account is
+   green, so which mode you're in reads at a glance before you even read
+   the label. */
+.auth-screen__tabs {
+  display: flex;
+  width: 100%;
+  gap: 4px;
+  padding: 3px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.auth-screen__tab {
+  flex: 1;
+  padding: var(--space-2) 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.auth-screen__tab:hover:not(.auth-screen__tab--active) {
+  color: var(--text);
+}
+
+.auth-screen__form--signin .auth-screen__tab--active {
+  background: var(--accent);
+  color: white;
+}
+
+.auth-screen__form--signup .auth-screen__tab--active {
+  background: var(--success);
+  color: white;
+}
+
+.auth-screen__google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.auth-screen__google:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--surface-hover);
+}
+
+.auth-screen__google:disabled {
+  opacity: 0.6;
+}
+
+.auth-screen__divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  margin: calc(var(--space-2) * -1) 0;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.auth-screen__divider::before,
+.auth-screen__divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
 .auth-screen__field {
   display: flex;
   flex-direction: column;
@@ -99,6 +183,34 @@
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
+.auth-screen__password-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.auth-screen__password-wrap .auth-screen__input {
+  padding-right: calc(var(--space-3) + 24px);
+}
+
+.auth-screen__password-toggle {
+  position: absolute;
+  top: 50%;
+  right: var(--space-2);
+  translate: 0 -50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  transition: color 0.12s ease;
+}
+
+.auth-screen__password-toggle:hover {
+  color: var(--text);
+}
+
 .auth-screen__error {
   width: 100%;
   font-size: var(--text-sm);
@@ -111,20 +223,29 @@
   }
 }
 
-.auth-screen__submit {
+.auth-screen__terms {
   width: 100%;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  text-align: left;
 }
 
-.auth-screen__toggle {
+.auth-screen__terms-text {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.auth-screen__terms-link {
   background: none;
   border: none;
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  text-align: center;
-  padding: var(--space-1);
-  transition: color 0.12s ease;
+  padding: 0;
+  font-size: inherit;
+  color: var(--accent);
+  text-decoration: underline;
 }
 
-.auth-screen__toggle:hover {
-  color: var(--text);
+.auth-screen__submit {
+  width: 100%;
 }

@@ -44,6 +44,11 @@
       "endpoints": [
         "https://github.com/Darius104/consistency/releases/latest/download/latest.json"
       ]
+    },
+    "deep-link": {
+      "desktop": {
+        "schemes": ["consistency"]
+      }
     }
   }
 }
