@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Consistency — Privacy Policy</title>
+<meta name="description" content="Privacy Policy for Consistency." />
+<link rel="icon" href="icon.png" />
+<style>
+  :root {
+    --bg: #0f1720;
+    --card: #161f2c;
+    --border: #2a3644;
+    --text: #e8edf2;
+    --muted: #9aa8b6;
+    --accent: #4da3ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: radial-gradient(circle at 50% -10%, #1b2836 0%, var(--bg) 60%);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    padding: 48px 24px 64px;
+  }
+  main {
+    max-width: 640px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  a.back {
+    color: var(--muted);
+    font-size: 14px;
+    text-decoration: none;
+  }
+  a.back:hover { color: var(--text); }
+  h1 {
+    font-size: 28px;
+    margin: 20px 0 4px;
+    letter-spacing: -0.02em;
+  }
+  p.updated {
+    color: var(--muted);
+    font-size: 13px;
+    margin: 0 0 32px;
+  }
+  section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 24px;
+    margin-bottom: 16px;
+  }
+  h2 {
+    font-size: 15px;
+    margin: 0 0 10px;
+    color: var(--text);
+  }
+  p, li {
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--muted);
+  }
+  p { margin: 0 0 10px; }
+  p:last-child { margin-bottom: 0; }
+  ul { margin: 0; padding-left: 20px; }
+  li { margin-bottom: 6px; }
+  li:last-child { margin-bottom: 0; }
+  a { color: var(--accent); }
+  footer {
+    margin-top: 28px;
+    font-size: 13px;
+    color: var(--muted);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" href="index.html">&larr; Back to Consistency</a>
+  <h1>Privacy Policy</h1>
+  <p class="updated">Last updated September 25, 2026</p>
+
+  <section>
+    <h2>Who this is</h2>
+    <p>
+      Consistency is built and run by one person, not a company. This page explains what data
+      the app collects, why, and what choices you have about it.
+    </p>
+  </section>
+
+  <section>
+    <h2>What's collected</h2>
+    <ul>
+      <li><strong>Account info:</strong> your email address, used to sign in and identify you.</li>
+      <li><strong>App content:</strong> the tasks, templates, completions, streaks, and notes you create.</li>
+      <li><strong>Profile info:</strong> a display name, optional bio, and avatar choice, shown to friends you connect with.</li>
+      <li><strong>Friend connections:</strong> if you link with another user, that connection, and any short notes you send each other.</li>
+      <li><strong>Support tickets:</strong> anything you send through the in-app support/help form.</li>
+    </ul>
+    <p>No location data, contacts, camera, or microphone access is ever requested or used.</p>
+  </section>
+
+  <section>
+    <h2>Why it's collected</h2>
+    <p>
+      Purely to run the app: sync your data across your own devices, let you view a friend's
+      calendar if you've both agreed to connect, and let you reach out if something's broken.
+      Nothing here is used for advertising, and nothing is sold to third parties.
+    </p>
+  </section>
+
+  <section>
+    <h2>Where it's stored</h2>
+    <p>
+      Your data lives in a Supabase-hosted Postgres database (Supabase is a third-party cloud
+      infrastructure provider - see their own
+      <a href="https://supabase.com/privacy" target="_blank" rel="noopener">privacy policy</a>
+      for how they handle infrastructure-level data). Access to your own data is restricted by
+      row-level security rules, so no other user can read your data except a friend viewing your
+      calendar, which you explicitly enable by connecting with them.
+    </p>
+  </section>
+
+  <section>
+    <h2>Your choices</h2>
+    <ul>
+      <li>Export a copy of your data any time from Settings &rarr; Account &rarr; Backup.</li>
+      <li>Remove a friend connection at any time from Settings &rarr; Friends.</li>
+      <li>Delete your account and everything tied to it from Settings &rarr; Account &rarr; Delete account - this is permanent and immediate.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Children's privacy</h2>
+    <p>
+      Consistency isn't directed at children, and knowingly collecting data from children under
+      16 isn't intended. If you believe a child has created an account, contact us and it will
+      be removed.
+    </p>
+  </section>
+
+  <section>
+    <h2>Changes to this policy</h2>
+    <p>
+      This page may be updated as the app changes. The date at the top always reflects the
+      latest version.
+    </p>
+  </section>
+
+  <section>
+    <h2>Contact</h2>
+    <p>
+      Questions about this policy, or a request about your data? Reach out at
+      <a href="mailto:darius@islive.com">darius@islive.com</a>.
+    </p>
+  </section>
+
+  <footer>
+    <a href="index.html">Consistency</a> &middot; <a href="terms.html">Terms &amp; Conditions</a>
+  </footer>
+</main>
+</body>
+</html>

@@ -315,6 +315,17 @@ export default function App() {
     setViewingFriend(null);
   }
 
+  // Called after DeleteAccountModal's own delete_my_account() RPC already
+  // succeeded server-side - this just tidies up the now-invalid local
+  // session/cache exactly like signing out does, since the account (and
+  // the session token's own backing row) no longer exists either way.
+  async function handleAccountDeleted() {
+    await supabase.auth.signOut();
+    await clearAllCache();
+    setViewingFriend(null);
+    setSettingsOpen(false);
+  }
+
   async function handleOpenPhrase() {
     setPhraseModalOpen(true);
     setLastPhraseViewDate(todayKey());
@@ -758,6 +769,7 @@ export default function App() {
           quote={quote}
           onClose={() => setSettingsOpen(false)}
           onSignOut={handleSignOut}
+          onAccountDeleted={handleAccountDeleted}
           online={online}
           onViewFriend={setViewingFriend}
           membership={membership}

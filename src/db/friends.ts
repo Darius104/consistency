@@ -91,6 +91,38 @@ export async function ensureProfile(): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+/** Called once, right after a successful signUp() - not ignoreDuplicates
+ *  like ensureProfile above, since this needs to actually land regardless
+ *  of whether ensureProfile's own upsert (also triggered by the same new
+ *  session, from App.tsx) happens to create the row first. Re-affirming
+ *  the same default display name either way is harmless - this only ever
+ *  runs once, for a brand-new account that hasn't customized anything yet. */
+export async function recordTermsAcceptance(): Promise<void> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  const defaultName = (user.email ?? "friend").split("@")[0];
+  const { error } = await supabase.from("profiles").upsert(
+    {
+      user_id: user.id,
+      display_name: defaultName,
+      terms_accepted_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" },
+  );
+  if (error) throw new Error(error.message);
+}
+
+/** Deletes the account and everything it owns - see delete_my_account() in
+ *  supabase/account_deletion_schema.sql for exactly what that covers. There
+ *  is no undo; the caller is expected to have already confirmed with the
+ *  user before calling this. */
+export async function deleteMyAccount(): Promise<void> {
+  const { error } = await supabase.rpc("delete_my_account");
+  if (error) throw new Error(error.message);
+}
+
 export async function updateDisplayName(name: string): Promise<void> {
   const userId = await currentUserId();
   const { error } = await supabase

@@ -6,10 +6,12 @@ import { supabase } from "../lib/supabaseClient";
 import { Button } from "../components/ui/Button";
 import { Checkbox } from "../components/ui/Checkbox";
 import { EyeIcon, EyeOffIcon } from "../components/ui/icons";
+import { recordTermsAcceptance } from "../db/friends";
 import { extractAuthCode, startGoogleSignIn } from "./googleAuth";
 import "./AuthScreen.css";
 
 const TERMS_URL = "https://darius104.github.io/consistency/terms.html";
+const PRIVACY_URL = "https://darius104.github.io/consistency/privacy.html";
 
 // Flip this once the Google Cloud Console OAuth client and Supabase's
 // Google provider are actually configured (see googleAuth.ts) - until then
@@ -136,6 +138,7 @@ export function AuthScreen() {
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
+        await recordTermsAcceptance();
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -271,6 +274,14 @@ export function AuthScreen() {
                 onClick={() => void openUrl(TERMS_URL)}
               >
                 Terms and Conditions
+              </button>{" "}
+              and{" "}
+              <button
+                type="button"
+                className="auth-screen__terms-link"
+                onClick={() => void openUrl(PRIVACY_URL)}
+              >
+                Privacy Policy
               </button>
             </span>
           </div>

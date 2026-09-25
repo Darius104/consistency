@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import type { Friend } from "../../db/friends";
 import type { MembershipState } from "../../hooks/useMembership";
 import type { ReminderStatus } from "../../hooks/useTaskReminders";
@@ -38,6 +39,7 @@ import {
 } from "../ui/icons";
 import { AppUpdateSection } from "./AppUpdateSection";
 import { BackupSection } from "./BackupSection";
+import { DeleteAccountModal } from "./DeleteAccountModal";
 import { DonateSection } from "./DonateSection";
 import { TemplateManager } from "./TemplateManager";
 import { FriendsManager } from "./FriendsManager";
@@ -83,6 +85,7 @@ interface SettingsModalProps {
   quote: Quote;
   onClose: () => void;
   onSignOut: () => void;
+  onAccountDeleted: () => void;
   online: boolean;
   onViewFriend: (friend: Friend) => void;
   membership: MembershipState;
@@ -90,6 +93,9 @@ interface SettingsModalProps {
   supportBadgeCount?: number;
   onSupportSeen?: () => void;
 }
+
+const TERMS_URL = "https://darius104.github.io/consistency/terms.html";
+const PRIVACY_URL = "https://darius104.github.io/consistency/privacy.html";
 
 const BASE_SECTIONS: SettingsSection[] = [
   { id: "profile", label: "Profile", icon: ProfileIcon },
@@ -137,6 +143,7 @@ export function SettingsModal({
   quote,
   onClose,
   onSignOut,
+  onAccountDeleted,
   online,
   onViewFriend,
   membership,
@@ -153,6 +160,7 @@ export function SettingsModal({
   // section detail can't both fit - mirrors the same list/detail pattern
   // used for the calendar vs. day panel on mobile.
   const [showingDetail, setShowingDetail] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   function selectSection(id: string) {
     setActiveId(id);
@@ -355,10 +363,39 @@ export function SettingsModal({
                 <AppUpdateSection />
                 <BackupSection />
                 <Card>
+                  <span className="settings__label">Legal</span>
+                  <div className="settings__legal-links">
+                    <button
+                      type="button"
+                      className="settings__legal-link"
+                      onClick={() => void openUrl(TERMS_URL)}
+                    >
+                      Terms and Conditions
+                    </button>
+                    <button
+                      type="button"
+                      className="settings__legal-link"
+                      onClick={() => void openUrl(PRIVACY_URL)}
+                    >
+                      Privacy Policy
+                    </button>
+                  </div>
+                </Card>
+                <Card>
                   <div className="settings__row">
                     <span className="settings__row-text">Sign out of your account on this device</span>
                     <Button variant="danger" onClick={onSignOut}>
                       Sign out
+                    </Button>
+                  </div>
+                </Card>
+                <Card>
+                  <div className="settings__row">
+                    <span className="settings__row-text">
+                      Permanently delete your account and all its data
+                    </span>
+                    <Button variant="danger" onClick={() => setDeletingAccount(true)}>
+                      Delete account
                     </Button>
                   </div>
                 </Card>
@@ -368,6 +405,16 @@ export function SettingsModal({
           </div>
         </div>
       </div>
+
+      {deletingAccount && (
+        <DeleteAccountModal
+          onClose={() => setDeletingAccount(false)}
+          onDeleted={() => {
+            setDeletingAccount(false);
+            onAccountDeleted();
+          }}
+        />
+      )}
     </Modal>
   );
 }
