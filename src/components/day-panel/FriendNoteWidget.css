@@ -10,10 +10,30 @@
   opacity: 1;
   transform: translateY(0) scale(1);
   transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out);
+  /* Draws the eye for the first couple of seconds a note is on screen,
+     then settles back to the plain resting look above - this is separate
+     from the mount transition (@starting-style), which only ever fades/
+     slides it in once. */
+  animation: friend-note-attention 2s ease-out;
 
   @starting-style {
     opacity: 0;
     transform: translateY(-6px) scale(0.97);
+  }
+}
+
+@keyframes friend-note-attention {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  30% {
+    box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent) 0%, transparent);
+  }
+  55% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent) 0%, transparent);
   }
 }
 
