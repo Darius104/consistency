@@ -1,6 +1,12 @@
 import { supabase } from "../lib/supabaseClient";
 import type { Priority, RecurrenceType, Tag, Task, ThemeId } from "../types";
 import { DEFAULT_AVATAR_ID, parseAvatarId, type AvatarId } from "../utils/avatars";
+import {
+  parseHiddenWidgets,
+  parsePanelOrder,
+  type PanelBlockId,
+  type WidgetId,
+} from "../utils/panelOrder";
 import type { RandomThemeColors } from "../utils/randomTheme";
 import { DEFAULT_THEME } from "../utils/themes";
 
@@ -48,6 +54,13 @@ export interface FriendCalendarData {
   displayName: string;
   bio: string | null;
   avatarId: AvatarId;
+  /** The friend's own widget arrangement/visibility choices, so their
+   *  calendar shows the same widgets they've kept visible, in their order -
+   *  parsed with the exact same fallback rules as your own (see
+   *  parsePanelOrder/parseHiddenWidgets), since a friend who never touched
+   *  these settings has the same null-from-the-database shape you would. */
+  panelOrder: PanelBlockId[];
+  hiddenWidgets: WidgetId[];
 }
 
 async function currentUserId(): Promise<string> {
@@ -324,6 +337,8 @@ export async function fetchFriendCalendarData(friendUserId: string): Promise<Fri
     tags: FriendTagRow[];
     completions: { task_id: string; date: string }[];
     freezes: { date: string }[];
+    panel_order: string | null;
+    hidden_widgets: string | null;
   };
 
   const tasks: Task[] = raw.tasks.map((row) => ({
@@ -360,5 +375,7 @@ export async function fetchFriendCalendarData(friendUserId: string): Promise<Fri
     displayName: profile.display_name,
     bio: profile.bio,
     avatarId: parseAvatarId(profile.avatar_id),
+    panelOrder: parsePanelOrder(raw.panel_order),
+    hiddenWidgets: parseHiddenWidgets(raw.hidden_widgets),
   };
 }

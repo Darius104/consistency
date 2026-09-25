@@ -1,15 +1,25 @@
+import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { fetchFriendCalendarData, type Friend, type FriendCalendarData } from "../../db/friends";
 import type { Tag, Task } from "../../types";
-import { parseDateKey, todayKey } from "../../utils/dates";
+import { parseDateKey, startOfWeek, todayKey } from "../../utils/dates";
+import type { PanelBlockId, WidgetId } from "../../utils/panelOrder";
 import { RANDOM_THEME_CSS_VARS, type RandomThemeColors } from "../../utils/randomTheme";
 import { tasksScheduledOn } from "../../utils/recurrence";
-import { computeLongestStreak, computeStreak, computeTodayStatus } from "../../utils/stats";
+import {
+  computeLongestStreak,
+  computeStreak,
+  computeTemplateBreakdown,
+  computeTodayStatus,
+  computeWeeklyCompletion,
+} from "../../utils/stats";
 import { CalendarView } from "../calendar/CalendarView";
 import "../day-panel/DayPanel.css";
 import { TaskGroup } from "../day-panel/TaskGroup";
 import { AvatarBadge } from "../stats/AvatarBadge";
 import { StreakCounter } from "../stats/StreakCounter";
+import { TemplateBreakdown } from "../stats/TemplateBreakdown";
+import { WeeklyCompletion } from "../stats/WeeklyCompletion";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { CheckIcon, ChevronDownIcon, ChevronLeftIcon, ChevronUpIcon, NoteIcon } from "../ui/icons";
@@ -17,6 +27,13 @@ import { Skeleton } from "../ui/Skeleton";
 import { FriendTaskRow } from "./FriendTaskRow";
 import { SendNoteModal } from "./SendNoteModal";
 import "./FriendCalendarView.css";
+
+// Only the widgets whose data is both available here and actually about the
+// friend, not you - "freezes" (needs their membership tier, which this view
+// never fetches) and "quote" (the same quote-of-the-day for everyone,
+// nothing friend-specific to show) are deliberately left out, so their
+// order entry is just skipped rather than rendered as a stray gap.
+const REPLICABLE_WIDGET_IDS: PanelBlockId[] = ["streak", "weekly", "templates"];
 
 interface FriendCalendarViewProps {
   friend: Friend;
@@ -244,6 +261,18 @@ function FriendDayContent({
     computeLongestStreak(data.tasks, data.completions, data.freezes, todayKey()),
   );
   const todayStatus = computeTodayStatus(data.tasks, data.completions, data.freezes, todayKey());
+  const weekStart = startOfWeek(selectedDate);
+  const weekly = computeWeeklyCompletion(data.tasks, data.completions, weekStart);
+  const templateBreakdown = computeTemplateBreakdown(data.tasks, data.completions, weekStart);
+
+  const widgetBlocks: Partial<Record<PanelBlockId, ReactNode>> = {
+    streak: <StreakCounter streak={streak} best={bestStreak} today={todayStatus} />,
+    weekly: <WeeklyCompletion data={weekly} />,
+    templates: <TemplateBreakdown data={templateBreakdown} tags={data.tags} />,
+  };
+  const visibleWidgetIds = data.panelOrder.filter(
+    (id) => REPLICABLE_WIDGET_IDS.includes(id) && !data.hiddenWidgets.includes(id as WidgetId),
+  );
 
   const groups = groupByTag(occurrences, data.tags);
 
@@ -269,7 +298,11 @@ function FriendDayContent({
       <div className="friend-view__day-header">
         <h2 className="friend-view__date">{label}</h2>
       </div>
-      <StreakCounter streak={streak} best={bestStreak} today={todayStatus} />
+      {visibleWidgetIds.map((id) => (
+        <div className="day-panel__block" key={id}>
+          <div className="day-panel__block-content">{widgetBlocks[id]}</div>
+        </div>
+      ))}
       {occurrences.length === 0 ? (
         <EmptyState icon={<CheckIcon size={16} />} iconClassName="empty-state__icon--success">
           Nothing scheduled for this day.

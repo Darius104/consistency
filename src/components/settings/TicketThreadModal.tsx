@@ -76,6 +76,10 @@ export function TicketThreadModal({
   const [myUserId, setMyUserId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  // Tracks whether the thread has ever shown messages yet, so the very
+  // first scroll-into-view (opening a long thread) jumps straight there
+  // instead of visibly smooth-scrolling the whole way down.
+  const hasShownMessagesRef = useRef(false);
 
   useEffect(() => {
     getCurrentUserId()
@@ -124,7 +128,9 @@ export function TicketThreadModal({
   // just once, so a background poll picking up a fresh reply scrolls down
   // to it the same way sending one yourself does.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: "end" });
+    const behavior = hasShownMessagesRef.current ? "smooth" : "auto";
+    bottomRef.current?.scrollIntoView({ block: "end", behavior });
+    if (messages) hasShownMessagesRef.current = true;
   }, [messages?.length]);
 
   // Grows the composer with its content instead of offering a manual drag

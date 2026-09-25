@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { sendFriendNote } from "../../db/friendNotes";
 import { Button } from "../ui/Button";
+import { CheckIcon } from "../ui/icons";
 import { Modal } from "../ui/Modal";
 import "./SendNoteModal.css";
 
@@ -38,7 +39,12 @@ export function SendNoteModal({ recipientId, recipientName, onClose }: SendNoteM
     <Modal title={`Send a note to ${recipientName}`} onClose={onClose}>
       <div className="send-note">
         {sent ? (
-          <p className="send-note__sent">Sent.</p>
+          <div className="send-note__sent">
+            <span className="send-note__sent-icon">
+              <CheckIcon size={20} />
+            </span>
+            <p className="send-note__sent-text">Sent to {recipientName}.</p>
+          </div>
         ) : (
           <>
             <textarea

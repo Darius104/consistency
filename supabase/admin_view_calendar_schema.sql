@@ -10,6 +10,14 @@
 -- `profiles` directly) already works for admins with no change, since
 -- membership_admin_schema.sql's "admins can select all profiles" policy
 -- already covers it.
+--
+-- Also now returns the friend's own "panelOrder"/"hiddenWidgets" settings
+-- rows (see src-tauri/migrations/0002_settings.sql for the local shape and
+-- src/sync.ts's SETTINGS sync for the remote one) so a friend's calendar
+-- shows the same widgets they've chosen to keep visible, in their order -
+-- read via this SECURITY DEFINER function (not a client-side select)
+-- because the `settings` table's own RLS only ever lets a user read their
+-- own rows, same reasoning as the rest of this function.
 
 create or replace function public.get_friend_calendar_data(p_friend_id uuid)
 returns jsonb
@@ -69,6 +77,14 @@ begin
       select coalesce(jsonb_agg(jsonb_build_object('date', sf.date)), '[]'::jsonb)
       from public.streak_freezes sf
       where sf.user_id = p_friend_id
+    ),
+    'panel_order', (
+      select s.value from public.settings s
+      where s.user_id = p_friend_id and s.key = 'panelOrder'
+    ),
+    'hidden_widgets', (
+      select s.value from public.settings s
+      where s.user_id = p_friend_id and s.key = 'hiddenWidgets'
     )
   ) into v_result;
 

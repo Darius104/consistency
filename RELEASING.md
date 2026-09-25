@@ -37,6 +37,10 @@ without breaking updates for everyone already on a signed version.
    since the app's `endpoints` config points at
    `.../releases/latest/download/latest.json`, which always resolves to
    whatever the newest release's asset with that exact name is:
+   Write `notes` as short `- ` bullet lines (one per change, plain and
+   friendly, e.g. `"- You can now send a friend a quick text note"`) -
+   `UpdateAvailableModal` parses lines starting with `-`/`*` into an actual
+   bulleted list, so a paragraph here would just render as one long line.
    ```json
    {
      "version": "<new version, no leading v>",
