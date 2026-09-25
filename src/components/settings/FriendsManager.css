@@ -155,3 +155,69 @@
   color: var(--danger);
   background: var(--surface-hover);
 }
+
+.friends-manager__notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.friends-manager__note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}
+
+.friends-manager__note-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.friends-manager__note-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.friends-manager__note-sender {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.friends-manager__note-time {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.friends-manager__note-text {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.friends-manager__note-dismiss {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  transition: color 0.12s ease, background-color 0.12s ease;
+}
+
+.friends-manager__note-dismiss:hover {
+  color: var(--danger);
+  background: var(--surface-hover);
+}

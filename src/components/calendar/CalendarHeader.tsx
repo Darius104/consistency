@@ -43,6 +43,8 @@ interface CalendarHeaderProps {
    *  useSupportBadgeCount. Omitted while viewing a friend's calendar, same
    *  as onOpenSettings itself. */
   settingsBadgeCount?: number;
+  /** Unseen notes from friends - see useFriendNoteBadgeCount. */
+  friendNoteBadgeCount?: number;
 }
 
 export function CalendarHeader({
@@ -59,6 +61,7 @@ export function CalendarHeader({
   onViewFriend,
   onlineFriendIds,
   settingsBadgeCount,
+  friendNoteBadgeCount,
 }: CalendarHeaderProps) {
   return (
     <div className="cal-header">
@@ -107,13 +110,17 @@ export function CalendarHeader({
           </Button>
         )}
         {onViewFriend && (
-          <FriendSwitcher onlineFriendIds={onlineFriendIds ?? new Set()} onViewFriend={onViewFriend} />
+          <FriendSwitcher
+            onlineFriendIds={onlineFriendIds ?? new Set()}
+            onViewFriend={onViewFriend}
+            badgeCount={friendNoteBadgeCount}
+          />
         )}
         {onOpenSettings && (
           <Button className="btn--icon" onClick={onOpenSettings} aria-label="Settings">
             <SettingsIcon size={15} />
             {!!settingsBadgeCount && (
-              <span className="cal-header__ticket-badge">
+              <span className="cal-header__count-badge">
                 {settingsBadgeCount > 9 ? "9+" : settingsBadgeCount}
               </span>
             )}

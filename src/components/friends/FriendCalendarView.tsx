@@ -12,9 +12,10 @@ import { AvatarBadge } from "../stats/AvatarBadge";
 import { StreakCounter } from "../stats/StreakCounter";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
-import { CheckIcon, ChevronDownIcon, ChevronLeftIcon, ChevronUpIcon } from "../ui/icons";
+import { CheckIcon, ChevronDownIcon, ChevronLeftIcon, ChevronUpIcon, NoteIcon } from "../ui/icons";
 import { Skeleton } from "../ui/Skeleton";
 import { FriendTaskRow } from "./FriendTaskRow";
+import { SendNoteModal } from "./SendNoteModal";
 import "./FriendCalendarView.css";
 
 interface FriendCalendarViewProps {
@@ -69,6 +70,7 @@ export function FriendCalendarView({ friend, onBack }: FriendCalendarViewProps) 
   // panel (see App.tsx's dayPanelExpanded) - lets this panel take over the
   // whole screen instead of always sharing it with the compact calendar.
   const [expanded, setExpanded] = useState(false);
+  const [sendingNote, setSendingNote] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -143,9 +145,14 @@ export function FriendCalendarView({ friend, onBack }: FriendCalendarViewProps) 
               prop only for the brief moment before this view's own fetch resolves. */}
           Viewing <strong>{data?.displayName ?? friend.displayName}</strong>'s calendar (read-only)
         </span>
-        <Button onClick={onBack} className="friend-view__back">
-          <ChevronLeftIcon size={14} /> Back to your calendar
-        </Button>
+        <div className="friend-view__bar-actions">
+          <Button onClick={() => setSendingNote(true)} className="friend-view__send-note">
+            <NoteIcon size={14} /> Send a note
+          </Button>
+          <Button onClick={onBack} className="friend-view__back">
+            <ChevronLeftIcon size={14} /> Back to your calendar
+          </Button>
+        </div>
       </div>
 
       {loading && (
@@ -192,6 +199,14 @@ export function FriendCalendarView({ friend, onBack }: FriendCalendarViewProps) 
             />
           </div>
         </div>
+      )}
+
+      {sendingNote && (
+        <SendNoteModal
+          recipientId={friend.userId}
+          recipientName={data?.displayName ?? friend.displayName}
+          onClose={() => setSendingNote(false)}
+        />
       )}
     </div>
   );

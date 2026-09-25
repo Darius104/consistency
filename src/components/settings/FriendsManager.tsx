@@ -6,12 +6,18 @@ import {
   redeemFriendCode,
   removeFriend,
 } from "../../db/friends";
+import {
+  deleteFriendNote,
+  listReceivedFriendNotes,
+  markAllFriendNotesSeen,
+  type FriendNote,
+} from "../../db/friendNotes";
 import { formatRelativeTime } from "../../utils/relativeTime";
 import { AvatarBadge } from "../stats/AvatarBadge";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { EmptyState } from "../ui/EmptyState";
-import { UsersIcon, TrashIcon } from "../ui/icons";
+import { UsersIcon, TrashIcon, XIcon } from "../ui/icons";
 import { Skeleton } from "../ui/Skeleton";
 import "./FriendsManager.css";
 
@@ -19,12 +25,21 @@ interface FriendsManagerProps {
   online: boolean;
   onlineFriendIds: Set<string>;
   onViewFriend: (friend: Friend) => void;
+  /** Called once the notes list has loaded and any unseen ones were marked
+   *  seen - lets App.tsx's badge poll refresh right away. */
+  onNotesSeen?: () => void;
 }
 
-export function FriendsManager({ online, onlineFriendIds, onViewFriend }: FriendsManagerProps) {
+export function FriendsManager({
+  online,
+  onlineFriendIds,
+  onViewFriend,
+  onNotesSeen,
+}: FriendsManagerProps) {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [notes, setNotes] = useState<FriendNote[] | null>(null);
 
   const [code, setCode] = useState<{ code: string; expiresAt: string } | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -51,6 +66,29 @@ export function FriendsManager({ online, onlineFriendIds, onViewFriend }: Friend
   useEffect(() => {
     void loadAll();
   }, []);
+
+  // Loaded once, separately from the friends list above - fetched before
+  // marking them seen so this one render can still show which notes were
+  // actually new, even though the mark-seen call that follows immediately
+  // clears the underlying flag for every future load.
+  useEffect(() => {
+    listReceivedFriendNotes()
+      .then((result) => {
+        setNotes(result);
+        if (result.some((n) => !n.seen)) {
+          markAllFriendNotesSeen()
+            .then(() => onNotesSeen?.())
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleDismissNote(noteId: string) {
+    setNotes((prev) => prev?.filter((n) => n.id !== noteId) ?? prev);
+    deleteFriendNote(noteId).catch(() => {});
+  }
 
   // Background refresh so a friend redeeming your code shows up here without
   // having to leave and reopen this screen - quiet (no loading/error UI) so
@@ -120,6 +158,36 @@ export function FriendsManager({ online, onlineFriendIds, onViewFriend }: Friend
   return (
     <div className="friends-manager">
       {error && <div className="friends-manager__error">{error}</div>}
+
+      {notes && notes.length > 0 && (
+        <Card>
+          <span className="settings__label">Notes from friends</span>
+          <div className="friends-manager__notes-list">
+            {notes.map((note) => (
+              <div className="friends-manager__note" key={note.id}>
+                <AvatarBadge avatarId={note.senderAvatarId} size={24} />
+                <div className="friends-manager__note-body">
+                  <span className="friends-manager__note-header">
+                    <span className="friends-manager__note-sender">{note.senderName}</span>
+                    <span className="friends-manager__note-time">
+                      {formatRelativeTime(note.createdAt)}
+                    </span>
+                  </span>
+                  <p className="friends-manager__note-text">{note.body}</p>
+                </div>
+                <button
+                  type="button"
+                  className="friends-manager__note-dismiss"
+                  aria-label="Dismiss this note"
+                  onClick={() => handleDismissNote(note.id)}
+                >
+                  <XIcon size={13} />
+                </button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <Card>
         <span className="settings__label">Invite a friend</span>

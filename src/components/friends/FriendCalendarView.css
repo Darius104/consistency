@@ -26,7 +26,15 @@
   white-space: nowrap;
 }
 
-.friend-view__back {
+.friend-view__bar-actions {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.friend-view__back,
+.friend-view__send-note {
   flex: none;
   display: inline-flex;
   align-items: center;

@@ -81,7 +81,7 @@
 
 /* A numbered count, not just a dot - unlike the phrase nudge above, this
    needs to say *how many*, so it's a small pill instead of a plain circle. */
-.cal-header__ticket-badge {
+.cal-header__count-badge {
   position: absolute;
   top: -4px;
   right: -4px;

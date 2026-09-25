@@ -10,13 +10,15 @@ import "./FriendSwitcher.css";
 interface FriendSwitcherProps {
   onlineFriendIds: Set<string>;
   onViewFriend: (friend: Friend) => void;
+  /** Unseen notes from friends - see useFriendNoteBadgeCount. */
+  badgeCount?: number;
 }
 
 // A quick way to jump straight to a friend's calendar from the calendar
 // itself - the alternative (Settings -> Friends -> View calendar) is a
 // perfectly good place for the full friend-management UI, but too many
 // steps for the everyday "just let me peek at their calendar" case.
-export function FriendSwitcher({ onlineFriendIds, onViewFriend }: FriendSwitcherProps) {
+export function FriendSwitcher({ onlineFriendIds, onViewFriend, badgeCount }: FriendSwitcherProps) {
   const [open, setOpen] = useState(false);
   const [friends, setFriends] = useState<Friend[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +50,9 @@ export function FriendSwitcher({ onlineFriendIds, onViewFriend }: FriendSwitcher
         aria-label="View a friend's calendar"
       >
         <UsersIcon size={15} />
+        {!!badgeCount && (
+          <span className="cal-header__count-badge">{badgeCount > 9 ? "9+" : badgeCount}</span>
+        )}
       </Button>
       {open && (
         <div className="friend-switcher__popup">
