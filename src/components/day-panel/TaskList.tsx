@@ -60,7 +60,7 @@ function sortOccurrences(occurrences: Occurrence[]): Occurrence[] {
   );
 }
 
-/** Whether today's actual tasks for a category are exactly the template's
+/** Whether today's actual tasks for a tag are exactly the template's
  *  saved starter tasks - order-independent, but every task must have a
  *  one-to-one match (same title/notes/time/priority) with no leftovers on
  *  either side. Used to tell "a template exists" apart from "today still
@@ -187,7 +187,7 @@ export function TaskList({
 
   // One combined, ordered list for rendering: notes anchored before any
   // group, then each group followed immediately by whichever notes are
-  // anchored to it. "No category" is never draggable (it always stays
+  // anchored to it. "No template" is never draggable (it always stays
   // last), but notes may still anchor to and render after it.
   interface LayoutEntry {
     itemId: string;
@@ -338,7 +338,7 @@ export function TaskList({
             {dropLineBefore}
             <div ref={isDraggable ? layoutDrag.registerItemRef(entry.itemId) : undefined}>
               <TaskGroup
-                label={tag?.name ?? "No category"}
+                label={tag?.name ?? "No template"}
                 color={tag?.color}
                 totalCount={groupOccurrences.length}
                 doneCount={groupOccurrences.filter((o) => o.completed).length}

@@ -8,9 +8,9 @@ import { Card } from "../ui/Card";
 import { EmptyState } from "../ui/EmptyState";
 import { EditIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { Skeleton } from "../ui/Skeleton";
-import "./CategoryManager.css";
+import "./TemplateManager.css";
 
-interface CategoryManagerProps {
+interface TemplateManagerProps {
   tags: Tag[];
   templates: Template[];
   onCreateTag: (name: string, color: string) => Promise<Tag>;
@@ -21,12 +21,12 @@ interface CategoryManagerProps {
   onDeleteTemplate: (id: string) => void;
 }
 
-// Categories and their optional "starter tasks" (what used to be a
-// separate, confusingly-named "Templates" section) live in one place now -
-// a category only ever has at most one such list under the hood, so this is
-// purely a UI reorganization: the same createTag/createTemplateFromTasks/
-// deleteTemplate functions everyone's existing data already goes through.
-export function CategoryManager({
+// Templates (a name + color) and their optional "starter tasks" live in one
+// place now - a template only ever has at most one starter-task list under
+// the hood, so this is purely a UI reorganization: the same
+// createTag/createTemplateFromTasks/deleteTemplate functions everyone's
+// existing data already goes through.
+export function TemplateManager({
   tags,
   templates,
   onCreateTag,
@@ -35,7 +35,7 @@ export function CategoryManager({
   onReorderTags,
   onSaveTemplate,
   onDeleteTemplate,
-}: CategoryManagerProps) {
+}: TemplateManagerProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftName, setDraftName] = useState("");
   const [draftColor, setDraftColor] = useState("");
@@ -53,7 +53,7 @@ export function CategoryManager({
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
 
   // Guards against startEditing's async getTemplateTasks() call landing
-  // after a newer one - switching from editing category A to category B
+  // after a newer one - switching from editing template A to template B
   // before A's fetch resolves must never let A's stale result overwrite B's
   // draft tasks.
   const editRequestRef = useRef(0);
@@ -122,8 +122,9 @@ export function CategoryManager({
     setNewName("");
     setNewColor(PRESET_COLORS[0]);
     setCreating(false);
-    // Jump straight into editing the category you just made - that's also
-    // where starter tasks now live, one tap away instead of hunting for it.
+    // Jump straight into editing the template you just created - that's
+    // also where starter tasks now live, one tap away instead of hunting
+    // for it.
     startEditing(tag);
   }
 
@@ -134,13 +135,13 @@ export function CategoryManager({
   }
 
   return (
-    <Card className="category-manager">
+    <Card className="template-manager">
       {creating ? (
-        <div className="category-manager__row category-manager__row--editing">
-          <div className="category-manager__editing-fields">
+        <div className="template-manager__row template-manager__row--editing">
+          <div className="template-manager__editing-fields">
             <input
-              className="category-manager__input category-manager__input--name"
-              placeholder="Category name"
+              className="template-manager__input template-manager__input--name"
+              placeholder="Template name"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => {
@@ -149,13 +150,13 @@ export function CategoryManager({
               }}
               autoFocus
             />
-            <div className="category-manager__colors">
+            <div className="template-manager__colors">
               {PRESET_COLORS.map((c) => (
                 <button
                   type="button"
                   key={c}
-                  className={`category-manager__swatch ${
-                    newColor === c ? "category-manager__swatch--active" : ""
+                  className={`template-manager__swatch ${
+                    newColor === c ? "template-manager__swatch--active" : ""
                   }`}
                   style={{ background: c }}
                   onClick={() => setNewColor(c)}
@@ -164,7 +165,7 @@ export function CategoryManager({
               ))}
             </div>
           </div>
-          <div className="category-manager__form-actions">
+          <div className="template-manager__form-actions">
             <Button onClick={cancelCreate}>Cancel</Button>
             <Button variant="primary" onClick={handleCreate}>
               Create
@@ -172,23 +173,23 @@ export function CategoryManager({
           </div>
         </div>
       ) : (
-        <Button onClick={() => setCreating(true)}>+ New category</Button>
+        <Button onClick={() => setCreating(true)}>+ New template</Button>
       )}
 
       {tags.length === 0 ? (
-        <EmptyState icon={<TagIcon size={16} />}>No categories yet - create one above.</EmptyState>
+        <EmptyState icon={<TagIcon size={16} />}>No templates yet - create one above.</EmptyState>
       ) : (
-        <div className="category-manager__list">
+        <div className="template-manager__list">
           {tags.map((tag, index) => {
             const isEditing = editingId === tag.id;
 
             if (isEditing) {
               return (
-                <div className="category-manager__item category-manager__item--editing" key={tag.id}>
-                  <div className="category-manager__row category-manager__row--editing">
-                    <div className="category-manager__editing-fields">
+                <div className="template-manager__item template-manager__item--editing" key={tag.id}>
+                  <div className="template-manager__row template-manager__row--editing">
+                    <div className="template-manager__editing-fields">
                       <input
-                        className="category-manager__input category-manager__input--name"
+                        className="template-manager__input template-manager__input--name"
                         value={draftName}
                         onChange={(e) => setDraftName(e.target.value)}
                         onKeyDown={(e) => {
@@ -197,13 +198,13 @@ export function CategoryManager({
                         }}
                         autoFocus
                       />
-                      <div className="category-manager__colors">
+                      <div className="template-manager__colors">
                         {PRESET_COLORS.map((c) => (
                           <button
                             type="button"
                             key={c}
-                            className={`category-manager__swatch ${
-                              draftColor === c ? "category-manager__swatch--active" : ""
+                            className={`template-manager__swatch ${
+                              draftColor === c ? "template-manager__swatch--active" : ""
                             }`}
                             style={{ background: c }}
                             onClick={() => setDraftColor(c)}
@@ -214,14 +215,14 @@ export function CategoryManager({
                     </div>
                   </div>
 
-                  <div className="category-manager__starter">
+                  <div className="template-manager__starter">
                     <span className="settings__label">Starter tasks</span>
-                    <span className="category-manager__hint">
+                    <span className="template-manager__hint">
                       Stamp this list onto any day for {tag.name} from the day panel's template
                       picker.
                     </span>
                     {draftTasksLoading ? (
-                      <div className="category-manager__starter-list">
+                      <div className="template-manager__starter-list">
                         {[0, 1].map((i) => (
                           <Skeleton key={i} height={28} radius="var(--radius-sm)" />
                         ))}
@@ -229,16 +230,16 @@ export function CategoryManager({
                     ) : (
                       <>
                         {draftTasks.length === 0 && (
-                          <span className="category-manager__hint">No starter tasks yet.</span>
+                          <span className="template-manager__hint">No starter tasks yet.</span>
                         )}
                         {draftTasks.length > 0 && (
-                          <div className="category-manager__starter-list">
+                          <div className="template-manager__starter-list">
                             {draftTasks.map((t, i) => (
-                              <div className="category-manager__starter-row" key={i}>
-                                <span className="category-manager__starter-title">{t.title}</span>
+                              <div className="template-manager__starter-row" key={i}>
+                                <span className="template-manager__starter-title">{t.title}</span>
                                 <button
                                   type="button"
-                                  className="category-manager__icon-btn category-manager__icon-btn--danger"
+                                  className="template-manager__icon-btn template-manager__icon-btn--danger"
                                   aria-label={`Remove ${t.title}`}
                                   onClick={() => removeDraftTask(i)}
                                 >
@@ -248,9 +249,9 @@ export function CategoryManager({
                             ))}
                           </div>
                         )}
-                        <div className="category-manager__starter-add">
+                        <div className="template-manager__starter-add">
                           <input
-                            className="category-manager__input"
+                            className="template-manager__input"
                             placeholder="Add a starter task"
                             value={newTaskTitle}
                             onChange={(e) => setNewTaskTitle(e.target.value)}
@@ -267,7 +268,7 @@ export function CategoryManager({
                     )}
                   </div>
 
-                  <div className="category-manager__form-actions">
+                  <div className="template-manager__form-actions">
                     <Button onClick={() => setEditingId(null)}>Cancel</Button>
                     <Button variant="primary" onClick={commitEdit} disabled={draftTasksLoading}>
                       Done
@@ -279,10 +280,10 @@ export function CategoryManager({
 
             if (confirmingDeleteId === tag.id) {
               return (
-                <div className="category-manager__item" key={tag.id}>
-                  <div className="category-manager__row">
-                    <span className="category-manager__tag-name">Delete {tag.name}?</span>
-                    <div className="category-manager__form-actions">
+                <div className="template-manager__item" key={tag.id}>
+                  <div className="template-manager__row">
+                    <span className="template-manager__tag-name">Delete {tag.name}?</span>
+                    <div className="template-manager__form-actions">
                       <Button onClick={() => setConfirmingDeleteId(null)}>Cancel</Button>
                       <Button
                         variant="danger"
@@ -302,29 +303,29 @@ export function CategoryManager({
             return (
               <Fragment key={tag.id}>
                 {draggedTagId !== null && dropIndex === index && (
-                  <div className="category-manager__drop-line" />
+                  <div className="template-manager__drop-line" />
                 )}
                 <div
-                  className={`category-manager__item ${
-                    draggedTagId === tag.id ? "category-manager__item--dragging" : ""
+                  className={`template-manager__item ${
+                    draggedTagId === tag.id ? "template-manager__item--dragging" : ""
                   }`}
                   ref={registerItemRef(tag.id)}
                 >
                   <div
-                    className="category-manager__row"
+                    className="template-manager__row"
                     onPointerDown={bindPointerDown(tag.id, () => tags.map((t) => t.id))}
                   >
                     <span
-                      className="category-manager__dot"
+                      className="template-manager__dot"
                       style={{ background: tag.color }}
                       aria-hidden="true"
                     />
-                    <span className="category-manager__tag-name">{tag.name}</span>
-                    <div className="category-manager__actions">
+                    <span className="template-manager__tag-name">{tag.name}</span>
+                    <div className="template-manager__actions">
                       <button
                         type="button"
-                        className="category-manager__icon-btn category-manager__icon-btn--row"
-                        title="Edit category"
+                        className="template-manager__icon-btn template-manager__icon-btn--row"
+                        title="Edit template"
                         aria-label={`Edit ${tag.name}`}
                         onClick={() => startEditing(tag)}
                       >
@@ -332,9 +333,9 @@ export function CategoryManager({
                       </button>
                       <button
                         type="button"
-                        className="category-manager__icon-btn category-manager__icon-btn--row category-manager__icon-btn--danger"
-                        title="Delete category"
-                        aria-label={`Delete category ${tag.name}`}
+                        className="template-manager__icon-btn template-manager__icon-btn--row template-manager__icon-btn--danger"
+                        title="Delete template"
+                        aria-label={`Delete template ${tag.name}`}
                         onClick={() => setConfirmingDeleteId(tag.id)}
                       >
                         <TrashIcon size={16} />
@@ -346,11 +347,10 @@ export function CategoryManager({
             );
           })}
           {draggedTagId !== null && dropIndex === tags.length && (
-            <div className="category-manager__drop-line" />
+            <div className="template-manager__drop-line" />
           )}
         </div>
       )}
     </Card>
   );
 }
-

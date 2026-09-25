@@ -54,7 +54,7 @@ export interface TaskOccurrence {
   completed: boolean;
 }
 
-// A reusable "starter pack": a category plus a canned list of tasks that can
+// A reusable "starter pack": a tag plus a canned list of tasks that can
 // be stamped onto any day on demand, instead of retyping them each time.
 export interface Template {
   id: string;

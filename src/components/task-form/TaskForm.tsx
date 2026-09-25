@@ -134,7 +134,7 @@ export function TaskForm({
         </div>
 
         <div className="task-form__field">
-          <span className="task-form__label">Category</span>
+          <span className="task-form__label">Template</span>
           <TagPicker
             tags={tags}
             selectedTagId={tagId}

@@ -1,17 +1,17 @@
-.category-manager {
+.template-manager {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
-.category-manager__list {
+.template-manager__list {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
 }
 
 
-.category-manager__item {
+.template-manager__item {
   display: flex;
   flex-direction: column;
 }
@@ -20,7 +20,7 @@
    vertically centered) - the more specific rules below only ever add to or
    override this (touch/card styling, or the editing form's column layout),
    never replace it. */
-.category-manager__row {
+.template-manager__row {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -40,7 +40,7 @@
    Also gives the row the same "card" chrome (background/border/padding)
    every other Settings row already has (Friends, Streak Freezes) - this one
    was missing it, which is why it looked flatter/plainer than the rest. */
-.category-manager__row:not(.category-manager__row--editing) {
+.template-manager__row:not(.template-manager__row--editing) {
   cursor: grab;
   touch-action: none;
   -webkit-user-select: none;
@@ -55,22 +55,22 @@
    state to reveal, so scoping this to real pointer devices avoids WebKit
    needing an extra first tap before a nested button's click lands. */
 @media (hover: hover) {
-  .category-manager__row:not(.category-manager__row--editing):hover {
+  .template-manager__row:not(.template-manager__row--editing):hover {
     border-color: var(--border-strong);
     background: var(--surface-hover);
   }
 }
 
 /* The dragged row visually lifts off the list and follows the pointer 1:1
-   (see CategoryManager.tsx's onMove) - a real-time "you're holding this"
+   (see TemplateManager.tsx's onMove) - a real-time "you're holding this"
    read, not just a static dimmed placeholder. Comes after the card-chrome
    rule above so its own background/shadow wins despite equal specificity. */
-.category-manager__item--dragging {
+.template-manager__item--dragging {
   position: relative;
   z-index: 5;
 }
 
-.category-manager__item--dragging .category-manager__row {
+.template-manager__item--dragging .template-manager__row {
   background: var(--bg-elevated);
   border-radius: var(--radius-md);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
@@ -79,7 +79,7 @@
   touch-action: none;
 }
 
-.category-manager__drop-line {
+.template-manager__drop-line {
   flex: none;
   height: 3px;
   border-radius: 999px;
@@ -88,14 +88,14 @@
   margin: 2px 0;
 }
 
-.category-manager__dot {
+.template-manager__dot {
   width: 9px;
   height: 9px;
   border-radius: 50%;
   flex: none;
 }
 
-.category-manager__tag-name {
+.template-manager__tag-name {
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -104,13 +104,13 @@
   font-size: var(--text-md);
 }
 
-/* Each action on a category is its own explicit, labeled control (starter-
+/* Each action on a template is its own explicit, labeled control (starter-
    tasks/rename/delete) rather than the name itself silently doubling as a
    "click to rename" button. Hidden until the row is hovered/focused (like
-   a task row's delete button) so a category list reads as a clean list of
+   a task row's delete button) so a template list reads as a clean list of
    names at a glance instead of every row showing three icons at once -
    touch has no hover to reveal them, so they stay visible there instead. */
-.category-manager__actions {
+.template-manager__actions {
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -118,18 +118,18 @@
 }
 
 @media (hover: hover) {
-  .category-manager__actions {
+  .template-manager__actions {
     opacity: 0;
     transition: opacity 0.12s ease;
   }
 
-  .category-manager__row:hover .category-manager__actions,
-  .category-manager__actions:focus-within {
+  .template-manager__row:hover .template-manager__actions,
+  .template-manager__actions:focus-within {
     opacity: 1;
   }
 }
 
-.category-manager__icon-btn {
+.template-manager__icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -143,16 +143,16 @@
     transform 120ms var(--ease-out);
 }
 
-.category-manager__icon-btn:hover {
+.template-manager__icon-btn:hover {
   color: var(--text);
   background: var(--surface-hover);
 }
 
-.category-manager__icon-btn:active {
+.template-manager__icon-btn:active {
   transform: scale(0.88);
 }
 
-.category-manager__icon-btn--danger:hover {
+.template-manager__icon-btn--danger:hover {
   color: var(--danger);
 }
 
@@ -161,27 +161,27 @@
    the smaller inline icon buttons used elsewhere (e.g. removing one starter
    task from a list), these two are the row's only actions, so they can
    afford to look more substantial. */
-.category-manager__icon-btn--row {
+.template-manager__icon-btn--row {
   padding: 9px;
   background: var(--surface);
   border: 1px solid var(--border);
 }
 
-.category-manager__icon-btn--row:hover {
+.template-manager__icon-btn--row:hover {
   background: var(--surface-hover);
   border-color: var(--border-strong);
 }
 
-.category-manager__icon-btn--row.category-manager__icon-btn--danger:hover {
+.template-manager__icon-btn--row.template-manager__icon-btn--danger:hover {
   border-color: var(--danger);
 }
 
-/* Editing a category (name/color + starter tasks) is ONE panel, not two -
+/* Editing a template (name/color + starter tasks) is ONE panel, not two -
    the accent border/background lives on the outer item so the name/color
    row and the starter-tasks section below it read as sections of the same
-   card, separated only by a hairline (see .category-manager__starter),
+   card, separated only by a hairline (see .template-manager__starter),
    instead of two visually distinct boxes stacked on top of each other. */
-.category-manager__item--editing {
+.template-manager__item--editing {
   gap: var(--space-3);
   background: var(--surface);
   border: 1px solid var(--accent);
@@ -197,7 +197,7 @@
   }
 }
 
-.category-manager__row--editing {
+.template-manager__row--editing {
   flex-direction: column;
   align-items: stretch;
   gap: var(--space-3);
@@ -206,27 +206,27 @@
 /* Name input + color swatches: stacked on narrow (mobile) widths for easy
    thumb targets, side by side on wider ones so the create/rename form reads
    as one compact line instead of a tall stack of mostly-empty rows. */
-.category-manager__editing-fields {
+.template-manager__editing-fields {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
 @media (min-width: 701px) {
-  .category-manager__editing-fields {
+  .template-manager__editing-fields {
     flex-direction: row;
     align-items: center;
     flex-wrap: wrap;
   }
 }
 
-.category-manager__form-actions {
+.template-manager__form-actions {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-2);
 }
 
-.category-manager__input {
+.template-manager__input {
   flex: 1 1 120px;
   min-width: 0;
   background: var(--bg-elevated);
@@ -235,32 +235,32 @@
   padding: 6px 8px;
 }
 
-/* On narrow widths, .category-manager__editing-fields is a column, and
+/* On narrow widths, .template-manager__editing-fields is a column, and
    flex: 1 1 120px's "120px" - meant as a minimum *width* in the row layout
-   the base .category-manager__input rule is normally used in (the
+   the base .template-manager__input rule is normally used in (the
    starter-task-add row) - gets reinterpreted as a *height* basis in a
    column instead, ballooning the input to ~120px tall. `flex: none` drops
    back to the input's natural content height there; on wider widths the
    fields row is a row again, so a real width makes more sense than relying
    on flex-basis-as-height accidentally being correct. */
-.category-manager__input--name {
+.template-manager__input--name {
   flex: none;
   width: 100%;
 }
 
 @media (min-width: 701px) {
-  .category-manager__input--name {
+  .template-manager__input--name {
     width: 220px;
   }
 }
 
-.category-manager__colors {
+.template-manager__colors {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.category-manager__swatch {
+.template-manager__swatch {
   width: 20px;
   height: 20px;
   border-radius: 50%;
@@ -268,11 +268,11 @@
   transition: border-color 0.12s ease, transform 120ms var(--ease-out);
 }
 
-.category-manager__swatch--active {
+.template-manager__swatch--active {
   border-color: var(--text);
 }
 
-.category-manager__swatch:active {
+.template-manager__swatch:active {
   transform: scale(0.85);
 }
 
@@ -280,7 +280,7 @@
    hairline top border separates it from the name/color fields above,
    matching the divider convention already used elsewhere (e.g. the streak
    card's own hero/status split) instead of a second background/border. */
-.category-manager__starter {
+.template-manager__starter {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -288,18 +288,18 @@
   border-top: 1px solid var(--border);
 }
 
-.category-manager__hint {
+.template-manager__hint {
   font-size: var(--text-xs);
   color: var(--text-muted);
 }
 
-.category-manager__starter-list {
+.template-manager__starter-list {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.category-manager__starter-row {
+.template-manager__starter-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -311,14 +311,14 @@
   font-size: var(--text-sm);
 }
 
-.category-manager__starter-title {
+.template-manager__starter-title {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.category-manager__starter-add {
+.template-manager__starter-add {
   display: flex;
   align-items: center;
   gap: var(--space-2);

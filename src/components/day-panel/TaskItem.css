@@ -142,7 +142,7 @@
 }
 
 /* Touch has no hover to reveal this, so it stays visible there instead -
-   same pattern used for note rows and category rows. Hidden-until-hover
+   same pattern used for note rows and template rows. Hidden-until-hover
    only applies where hover actually exists (desktop). */
 @media (hover: hover) {
   .task-item__delete {

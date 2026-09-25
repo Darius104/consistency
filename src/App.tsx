@@ -56,7 +56,7 @@ import type { DayNote, NewTask, Tag, Task, Template, TemplateTaskBlueprint, Them
 import { addDays, startOfWeek, todayKey } from "./utils/dates";
 import { tasksScheduledOn } from "./utils/recurrence";
 import {
-  computeCategoryBreakdown,
+  computeTemplateBreakdown,
   computeLongestStreak,
   computeStreak,
   computeTodayStatus,
@@ -99,8 +99,8 @@ export default function App() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   // Keyed by template id - loaded whenever `templates` changes so the day
-  // panel can tell "this category has a template" apart from "today's
-  // tasks for this category actually still match it" (see TaskList.tsx's
+  // panel can tell "this tag has a template" apart from "today's
+  // tasks for this tag actually still match it" (see TaskList.tsx's
   // hasTemplate computation).
   const [templateTaskBlueprints, setTemplateTaskBlueprints] = useState<
     Record<string, TemplateTaskBlueprint[]>
@@ -183,7 +183,7 @@ export default function App() {
       })
       .catch(() => {
         // Best-effort - a stale/missing entry here just means hasTemplate
-        // falls back to "no template" for that category, not a crash.
+        // falls back to "no template" for that tag, not a crash.
       });
     return () => {
       cancelled = true;
@@ -601,7 +601,7 @@ export default function App() {
   const phraseUnseen = lastPhraseViewDate !== todayKey();
   const quote = getQuoteOfDay(todayKey());
 
-  const categoryBreakdown = computeCategoryBreakdown(
+  const templateBreakdown = computeTemplateBreakdown(
     tasks,
     completions,
     startOfWeek(selectedDate),
@@ -663,7 +663,7 @@ export default function App() {
         todayStatus={todayStatus}
         weekly={weekly}
         freezesRemaining={freezesRemainingThisMonth}
-        categoryBreakdown={categoryBreakdown}
+        templateBreakdown={templateBreakdown}
         quote={quote}
         order={panelOrder}
         onReorder={handleReorderPanel}
@@ -745,7 +745,7 @@ export default function App() {
           bestStreak={bestStreak}
           todayStatus={todayStatus}
           weekly={weekly}
-          categoryBreakdown={categoryBreakdown}
+          templateBreakdown={templateBreakdown}
           quote={quote}
           onClose={() => setSettingsOpen(false)}
           onSignOut={handleSignOut}

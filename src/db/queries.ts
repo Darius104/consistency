@@ -377,8 +377,8 @@ export async function getTemplateTasks(templateId: string): Promise<TemplateTask
 }
 
 /**
- * Captures a category's current tasks as a reusable, named starter pack.
- * A category only ever has one template - re-saving it replaces its
+ * Captures a tag's current tasks as a reusable, named starter pack.
+ * A tag only ever has one template - re-saving it replaces its
  * blueprint tasks in place instead of piling up duplicates. The outbox
  * mirrors that as a "delete all this template's tasks" op followed by one
  * upsert per fresh blueprint task, so a partial sync never leaves stale rows.

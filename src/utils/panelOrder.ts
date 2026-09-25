@@ -2,7 +2,7 @@ export type PanelBlockId =
   | "streak"
   | "weekly"
   | "freezes"
-  | "categories"
+  | "templates"
   | "quote"
   | "tasks";
 
@@ -10,7 +10,7 @@ export const DEFAULT_PANEL_ORDER: PanelBlockId[] = [
   "streak",
   "weekly",
   "freezes",
-  "categories",
+  "templates",
   "quote",
   "tasks",
 ];
@@ -35,7 +35,7 @@ export function parsePanelOrder(raw: string | null): PanelBlockId[] {
   return DEFAULT_PANEL_ORDER;
 }
 
-// The only blocks a user can actually remove - the task/category list stays
+// The only blocks a user can actually remove - the task/template list stays
 // permanent, so it's deliberately excluded from this type entirely rather
 // than just being excluded by convention at each call site.
 export type WidgetId = Exclude<PanelBlockId, "tasks">;
@@ -44,14 +44,14 @@ export const WIDGET_LABELS: Record<WidgetId, string> = {
   streak: "Day Streak",
   weekly: "Weekly Progress",
   freezes: "Streak Freezes",
-  categories: "Category Breakdown",
+  templates: "Template Breakdown",
   quote: "Quote of the Day",
 };
 
 // Canonical listing order for management UIs (e.g. Settings > Widgets) -
 // deliberately fixed, unlike the user's freely-draggable panelOrder, so that
 // page doesn't reshuffle itself as the user reorders their actual panel.
-export const WIDGET_IDS: WidgetId[] = ["streak", "weekly", "freezes", "categories", "quote"];
+export const WIDGET_IDS: WidgetId[] = ["streak", "weekly", "freezes", "templates", "quote"];
 
 // Free accounts can have this many widgets visible at once - exactly the
 // default on-boarding state (only "streak" - see DEFAULT_HIDDEN_WIDGETS

@@ -78,7 +78,7 @@
 }
 
 /* Touch has no hover to reveal these, so they stay visible there instead -
-   same pattern used for task rows and category rows. */
+   same pattern used for task rows and template rows. */
 @media (hover: hover) {
   .note-row__actions {
     opacity: 0;

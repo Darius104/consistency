@@ -107,7 +107,7 @@ function startMomentum(container: HTMLElement, initialVelocity: number) {
  * Two ways to start a drag, for two different situations:
  *  - `bindPointerDown` - grab anywhere on the row, press-and-hold on touch /
  *    threshold-drag on mouse. Only really safe when nothing else on that
- *    row needs to scroll independently of it (Settings' CategoryManager).
+ *    row needs to scroll independently of it (Settings' TemplateManager).
  *  - `bindHandlePointerDown` - grab a small dedicated handle element,
  *    starting immediately with no ambiguity. Used wherever the row itself
  *    also needs to keep ordinary native touch scrolling (the day panel's
@@ -116,7 +116,7 @@ function startMomentum(container: HTMLElement, initialVelocity: number) {
  * The list of ids being reordered is captured fresh at the moment a drag
  * actually begins (via `getIds()`, called from whichever bind function
  * started it) rather than passed once up front - that's what lets the same
- * hook serve both a flat list (categories) and a scoped one (just the tasks
+ * hook serve both a flat list (templates) and a scoped one (just the tasks
  * in whichever group you started dragging from).
  */
 export function useReorderDrag(onReorder: (nextIds: string[]) => void) {
@@ -328,7 +328,7 @@ export function useReorderDrag(onReorder: (nextIds: string[]) => void) {
       }
 
       // Touch only: these rows keep touch-action: none permanently (see
-      // CategoryManager.css / TaskItem.css / TaskGroup.css) rather than
+      // TemplateManager.css / TaskItem.css / TaskGroup.css) rather than
       // something like pan-y, because WebKit decides once, at the very
       // first touch of a gesture, whether it's allowed to scroll natively -
       // and never reconsiders that decision later no matter what our JS
@@ -425,7 +425,7 @@ export function useReorderDrag(onReorder: (nextIds: string[]) => void) {
   }
 
   /** Attach to a small, dedicated grab-handle element instead of the whole
-   *  row (day-panel tasks/groups/notes use this; Settings' CategoryManager
+   *  row (day-panel tasks/groups/notes use this; Settings' TemplateManager
    *  still uses grab-anywhere via bindPointerDown above). A press here is
    *  never ambiguous with a scroll - there's nothing else to interpret it
    *  as - so it begins immediately, with no long-press wait and none of

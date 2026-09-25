@@ -79,7 +79,7 @@ export function TagPicker({
         <div className="tag-picker__new">
           <input
             className="tag-picker__input"
-            placeholder="Category name"
+            placeholder="Template name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoFocus

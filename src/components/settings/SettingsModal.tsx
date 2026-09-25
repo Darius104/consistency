@@ -8,13 +8,13 @@ import { FREE_WIDGET_LIMIT, WIDGET_IDS, WIDGET_LABELS, type WidgetId } from "../
 import type { Quote } from "../../utils/quotes";
 import {
   MAX_FREEZES_PER_MONTH,
-  type CategoryBreakdownItem,
+  type TemplateBreakdownItem,
   type FreezeCandidate,
   type TodayStatus,
   type WeeklyCompletion as WeeklyCompletionData,
 } from "../../utils/stats";
 import { THEMES } from "../../utils/themes";
-import { CategoryBreakdown } from "../stats/CategoryBreakdown";
+import { TemplateBreakdown } from "../stats/TemplateBreakdown";
 import { FreezeSummary } from "../stats/FreezeSummary";
 import { QuoteWidget } from "../stats/QuoteWidget";
 import { StreakCounter } from "../stats/StreakCounter";
@@ -37,7 +37,7 @@ import {
 } from "../ui/icons";
 import { AppUpdateSection } from "./AppUpdateSection";
 import { BackupSection } from "./BackupSection";
-import { CategoryManager } from "./CategoryManager";
+import { TemplateManager } from "./TemplateManager";
 import { FriendsManager } from "./FriendsManager";
 import { MembershipSection } from "./MembershipSection";
 import { ProfileSection } from "./ProfileSection";
@@ -77,7 +77,7 @@ interface SettingsModalProps {
   bestStreak: number;
   todayStatus: TodayStatus;
   weekly: WeeklyCompletionData;
-  categoryBreakdown: CategoryBreakdownItem[];
+  templateBreakdown: TemplateBreakdownItem[];
   quote: Quote;
   onClose: () => void;
   onSignOut: () => void;
@@ -90,7 +90,7 @@ interface SettingsModalProps {
 const SECTIONS: SettingsSection[] = [
   { id: "profile", label: "Profile", icon: ProfileIcon },
   { id: "widgets", label: "Widgets", icon: GridIcon },
-  { id: "categories", label: "Templates", icon: TagIcon },
+  { id: "templates", label: "Templates", icon: TagIcon },
   { id: "freezes", label: "Streak Freezes", icon: FrostIcon },
   { id: "reminders", label: "Reminders", icon: BellIcon },
   { id: "friends", label: "Friends", icon: UsersIcon },
@@ -128,7 +128,7 @@ export function SettingsModal({
   bestStreak,
   todayStatus,
   weekly,
-  categoryBreakdown,
+  templateBreakdown,
   quote,
   onClose,
   onSignOut,
@@ -156,8 +156,8 @@ export function SettingsModal({
         return <WeeklyCompletion data={weekly} />;
       case "freezes":
         return <FreezeSummary remaining={freezesRemaining} total={MAX_FREEZES_PER_MONTH} />;
-      case "categories":
-        return <CategoryBreakdown data={categoryBreakdown} tags={tags} />;
+      case "templates":
+        return <TemplateBreakdown data={templateBreakdown} tags={tags} />;
       case "quote":
         return <QuoteWidget quote={quote} />;
     }
@@ -241,8 +241,8 @@ export function SettingsModal({
               </>
             )}
 
-            {activeId === "categories" && (
-              <CategoryManager
+            {activeId === "templates" && (
+              <TemplateManager
                 tags={tags}
                 templates={templates}
                 onCreateTag={onCreateTag}

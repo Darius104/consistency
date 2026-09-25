@@ -44,7 +44,7 @@ export function BackupSection() {
     <Card className="backup-section">
       <div className="settings__row">
         <span className="settings__row-text">
-          Save a copy of your tasks, categories, and history to a file
+          Save a copy of your tasks, templates, and history to a file
         </span>
         <Button onClick={handleSave} disabled={saving}>
           {saving ? "Exporting…" : "Export Data…"}

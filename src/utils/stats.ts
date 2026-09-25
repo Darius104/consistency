@@ -244,22 +244,22 @@ export function computeWeeklyCompletion(
   };
 }
 
-export interface CategoryBreakdownItem {
-  /** null = tasks with no category assigned. */
+export interface TemplateBreakdownItem {
+  /** null = tasks with no template assigned. */
   tagId: string | null;
   scheduled: number;
   completed: number;
   percent: number; // 0..100
 }
 
-/** Per-category completion for the Mon-Sun week starting `weekStartKey`,
- *  most-scheduled category first - the same week window as
+/** Per-template completion for the Mon-Sun week starting `weekStartKey`,
+ *  most-scheduled template first - the same week window as
  *  computeWeeklyCompletion, just split out by tag instead of summed. */
-export function computeCategoryBreakdown(
+export function computeTemplateBreakdown(
   tasks: Task[],
   completions: Set<string>,
   weekStartKey: string,
-): CategoryBreakdownItem[] {
+): TemplateBreakdownItem[] {
   const byTag = new Map<string | null, { scheduled: number; completed: number }>();
 
   for (let i = 0; i < 7; i++) {

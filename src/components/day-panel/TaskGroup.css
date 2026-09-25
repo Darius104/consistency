@@ -95,7 +95,7 @@
   font-weight: 600;
 }
 
-/* Phone-sized screens: category titles read as too small at the desktop
+/* Phone-sized screens: template titles read as too small at the desktop
    size. */
 @media (max-width: 700px) {
   .task-group__label {

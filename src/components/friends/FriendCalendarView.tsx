@@ -263,7 +263,7 @@ function FriendDayContent({
         groups.map((group) => (
           <TaskGroup
             key={group.key}
-            label={group.tag?.name ?? "No category"}
+            label={group.tag?.name ?? "No template"}
             color={group.tag?.color}
             totalCount={group.occurrences.length}
             doneCount={group.occurrences.filter((o) => o.completed).length}

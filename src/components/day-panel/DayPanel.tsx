@@ -6,14 +6,14 @@ import { WIDGET_LABELS, type PanelBlockId, type WidgetId } from "../../utils/pan
 import type { Quote } from "../../utils/quotes";
 import {
   MAX_FREEZES_PER_MONTH,
-  type CategoryBreakdownItem,
+  type TemplateBreakdownItem,
   type TodayStatus,
   type WeeklyCompletion as WeeklyCompletionData,
 } from "../../utils/stats";
 import { ActionSheet } from "../ui/ActionSheet";
 import { Button } from "../ui/Button";
 import { ChevronDownIcon, ChevronUpIcon, GripIcon, MoreIcon, XIcon } from "../ui/icons";
-import { CategoryBreakdown } from "../stats/CategoryBreakdown";
+import { TemplateBreakdown } from "../stats/TemplateBreakdown";
 import { FreezeSummary } from "../stats/FreezeSummary";
 import { QuoteWidget } from "../stats/QuoteWidget";
 import { StreakCounter } from "../stats/StreakCounter";
@@ -61,7 +61,7 @@ interface DayPanelProps {
   todayStatus: TodayStatus;
   weekly: WeeklyCompletionData;
   freezesRemaining: number;
-  categoryBreakdown: CategoryBreakdownItem[];
+  templateBreakdown: TemplateBreakdownItem[];
   quote: Quote;
   order: PanelBlockId[];
   onReorder: (order: PanelBlockId[]) => void;
@@ -104,7 +104,7 @@ export function DayPanel({
   todayStatus,
   weekly,
   freezesRemaining,
-  categoryBreakdown,
+  templateBreakdown,
   quote,
   order,
   onReorder,
@@ -313,7 +313,7 @@ export function DayPanel({
     ),
     weekly: <WeeklyCompletion data={weekly} />,
     freezes: <FreezeSummary remaining={freezesRemaining} total={MAX_FREEZES_PER_MONTH} />,
-    categories: <CategoryBreakdown data={categoryBreakdown} tags={tags} />,
+    templates: <TemplateBreakdown data={templateBreakdown} tags={tags} />,
     quote: <QuoteWidget quote={quote} />,
     tasks: (
       <TaskList
