@@ -107,12 +107,12 @@ export function AdminTicketsList({ onSeen }: AdminTicketsListProps) {
           onClick={() => handleOpenTicket(ticket)}
         >
           <div className="support-list__row-header">
-            {ticket.unseenByAdmin && <span className="support-list__new-badge">New</span>}
             <span className="support-list__author">{ticket.displayName}</span>
             <span className="support-list__type">{TICKET_TYPE_LABEL[ticket.type]}</span>
             <span className={`support-list__status support-list__status--${ticket.status}`}>
               {STATUS_LABEL[ticket.status]}
             </span>
+            {ticket.unseenByAdmin && <span className="support-list__new-badge">New</span>}
           </div>
           <p className="support-list__description">{ticket.description}</p>
           <span className="support-list__date">{formatDate(ticket.createdAt)}</span>

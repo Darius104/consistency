@@ -100,6 +100,10 @@ function MemberSupportForm({ onSeen }: MemberSupportFormProps) {
 
   function handleOpenTicket(ticket: SupportTicket) {
     setOpenTicket(ticket);
+    // Optimistic - see AdminTicketsList's own handleOpenTicket for why.
+    setTickets((prev) =>
+      prev?.map((t) => (t.id === ticket.id ? { ...t, unseenByMember: false } : t)) ?? prev,
+    );
   }
 
   async function handleConfirmDelete() {
@@ -203,6 +207,7 @@ function MemberSupportForm({ onSeen }: MemberSupportFormProps) {
                     <span className={`support-list__status support-list__status--${ticket.status}`}>
                       {STATUS_LABEL[ticket.status]}
                     </span>
+                    {ticket.unseenByMember && <span className="support-list__new-badge">New</span>}
                   </div>
                   <p className="support-list__description">{ticket.description}</p>
                   <span className="support-list__date">{formatDate(ticket.createdAt)}</span>

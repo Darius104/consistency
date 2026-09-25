@@ -14,6 +14,11 @@ export interface SupportTicket {
   description: string;
   status: TicketStatus;
   createdAt: string;
+  /** Only ever set by listMyTickets() - true if the admin has replied
+   *  since the member last opened this ticket's thread. Left undefined
+   *  (not false) by listAllTickets(), which has no reason to compute a
+   *  per-row "unseen by the ticket's own owner" flag for the admin's view. */
+  unseenByMember?: boolean;
 }
 
 export interface AdminSupportTicket extends SupportTicket {
@@ -85,15 +90,43 @@ export async function createTicket(type: TicketType, description: string): Promi
   if (error) throw new Error(error.message);
 }
 
+/** Mirrors listAllTickets()'s own "is this unseen" computation, just from
+ *  the other side: a newest-admin-reply timestamp per ticket, compared
+ *  against member_last_seen_at instead of admin_last_seen_at. */
 export async function listMyTickets(): Promise<SupportTicket[]> {
   const userId = await getCurrentUserId();
   const { data, error } = await supabase
     .from("support_tickets")
-    .select("id, user_id, type, description, status, created_at")
+    .select("id, user_id, type, description, status, created_at, member_last_seen_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-  return (data as TicketRow[]).map(mapRow);
+  const rows = data as (TicketRow & { member_last_seen_at: string | null })[];
+
+  const ticketIds = rows.map((r) => r.id);
+  const lastAdminMessageAt = new Map<string, string>();
+  if (ticketIds.length > 0) {
+    const { data: messageRows, error: messageError } = await supabase
+      .from("support_ticket_messages")
+      .select("ticket_id, created_at")
+      .in("ticket_id", ticketIds)
+      .neq("sender_id", userId);
+    if (messageError) throw new Error(messageError.message);
+    for (const m of messageRows as { ticket_id: string; created_at: string }[]) {
+      const existing = lastAdminMessageAt.get(m.ticket_id);
+      if (!existing || m.created_at > existing) {
+        lastAdminMessageAt.set(m.ticket_id, m.created_at);
+      }
+    }
+  }
+
+  return rows.map((row) => {
+    const lastAdminMessage = lastAdminMessageAt.get(row.id);
+    const unseenByMember =
+      row.member_last_seen_at === null ||
+      (lastAdminMessage !== undefined && lastAdminMessage > row.member_last_seen_at);
+    return { ...mapRow(row), unseenByMember };
+  });
 }
 
 /** Admin-only in practice: the "select own or admin tickets" RLS policy

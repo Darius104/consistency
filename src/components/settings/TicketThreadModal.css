@@ -106,7 +106,13 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding-right: 2px;
+  /* WebKit's overlay scrollbar draws its thumb on top of the content box
+     instead of reserving its own gutter - this gives it a lane of empty
+     space to sit in instead of drawing over the last few characters of
+     text, which is what a too-thin 2px version of this used to do for
+     anyone with "always show scrollbars" or a non-overlay scrollbar
+     style. */
+  padding-right: var(--space-3);
 }
 
 .ticket-thread__skeletons {
