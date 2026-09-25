@@ -11,6 +11,11 @@ import "./AuthScreen.css";
 
 const TERMS_URL = "https://darius104.github.io/consistency/terms.html";
 
+// Flip this once the Google Cloud Console OAuth client and Supabase's
+// Google provider are actually configured (see googleAuth.ts) - until then
+// the button would just be a broken dead end for anyone who clicks it.
+const GOOGLE_SIGN_IN_ENABLED = false;
+
 function GoogleIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 18 18" aria-hidden="true">
@@ -174,19 +179,23 @@ export function AuthScreen() {
           {mode === "signup" ? "Set up your account to get started" : "Welcome back"}
         </p>
 
-        <button
-          type="button"
-          className="auth-screen__google"
-          onClick={() => void handleGoogleSignIn()}
-          disabled={googleBusy}
-        >
-          <GoogleIcon />
-          Continue with Google
-        </button>
+        {GOOGLE_SIGN_IN_ENABLED && (
+          <>
+            <button
+              type="button"
+              className="auth-screen__google"
+              onClick={() => void handleGoogleSignIn()}
+              disabled={googleBusy}
+            >
+              <GoogleIcon />
+              Continue with Google
+            </button>
 
-        <div className="auth-screen__divider">
-          <span>or</span>
-        </div>
+            <div className="auth-screen__divider">
+              <span>or</span>
+            </div>
+          </>
+        )}
 
         <label className="auth-screen__field">
           <span className="auth-screen__label">Email</span>
