@@ -217,7 +217,9 @@ export default function App() {
   const reminderStatus = useTaskReminders(tasks, completions, remindersEnabled);
 
   const membership = useMembership();
-  const supportBadgeCount = useSupportBadgeCount(membership.effectiveTier === "admin");
+  const { count: supportBadgeCount, refresh: refreshSupportBadge } = useSupportBadgeCount(
+    membership.effectiveTier === "admin",
+  );
   const [paywallFeature, setPaywallFeature] = useState<string | null>(null);
 
   // Desktop-only (see useAppUpdater's own doc comment) - checked once on
@@ -757,6 +759,7 @@ export default function App() {
           membership={membership}
           onlineFriendIds={onlineFriendIds}
           supportBadgeCount={supportBadgeCount}
+          onSupportSeen={refreshSupportBadge}
         />
       )}
 

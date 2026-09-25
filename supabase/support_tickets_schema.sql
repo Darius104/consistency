@@ -59,9 +59,8 @@ alter table public.support_tickets enable row level security;
 -- Supabase stops auto-granting Data API access to new tables from
 -- 2026-10-30 onward - without this, a fresh project running this script
 -- after that date would create the table above but the client library
--- would get "permission denied" despite correct RLS. No delete here since
--- no policy below allows it either.
-grant select, insert, update on public.support_tickets to authenticated;
+-- would get "permission denied" despite correct RLS.
+grant select, insert, update, delete on public.support_tickets to authenticated;
 
 -- A member sees their own tickets; an admin sees everyone's (same
 -- is_admin() helper the membership admin panel already uses).
@@ -82,6 +81,15 @@ create policy "admin update ticket" on public.support_tickets
   for update
   using (public.is_admin())
   with check (public.is_admin());
+
+-- Either side can remove a ticket entirely - the filer their own (e.g. they
+-- opened it by mistake), the admin any of them (cleanup once resolved).
+-- The messages table's own on delete cascade takes its whole thread with
+-- it, so there's nothing extra to clean up here.
+drop policy if exists "delete own or admin ticket" on public.support_tickets;
+create policy "delete own or admin ticket" on public.support_tickets
+  for delete
+  using (auth.uid() = user_id or public.is_admin());
 
 -- ---------- support_ticket_messages ----------
 -- One row per chat message on a ticket - the ticket's own `description` is

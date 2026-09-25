@@ -165,6 +165,15 @@ export async function setTicketStatus(ticketId: string, status: TicketStatus): P
   if (error) throw new Error(error.message);
 }
 
+/** Either side can call this for a ticket they're allowed to see - the
+ *  "delete own or admin ticket" RLS policy is what actually enforces that,
+ *  same trust boundary as setTicketStatus. Its messages go with it (see
+ *  the messages table's own on delete cascade). */
+export async function deleteTicket(ticketId: string): Promise<void> {
+  const { error } = await supabase.from("support_tickets").delete().eq("id", ticketId);
+  if (error) throw new Error(error.message);
+}
+
 export async function listTicketMessages(ticketId: string): Promise<TicketMessage[]> {
   const { data, error } = await supabase
     .from("support_ticket_messages")

@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import {
+  deleteTicket,
   listAllTickets,
-  markTicketSeenByAdmin,
   type AdminSupportTicket,
   type TicketStatus,
 } from "../../db/support";
 import { Card } from "../ui/Card";
+import { ConfirmModal } from "../ui/ConfirmModal";
 import { Skeleton } from "../ui/Skeleton";
+import { TrashIcon } from "../ui/icons";
 import { TicketStatusGroup } from "./TicketStatusGroup";
 import { TicketThreadModal } from "./TicketThreadModal";
 import "./SupportSection.css";
@@ -39,14 +41,21 @@ function formatDate(iso: string): string {
 // tab.
 const POLL_MS = 5000;
 
+interface AdminTicketsListProps {
+  /** Bubbled up to App.tsx's own support-badge poll so it doesn't wait out
+   *  its own 5s interval - see TicketThreadModal's onSeen. */
+  onSeen?: () => void;
+}
+
 /** Only ever rendered by SupportSection when the signed-in account's own
  *  tier is "admin" - the actual access control lives server-side (see
  *  supabase/support_tickets_schema.sql's RLS policies), so this being
  *  visible is a convenience, not the security boundary. */
-export function AdminTicketsList() {
+export function AdminTicketsList({ onSeen }: AdminTicketsListProps) {
   const [tickets, setTickets] = useState<AdminSupportTicket[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [openTicket, setOpenTicket] = useState<AdminSupportTicket | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<AdminSupportTicket | null>(null);
 
   useEffect(() => {
     function load() {
@@ -66,31 +75,57 @@ export function AdminTicketsList() {
 
   function handleOpenTicket(ticket: AdminSupportTicket) {
     setOpenTicket(ticket);
+    // Optimistic - clears the row's own "New" badge immediately instead of
+    // waiting on the next 5s list poll. TicketThreadModal itself owns the
+    // actual mark-seen write (and keeps refreshing it for as long as the
+    // thread stays open - see its own onSeen).
     setTickets((prev) =>
       prev?.map((t) => (t.id === ticket.id ? { ...t, unseenByAdmin: false } : t)) ?? prev,
     );
-    markTicketSeenByAdmin(ticket.id).catch(() => {});
+  }
+
+  async function handleConfirmDelete() {
+    if (!pendingDelete) return;
+    setError(null);
+    try {
+      await deleteTicket(pendingDelete.id);
+      setTickets((prev) => prev?.filter((t) => t.id !== pendingDelete.id) ?? prev);
+      if (openTicket?.id === pendingDelete.id) setOpenTicket(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPendingDelete(null);
+    }
   }
 
   function renderRow(ticket: AdminSupportTicket) {
     return (
-      <button
-        type="button"
-        className="support-list__row support-list__row--clickable"
-        key={ticket.id}
-        onClick={() => handleOpenTicket(ticket)}
-      >
-        <div className="support-list__row-header">
-          {ticket.unseenByAdmin && <span className="support-list__new-dot" aria-label="New" />}
-          <span className="support-list__author">{ticket.displayName}</span>
-          <span className="support-list__type">{TICKET_TYPE_LABEL[ticket.type]}</span>
-          <span className={`support-list__status support-list__status--${ticket.status}`}>
-            {STATUS_LABEL[ticket.status]}
-          </span>
-        </div>
-        <p className="support-list__description">{ticket.description}</p>
-        <span className="support-list__date">{formatDate(ticket.createdAt)}</span>
-      </button>
+      <div className="support-list__row" key={ticket.id}>
+        <button
+          type="button"
+          className="support-list__row-open"
+          onClick={() => handleOpenTicket(ticket)}
+        >
+          <div className="support-list__row-header">
+            {ticket.unseenByAdmin && <span className="support-list__new-badge">New</span>}
+            <span className="support-list__author">{ticket.displayName}</span>
+            <span className="support-list__type">{TICKET_TYPE_LABEL[ticket.type]}</span>
+            <span className={`support-list__status support-list__status--${ticket.status}`}>
+              {STATUS_LABEL[ticket.status]}
+            </span>
+          </div>
+          <p className="support-list__description">{ticket.description}</p>
+          <span className="support-list__date">{formatDate(ticket.createdAt)}</span>
+        </button>
+        <button
+          type="button"
+          className="support-list__delete"
+          aria-label={`Delete ${ticket.displayName}'s ticket`}
+          onClick={() => setPendingDelete(ticket)}
+        >
+          <TrashIcon size={14} />
+        </button>
+      </div>
     );
   }
 
@@ -108,7 +143,7 @@ export function AdminTicketsList() {
       {!tickets && !error && (
         <div className="support-list">
           {[0, 1, 2].map((i) => (
-            <div className="support-list__row" key={i}>
+            <div className="support-list__row-skeleton" key={i}>
               <Skeleton width="50%" height="0.85em" />
               <Skeleton width="85%" height="0.85em" />
             </div>
@@ -134,12 +169,22 @@ export function AdminTicketsList() {
           authorName={openTicket.displayName}
           isAdmin
           onClose={() => setOpenTicket(null)}
+          onSeen={onSeen}
           onStatusChange={(status) => {
             setTickets((prev) =>
               prev?.map((t) => (t.id === openTicket.id ? { ...t, status } : t)) ?? prev,
             );
             setOpenTicket((prev) => (prev ? { ...prev, status } : prev));
           }}
+        />
+      )}
+
+      {pendingDelete && (
+        <ConfirmModal
+          title="Delete ticket"
+          message={`Delete ${pendingDelete.displayName}'s "${TICKET_TYPE_LABEL[pendingDelete.type]}" ticket? This can't be undone.`}
+          onConfirm={() => void handleConfirmDelete()}
+          onClose={() => setPendingDelete(null)}
         />
       )}
     </Card>

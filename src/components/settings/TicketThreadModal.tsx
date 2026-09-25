@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import {
   getCurrentUserId,
   listTicketMessages,
+  markTicketSeenByAdmin,
+  markTicketSeenByMember,
   sendTicketMessage,
   setTicketStatus,
   type SupportTicket,
@@ -44,6 +46,12 @@ interface TicketThreadModalProps {
   isAdmin: boolean;
   onClose: () => void;
   onStatusChange?: (status: TicketStatus) => void;
+  /** Called every time this thread is (re)marked seen - on open, and again
+   *  on every poll tick while it stays open, so a reply that arrives while
+   *  you're already looking at the thread doesn't re-count as unseen the
+   *  moment you leave. Lets the parent refresh its own badge count right
+   *  away instead of waiting for its own independent poll. */
+  onSeen?: () => void;
 }
 
 // Polling, not a realtime subscription - the same "quiet background
@@ -57,6 +65,7 @@ export function TicketThreadModal({
   isAdmin,
   onClose,
   onStatusChange,
+  onSeen,
 }: TicketThreadModalProps) {
   const [messages, setMessages] = useState<TicketMessage[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -74,8 +83,16 @@ export function TicketThreadModal({
       .catch(() => {});
   }, []);
 
+  // Marks the thread seen on every successful poll, not just once on open -
+  // otherwise a reply that arrives while you're still sitting in the
+  // thread would land after the one-time "seen" stamp and count as unseen
+  // again the moment you left, even though you were right there reading it.
+  // Fire-and-forget, same as the parent's own old one-time call was - a
+  // failure here shouldn't surface as a message-thread error.
   useEffect(() => {
     let cancelled = false;
+    const markSeen = isAdmin ? markTicketSeenByAdmin : markTicketSeenByMember;
+
     function load() {
       listTicketMessages(ticket.id)
         .then((result) => {
@@ -87,6 +104,12 @@ export function TicketThreadModal({
         .catch((err) => {
           if (!cancelled) setError(err instanceof Error ? err.message : String(err));
         });
+
+      markSeen(ticket.id)
+        .then(() => {
+          if (!cancelled) onSeen?.();
+        })
+        .catch(() => {});
     }
     load();
     const id = window.setInterval(load, POLL_MS);
@@ -94,7 +117,8 @@ export function TicketThreadModal({
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [ticket.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ticket.id, isAdmin]);
 
   // Keeps the newest message in view - runs whenever the thread grows, not
   // just once, so a background poll picking up a fresh reply scrolls down

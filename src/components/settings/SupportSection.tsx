@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import {
   createTicket,
+  deleteTicket,
   listMyTickets,
-  markTicketSeenByMember,
   type SupportTicket,
   type TicketStatus,
   type TicketType,
@@ -10,7 +10,9 @@ import {
 import type { MembershipState } from "../../hooks/useMembership";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
+import { ConfirmModal } from "../ui/ConfirmModal";
 import { Skeleton } from "../ui/Skeleton";
+import { TrashIcon } from "../ui/icons";
 import { AdminTicketsList } from "./AdminTicketsList";
 import { TicketStatusGroup } from "./TicketStatusGroup";
 import { TicketThreadModal } from "./TicketThreadModal";
@@ -18,6 +20,7 @@ import "./SupportSection.css";
 
 interface SupportSectionProps {
   membership: MembershipState;
+  onSeen?: () => void;
 }
 
 const TICKET_TYPE_OPTIONS: { value: TicketType; label: string }[] = [
@@ -60,20 +63,25 @@ const POLL_MS = 5000;
  * supabase/support_tickets_schema.sql for why an admin sees every ticket
  * regardless of which view renders here).
  */
-export function SupportSection({ membership }: SupportSectionProps) {
+export function SupportSection({ membership, onSeen }: SupportSectionProps) {
   if (membership.effectiveTier === "admin") {
-    return <AdminTicketsList />;
+    return <AdminTicketsList onSeen={onSeen} />;
   }
-  return <MemberSupportForm />;
+  return <MemberSupportForm onSeen={onSeen} />;
 }
 
-function MemberSupportForm() {
+interface MemberSupportFormProps {
+  onSeen?: () => void;
+}
+
+function MemberSupportForm({ onSeen }: MemberSupportFormProps) {
   const [tickets, setTickets] = useState<SupportTicket[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [type, setType] = useState<TicketType>("bug");
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [openTicket, setOpenTicket] = useState<SupportTicket | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<SupportTicket | null>(null);
 
   function load() {
     listMyTickets()
@@ -92,7 +100,20 @@ function MemberSupportForm() {
 
   function handleOpenTicket(ticket: SupportTicket) {
     setOpenTicket(ticket);
-    markTicketSeenByMember(ticket.id).catch(() => {});
+  }
+
+  async function handleConfirmDelete() {
+    if (!pendingDelete) return;
+    setError(null);
+    try {
+      await deleteTicket(pendingDelete.id);
+      setTickets((prev) => prev?.filter((t) => t.id !== pendingDelete.id) ?? prev);
+      if (openTicket?.id === pendingDelete.id) setOpenTicket(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPendingDelete(null);
+    }
   }
 
   async function handleSubmit() {
@@ -153,7 +174,7 @@ function MemberSupportForm() {
       {!tickets && !error && (
         <div className="support-list">
           {[0, 1].map((i) => (
-            <div className="support-list__row" key={i}>
+            <div className="support-list__row-skeleton" key={i}>
               <Skeleton width="40%" height="0.85em" />
               <Skeleton width="90%" height="0.85em" />
             </div>
@@ -171,21 +192,30 @@ function MemberSupportForm() {
             label={STATUS_LABEL[status]}
             tickets={tickets.filter((t) => t.status === status)}
             renderRow={(ticket) => (
-              <button
-                type="button"
-                className="support-list__row support-list__row--clickable"
-                key={ticket.id}
-                onClick={() => handleOpenTicket(ticket)}
-              >
-                <div className="support-list__row-header">
-                  <span className="support-list__type">{TICKET_TYPE_LABEL[ticket.type]}</span>
-                  <span className={`support-list__status support-list__status--${ticket.status}`}>
-                    {STATUS_LABEL[ticket.status]}
-                  </span>
-                </div>
-                <p className="support-list__description">{ticket.description}</p>
-                <span className="support-list__date">{formatDate(ticket.createdAt)}</span>
-              </button>
+              <div className="support-list__row" key={ticket.id}>
+                <button
+                  type="button"
+                  className="support-list__row-open"
+                  onClick={() => handleOpenTicket(ticket)}
+                >
+                  <div className="support-list__row-header">
+                    <span className="support-list__type">{TICKET_TYPE_LABEL[ticket.type]}</span>
+                    <span className={`support-list__status support-list__status--${ticket.status}`}>
+                      {STATUS_LABEL[ticket.status]}
+                    </span>
+                  </div>
+                  <p className="support-list__description">{ticket.description}</p>
+                  <span className="support-list__date">{formatDate(ticket.createdAt)}</span>
+                </button>
+                <button
+                  type="button"
+                  className="support-list__delete"
+                  aria-label="Delete this ticket"
+                  onClick={() => setPendingDelete(ticket)}
+                >
+                  <TrashIcon size={14} />
+                </button>
+              </div>
             )}
           />
         ))}
@@ -195,6 +225,16 @@ function MemberSupportForm() {
           ticket={openTicket}
           isAdmin={false}
           onClose={() => setOpenTicket(null)}
+          onSeen={onSeen}
+        />
+      )}
+
+      {pendingDelete && (
+        <ConfirmModal
+          title="Delete ticket"
+          message={`Delete this "${TICKET_TYPE_LABEL[pendingDelete.type]}" ticket? This can't be undone.`}
+          onConfirm={() => void handleConfirmDelete()}
+          onClose={() => setPendingDelete(null)}
         />
       )}
     </Card>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { countUnseenMessagesForMember, countUnseenTicketsForAdmin } from "../db/support";
 
 // One badge number, wherever it's shown (the Settings button, and the
@@ -7,29 +7,26 @@ import { countUnseenMessagesForMember, countUnseenTicketsForAdmin } from "../db/
 // to know about tickets they haven't opened yet (new, or replied-to since
 // they last looked), a member wants to know about admin replies they
 // haven't read yet. Both reset the moment the relevant thread is opened
-// (see markTicketSeenByAdmin/markTicketSeenByMember).
+// (see markTicketSeenByAdmin/markTicketSeenByMember) - `refresh` lets
+// whoever just did that pull the new count immediately instead of waiting
+// out the rest of this poll interval.
 const POLL_MS = 5000;
 
-export function useSupportBadgeCount(isAdmin: boolean): number {
+export function useSupportBadgeCount(isAdmin: boolean): { count: number; refresh: () => void } {
   const [count, setCount] = useState(0);
 
-  useEffect(() => {
-    let cancelled = false;
-    function load() {
-      const fetchCount = isAdmin ? countUnseenTicketsForAdmin : countUnseenMessagesForMember;
-      fetchCount()
-        .then((n) => {
-          if (!cancelled) setCount(n);
-        })
-        .catch(() => {});
-    }
-    load();
-    const id = window.setInterval(load, POLL_MS);
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
-    };
+  const load = useCallback(() => {
+    const fetchCount = isAdmin ? countUnseenTicketsForAdmin : countUnseenMessagesForMember;
+    fetchCount()
+      .then(setCount)
+      .catch(() => {});
   }, [isAdmin]);
 
-  return count;
+  useEffect(() => {
+    load();
+    const id = window.setInterval(load, POLL_MS);
+    return () => window.clearInterval(id);
+  }, [load]);
+
+  return { count, refresh: load };
 }

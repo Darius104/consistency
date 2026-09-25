@@ -86,6 +86,7 @@ interface SettingsModalProps {
   membership: MembershipState;
   onlineFriendIds: Set<string>;
   supportBadgeCount?: number;
+  onSupportSeen?: () => void;
 }
 
 const BASE_SECTIONS: SettingsSection[] = [
@@ -138,6 +139,7 @@ export function SettingsModal({
   membership,
   onlineFriendIds,
   supportBadgeCount,
+  onSupportSeen,
 }: SettingsModalProps) {
   const SECTIONS = BASE_SECTIONS.map((s) =>
     s.id === "support" ? { ...s, badge: supportBadgeCount } : s,
@@ -338,7 +340,9 @@ export function SettingsModal({
               />
             )}
 
-            {activeId === "support" && <SupportSection membership={membership} />}
+            {activeId === "support" && (
+              <SupportSection membership={membership} onSeen={onSupportSeen} />
+            )}
 
             {activeId === "account" && (
               <>
