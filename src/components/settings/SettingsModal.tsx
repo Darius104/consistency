@@ -90,7 +90,7 @@ interface SettingsModalProps {
 const SECTIONS: SettingsSection[] = [
   { id: "profile", label: "Profile", icon: ProfileIcon },
   { id: "widgets", label: "Widgets", icon: GridIcon },
-  { id: "categories", label: "Categories", icon: TagIcon },
+  { id: "categories", label: "Templates", icon: TagIcon },
   { id: "freezes", label: "Streak Freezes", icon: FrostIcon },
   { id: "reminders", label: "Reminders", icon: BellIcon },
   { id: "friends", label: "Friends", icon: UsersIcon },
