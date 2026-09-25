@@ -87,8 +87,6 @@ interface SettingsModalProps {
   onlineFriendIds: Set<string>;
   supportBadgeCount?: number;
   onSupportSeen?: () => void;
-  friendNoteBadgeCount?: number;
-  onFriendNotesSeen?: () => void;
 }
 
 const BASE_SECTIONS: SettingsSection[] = [
@@ -142,12 +140,9 @@ export function SettingsModal({
   onlineFriendIds,
   supportBadgeCount,
   onSupportSeen,
-  friendNoteBadgeCount,
-  onFriendNotesSeen,
 }: SettingsModalProps) {
   const SECTIONS = BASE_SECTIONS.map((s) => {
     if (s.id === "support") return { ...s, badge: supportBadgeCount };
-    if (s.id === "friends") return { ...s, badge: friendNoteBadgeCount };
     return s;
   });
   const [activeId, setActiveId] = useState(SECTIONS[0].id);
@@ -332,7 +327,6 @@ export function SettingsModal({
                   onViewFriend(friend);
                   onClose();
                 }}
-                onNotesSeen={onFriendNotesSeen}
               />
             )}
 

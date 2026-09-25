@@ -57,7 +57,6 @@ interface CalendarViewProps {
   onViewFriend?: (friend: Friend) => void;
   onlineFriendIds?: Set<string>;
   settingsBadgeCount?: number;
-  friendNoteBadgeCount?: number;
 }
 
 export function CalendarView({
@@ -74,7 +73,6 @@ export function CalendarView({
   syncing,
   onViewFriend,
   settingsBadgeCount,
-  friendNoteBadgeCount,
   onlineFriendIds,
 }: CalendarViewProps) {
   const today = todayKey();
@@ -217,7 +215,6 @@ export function CalendarView({
           onViewFriend={onViewFriend}
           onlineFriendIds={onlineFriendIds}
           settingsBadgeCount={settingsBadgeCount}
-          friendNoteBadgeCount={friendNoteBadgeCount}
         />
         <div className="cal-view__weekdays">
           {WEEKDAY_LABELS.map((label) => (

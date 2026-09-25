@@ -12,7 +12,6 @@ export interface FriendNote {
   senderAvatarId: AvatarId;
   body: string;
   createdAt: string;
-  seen: boolean;
 }
 
 interface NoteRow {
@@ -20,7 +19,6 @@ interface NoteRow {
   sender_id: string;
   body: string;
   created_at: string;
-  seen_at: string | null;
 }
 
 async function currentUserId(): Promise<string> {
@@ -40,12 +38,14 @@ export async function sendFriendNote(recipientId: string, body: string): Promise
 }
 
 /** Two queries rather than a join, same reasoning as listAllTickets in
- *  db/support.ts - a note only has a plain auth.users FK for its sender. */
+ *  db/support.ts - a note only has a plain auth.users FK for its sender.
+ *  Every row here is "pending" by definition - there's no seen/unseen
+ *  state, the list itself (and its length) IS the current inbox. */
 export async function listReceivedFriendNotes(): Promise<FriendNote[]> {
   const userId = await currentUserId();
   const { data, error } = await supabase
     .from("friend_notes")
-    .select("id, sender_id, body, created_at, seen_at")
+    .select("id, sender_id, body, created_at")
     .eq("recipient_id", userId)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
@@ -76,25 +76,12 @@ export async function listReceivedFriendNotes(): Promise<FriendNote[]> {
       senderAvatarId: profile?.avatarId ?? DEFAULT_AVATAR_ID,
       body: row.body,
       createdAt: row.created_at,
-      seen: row.seen_at !== null,
     };
   });
 }
 
-export async function countUnseenFriendNotes(): Promise<number> {
-  const { data, error } = await supabase.rpc("count_unseen_friend_notes");
-  if (error) throw new Error(error.message);
-  return (data as number) ?? 0;
-}
-
-/** Call once when the Friends tab (and its notes list) is opened - marks
- *  every currently-unseen note read at once, same "opening the inbox counts
- *  as reading it" model as a notifications bell. */
-export async function markAllFriendNotesSeen(): Promise<void> {
-  const { error } = await supabase.rpc("mark_all_friend_notes_seen");
-  if (error) throw new Error(error.message);
-}
-
+/** The only action available on a received note - dismissing its widget
+ *  deletes it outright, there's no separate "mark seen" state to clear. */
 export async function deleteFriendNote(noteId: string): Promise<void> {
   const { error } = await supabase.from("friend_notes").delete().eq("id", noteId);
   if (error) throw new Error(error.message);

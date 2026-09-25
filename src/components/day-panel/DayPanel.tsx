@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import type { FriendNote } from "../../db/friendNotes";
 import type { DayNote, Tag, Task, Template, TemplateTaskBlueprint } from "../../types";
 import { parseDateKey } from "../../utils/dates";
 import { WIDGET_LABELS, type PanelBlockId, type WidgetId } from "../../utils/panelOrder";
@@ -19,6 +20,7 @@ import { QuoteWidget } from "../stats/QuoteWidget";
 import { StreakCounter } from "../stats/StreakCounter";
 import { WeeklyCompletion } from "../stats/WeeklyCompletion";
 import { AddMenu } from "./AddMenu";
+import { FriendNoteWidget } from "./FriendNoteWidget";
 import { TaskList } from "./TaskList";
 import "./DayPanel.css";
 
@@ -71,6 +73,11 @@ interface DayPanelProps {
   hiddenWidgets: WidgetId[];
   onHideWidget: (id: WidgetId) => void;
   onShowWidget: (id: WidgetId) => void;
+  /** Temporary, not part of the arrangeable widget system - rendered above
+   *  it, one per pending note, gone the moment it's dismissed (see
+   *  useFriendNotes). */
+  friendNotes: FriendNote[];
+  onDismissFriendNote: (id: string) => void;
   onToggle: (task: Task) => void;
   onView: (task: Task) => void;
   onDelete: (task: Task) => void;
@@ -114,6 +121,8 @@ export function DayPanel({
   hiddenWidgets,
   onHideWidget,
   onShowWidget,
+  friendNotes,
+  onDismissFriendNote,
   onToggle,
   onView,
   onDelete,
@@ -374,6 +383,11 @@ export function DayPanel({
           <Button onClick={onFinishArranging}>Done</Button>
         </div>
       )}
+
+      {!arranging &&
+        friendNotes.map((note) => (
+          <FriendNoteWidget key={note.id} note={note} onDismiss={onDismissFriendNote} />
+        ))}
 
       {visibleOrder.map((id) => {
         const trueIndex = order.indexOf(id);
