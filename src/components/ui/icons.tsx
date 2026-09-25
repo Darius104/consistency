@@ -280,3 +280,11 @@ export function HelpIcon({ size = 16, ...props }: IconProps) {
   );
 }
 
+export function HeartIcon({ size = 16, ...props }: IconProps) {
+  return (
+    <svg {...base(size, props)}>
+      <path d="M12 21s-6.7-4.3-9.5-8.1C.7 10.1 1 6.5 3.6 4.9 5.6 3.6 8.2 4 9.7 5.9L12 8.6l2.3-2.7c1.5-1.9 4.1-2.3 6.1-1 2.6 1.6 2.9 5.2 1.1 8C18.7 16.7 12 21 12 21Z" />
+    </svg>
+  );
+}
+

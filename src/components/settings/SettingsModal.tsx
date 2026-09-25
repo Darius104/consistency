@@ -29,6 +29,7 @@ import {
   CrownIcon,
   FrostIcon,
   GridIcon,
+  HeartIcon,
   HelpIcon,
   ProfileIcon,
   TagIcon,
@@ -37,6 +38,7 @@ import {
 } from "../ui/icons";
 import { AppUpdateSection } from "./AppUpdateSection";
 import { BackupSection } from "./BackupSection";
+import { DonateSection } from "./DonateSection";
 import { TemplateManager } from "./TemplateManager";
 import { FriendsManager } from "./FriendsManager";
 import { MembershipSection } from "./MembershipSection";
@@ -97,6 +99,7 @@ const BASE_SECTIONS: SettingsSection[] = [
   { id: "reminders", label: "Reminders", icon: BellIcon },
   { id: "friends", label: "Friends", icon: UsersIcon },
   { id: "membership", label: "Membership", icon: CrownIcon },
+  { id: "donate", label: "Donate", icon: HeartIcon },
   { id: "support", label: "Support", icon: HelpIcon },
   { id: "account", label: "Account", icon: UserIcon },
 ];
@@ -340,6 +343,8 @@ export function SettingsModal({
                 }}
               />
             )}
+
+            {activeId === "donate" && <DonateSection />}
 
             {activeId === "support" && (
               <SupportSection membership={membership} onSeen={onSupportSeen} />

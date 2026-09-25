@@ -20,6 +20,11 @@ export function PhraseModal({ quote, onClose }: PhraseModalProps) {
         </span>
         <span className="phrase-modal__category">{QUOTE_CATEGORY_LABEL[quote.category]}</span>
         <p className="phrase-modal__text">{quote.text}</p>
+        {/* People screenshot this view to share as a story/post - this is
+            the app's own small watermark on that shared image, grouped with
+            the quote itself (not the "Got it" button) since that's the part
+            most likely to survive someone's crop. */}
+        <span className="phrase-modal__brand">Consistency</span>
         <Button variant="primary" className="phrase-modal__done" onClick={onClose}>
           Got it
         </Button>

@@ -37,6 +37,7 @@
 
 .phrase-modal__category,
 .phrase-modal__text,
+.phrase-modal__brand,
 .phrase-modal__done {
   position: relative;
   animation: phrase-reveal 320ms var(--ease-out) both;
@@ -64,6 +65,15 @@
   max-width: 32ch;
   text-wrap: balance;
   animation-delay: 100ms;
+}
+
+.phrase-modal__brand {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  animation-delay: 140ms;
 }
 
 .phrase-modal__done {
