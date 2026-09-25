@@ -21,6 +21,17 @@ create table if not exists public.support_tickets (
   created_at timestamptz not null default now()
 );
 
+-- When the filer last opened this ticket's thread - drives their own
+-- unread-message badge (see count_unseen_messages_for_member() below).
+-- Never touched directly by the client; only mark_ticket_seen_by_member()
+-- writes it, so a member can never backdate/forge it to hide a message.
+alter table public.support_tickets add column if not exists member_last_seen_at timestamptz;
+
+-- Same idea, admin side: when the admin last opened this ticket's thread -
+-- drives the admin's own badge/per-ticket "new" marker. Written only by
+-- mark_ticket_seen_by_admin().
+alter table public.support_tickets add column if not exists admin_last_seen_at timestamptz;
+
 -- Widen the status check to add 'in_progress' - found by definition (same
 -- technique as membership_admin_schema.sql's own tier-constraint migration)
 -- rather than assuming Postgres's auto-generated constraint name, so this
@@ -121,3 +132,98 @@ create policy "reply on own or admin ticket" on public.support_ticket_messages
       )
     )
   );
+
+-- ---------- unread-message badges ----------
+-- Two different counters for two different roles: the admin's badge is a
+-- simple count of brand-new (status = 'open') tickets - no read-tracking
+-- needed, computed straight off support_tickets client-side. A member's
+-- badge is "how many of the admin's replies have I not opened yet", which
+-- does need read-tracking (member_last_seen_at above), so it's computed
+-- here instead of client-side.
+
+-- Bypasses RLS only to update the one column it's hardcoded to touch, on
+-- only the caller's own ticket - a member can never call this for someone
+-- else's ticket (the where clause enforces that, not the caller-supplied
+-- ticket id alone).
+create or replace function public.mark_ticket_seen_by_member(p_ticket_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.support_tickets
+  set member_last_seen_at = now()
+  where id = p_ticket_id and user_id = auth.uid();
+end;
+$$;
+
+revoke all on function public.mark_ticket_seen_by_member(uuid) from public;
+grant execute on function public.mark_ticket_seen_by_member(uuid) to authenticated;
+
+-- Plain (not SECURITY DEFINER) - the join's own two tables already carry
+-- RLS that restricts this to the caller's own tickets/messages, same as
+-- if the caller ran the query directly, so there's no elevated-privilege
+-- reason to bypass RLS here the way the two SECURITY DEFINER functions
+-- above do.
+create or replace function public.count_unseen_messages_for_member()
+returns integer
+language sql
+stable
+as $$
+  select count(*)::int
+  from public.support_ticket_messages m
+  join public.support_tickets t on t.id = m.ticket_id
+  where t.user_id = auth.uid()
+    and m.sender_id <> auth.uid()
+    and (t.member_last_seen_at is null or m.created_at > t.member_last_seen_at);
+$$;
+
+revoke all on function public.count_unseen_messages_for_member() from public;
+grant execute on function public.count_unseen_messages_for_member() to authenticated;
+
+-- Same idea in the other direction: a ticket counts as unseen by the admin
+-- if they've never opened it at all, or the member has posted since the
+-- admin last looked - covers both "brand new ticket" and "they replied to
+-- my reply" without needing two separate counters.
+create or replace function public.mark_ticket_seen_by_admin(p_ticket_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'Only an admin can do this.';
+  end if;
+  update public.support_tickets
+  set admin_last_seen_at = now()
+  where id = p_ticket_id;
+end;
+$$;
+
+revoke all on function public.mark_ticket_seen_by_admin(uuid) from public;
+grant execute on function public.mark_ticket_seen_by_admin(uuid) to authenticated;
+
+-- Plain, same reasoning as count_unseen_messages_for_member() - RLS on
+-- support_tickets already scopes `t` to every ticket for an admin caller,
+-- or just their own for anyone else, so there's nothing here for a
+-- non-admin caller to see beyond their own ticket's admin_last_seen_at.
+create or replace function public.count_unseen_tickets_for_admin()
+returns integer
+language sql
+stable
+as $$
+  select count(*)::int
+  from public.support_tickets t
+  where t.admin_last_seen_at is null
+    or exists (
+      select 1 from public.support_ticket_messages m
+      where m.ticket_id = t.id
+        and m.sender_id <> auth.uid()
+        and m.created_at > t.admin_last_seen_at
+    );
+$$;
+
+revoke all on function public.count_unseen_tickets_for_admin() from public;
+grant execute on function public.count_unseen_tickets_for_admin() to authenticated;

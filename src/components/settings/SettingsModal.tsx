@@ -85,9 +85,10 @@ interface SettingsModalProps {
   onViewFriend: (friend: Friend) => void;
   membership: MembershipState;
   onlineFriendIds: Set<string>;
+  supportBadgeCount?: number;
 }
 
-const SECTIONS: SettingsSection[] = [
+const BASE_SECTIONS: SettingsSection[] = [
   { id: "profile", label: "Profile", icon: ProfileIcon },
   { id: "widgets", label: "Widgets", icon: GridIcon },
   { id: "templates", label: "Templates", icon: TagIcon },
@@ -136,7 +137,11 @@ export function SettingsModal({
   onViewFriend,
   membership,
   onlineFriendIds,
+  supportBadgeCount,
 }: SettingsModalProps) {
+  const SECTIONS = BASE_SECTIONS.map((s) =>
+    s.id === "support" ? { ...s, badge: supportBadgeCount } : s,
+  );
   const [activeId, setActiveId] = useState(SECTIONS[0].id);
   // Only meaningful on phone-sized modal widths, where the nav list and the
   // section detail can't both fit - mirrors the same list/detail pattern

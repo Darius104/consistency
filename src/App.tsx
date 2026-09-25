@@ -82,6 +82,7 @@ import {
 } from "./utils/panelOrder";
 import { useTaskReminders } from "./hooks/useTaskReminders";
 import { useMembership } from "./hooks/useMembership";
+import { useSupportBadgeCount } from "./hooks/useSupportBadgeCount";
 import { useAppUpdater } from "./hooks/useAppUpdater";
 import { UpdateAvailableModal } from "./components/UpdateAvailableModal";
 import "./App.css";
@@ -216,6 +217,7 @@ export default function App() {
   const reminderStatus = useTaskReminders(tasks, completions, remindersEnabled);
 
   const membership = useMembership();
+  const supportBadgeCount = useSupportBadgeCount(membership.effectiveTier === "admin");
   const [paywallFeature, setPaywallFeature] = useState<string | null>(null);
 
   // Desktop-only (see useAppUpdater's own doc comment) - checked once on
@@ -648,6 +650,7 @@ export default function App() {
         syncing={syncing}
         onViewFriend={setViewingFriend}
         onlineFriendIds={onlineFriendIds}
+        settingsBadgeCount={supportBadgeCount}
       />
       {/* Mobile-only divider between the calendar and the day panel below it -
           a separate element, not the day panel's own border, since that edge
@@ -753,6 +756,7 @@ export default function App() {
           onViewFriend={setViewingFriend}
           membership={membership}
           onlineFriendIds={onlineFriendIds}
+          supportBadgeCount={supportBadgeCount}
         />
       )}
 

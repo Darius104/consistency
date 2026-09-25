@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import {
   listAllTickets,
+  markTicketSeenByAdmin,
   type AdminSupportTicket,
   type TicketStatus,
 } from "../../db/support";
 import { Card } from "../ui/Card";
 import { Skeleton } from "../ui/Skeleton";
+import { TicketStatusGroup } from "./TicketStatusGroup";
 import { TicketThreadModal } from "./TicketThreadModal";
 import "./SupportSection.css";
 
@@ -21,6 +23,8 @@ const STATUS_LABEL: Record<TicketStatus, string> = {
   resolved: "Resolved",
 };
 
+const STATUS_GROUP_ORDER: TicketStatus[] = ["open", "in_progress", "resolved"];
+
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, {
     month: "short",
@@ -28,6 +32,12 @@ function formatDate(iso: string): string {
     year: "numeric",
   });
 }
+
+// Quiet background refresh, same pattern as FriendsManager's own list -
+// keeps new tickets (and status changes made from elsewhere, e.g. another
+// signed-in session) showing up without needing to leave and reopen this
+// tab.
+const POLL_MS = 5000;
 
 /** Only ever rendered by SupportSection when the signed-in account's own
  *  tier is "admin" - the actual access control lives server-side (see
@@ -38,15 +48,51 @@ export function AdminTicketsList() {
   const [error, setError] = useState<string | null>(null);
   const [openTicket, setOpenTicket] = useState<AdminSupportTicket | null>(null);
 
-  function load() {
-    listAllTickets()
-      .then(setTickets)
-      .catch((err) => setError(err instanceof Error ? err.message : String(err)));
+  useEffect(() => {
+    function load() {
+      listAllTickets()
+        .then((result) => {
+          setTickets(result);
+          setOpenTicket((prev) => (prev ? result.find((t) => t.id === prev.id) ?? prev : prev));
+        })
+        .catch((err) => setError(err instanceof Error ? err.message : String(err)));
+    }
+    load();
+    const id = window.setInterval(load, POLL_MS);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const openCount = tickets?.filter((t) => t.status === "open").length ?? 0;
+
+  function handleOpenTicket(ticket: AdminSupportTicket) {
+    setOpenTicket(ticket);
+    setTickets((prev) =>
+      prev?.map((t) => (t.id === ticket.id ? { ...t, unseenByAdmin: false } : t)) ?? prev,
+    );
+    markTicketSeenByAdmin(ticket.id).catch(() => {});
   }
 
-  useEffect(load, []);
-
-  const openCount = tickets?.filter((t) => t.status !== "resolved").length ?? 0;
+  function renderRow(ticket: AdminSupportTicket) {
+    return (
+      <button
+        type="button"
+        className="support-list__row support-list__row--clickable"
+        key={ticket.id}
+        onClick={() => handleOpenTicket(ticket)}
+      >
+        <div className="support-list__row-header">
+          {ticket.unseenByAdmin && <span className="support-list__new-dot" aria-label="New" />}
+          <span className="support-list__author">{ticket.displayName}</span>
+          <span className="support-list__type">{TICKET_TYPE_LABEL[ticket.type]}</span>
+          <span className={`support-list__status support-list__status--${ticket.status}`}>
+            {STATUS_LABEL[ticket.status]}
+          </span>
+        </div>
+        <p className="support-list__description">{ticket.description}</p>
+        <span className="support-list__date">{formatDate(ticket.createdAt)}</span>
+      </button>
+    );
+  }
 
   return (
     <Card>
@@ -72,28 +118,15 @@ export function AdminTicketsList() {
       {tickets && tickets.length === 0 && (
         <span className="settings__hint">No tickets yet.</span>
       )}
-      {tickets && tickets.length > 0 && (
-        <div className="support-list">
-          {tickets.map((ticket) => (
-            <button
-              type="button"
-              className="support-list__row support-list__row--clickable"
-              key={ticket.id}
-              onClick={() => setOpenTicket(ticket)}
-            >
-              <div className="support-list__row-header">
-                <span className="support-list__author">{ticket.displayName}</span>
-                <span className="support-list__type">{TICKET_TYPE_LABEL[ticket.type]}</span>
-                <span className={`support-list__status support-list__status--${ticket.status}`}>
-                  {STATUS_LABEL[ticket.status]}
-                </span>
-              </div>
-              <p className="support-list__description">{ticket.description}</p>
-              <span className="support-list__date">{formatDate(ticket.createdAt)}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      {tickets &&
+        STATUS_GROUP_ORDER.map((status) => (
+          <TicketStatusGroup
+            key={status}
+            label={STATUS_LABEL[status]}
+            tickets={tickets.filter((t) => t.status === status)}
+            renderRow={renderRow}
+          />
+        ))}
 
       {openTicket && (
         <TicketThreadModal
@@ -105,6 +138,7 @@ export function AdminTicketsList() {
             setTickets((prev) =>
               prev?.map((t) => (t.id === openTicket.id ? { ...t, status } : t)) ?? prev,
             );
+            setOpenTicket((prev) => (prev ? { ...prev, status } : prev));
           }}
         />
       )}

@@ -177,7 +177,8 @@
   padding: var(--space-2) var(--space-3);
   font-size: var(--text-sm);
   color: var(--text);
-  resize: vertical;
+  resize: none;
+  overflow-y: auto;
   min-height: 40px;
   max-height: 120px;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;

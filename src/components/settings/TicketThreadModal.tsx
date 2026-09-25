@@ -66,6 +66,7 @@ export function TicketThreadModal({
   const [status, setStatus] = useState<TicketStatus>(ticket.status);
   const [myUserId, setMyUserId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     getCurrentUserId()
@@ -101,6 +102,16 @@ export function TicketThreadModal({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messages?.length]);
+
+  // Grows the composer with its content instead of offering a manual drag
+  // handle - resetting to "auto" first is what lets it shrink back down
+  // too (e.g. after sending clears the draft), not just grow.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [draft]);
 
   async function handleSend() {
     const trimmed = draft.trim();
@@ -198,6 +209,7 @@ export function TicketThreadModal({
 
         <div className="ticket-thread__composer">
           <textarea
+            ref={inputRef}
             className="ticket-thread__input"
             placeholder="Write a reply…"
             value={draft}
@@ -208,7 +220,7 @@ export function TicketThreadModal({
                 void handleSend();
               }
             }}
-            rows={2}
+            rows={1}
           />
           <Button variant="primary" onClick={() => void handleSend()} disabled={sending || !draft.trim()}>
             {sending ? "Sending…" : "Send"}

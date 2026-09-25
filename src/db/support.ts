@@ -19,6 +19,9 @@ export interface SupportTicket {
 export interface AdminSupportTicket extends SupportTicket {
   userId: string;
   displayName: string;
+  /** True if the admin has never opened this ticket, or the member has
+   *  posted since the admin last did - drives the per-row "new" marker. */
+  unseenByAdmin: boolean;
 }
 
 interface TicketRow {
@@ -95,16 +98,18 @@ export async function listMyTickets(): Promise<SupportTicket[]> {
 
 /** Admin-only in practice: the "select own or admin tickets" RLS policy
  *  means a non-admin calling this just gets back their own tickets (same
- *  as listMyTickets), not an error. Two queries rather than a join - a
- *  ticket only has a plain auth.users FK, same reasoning as
- *  fetchFriendCalendarData's separate profile fetch in friends.ts. */
+ *  as listMyTickets), not an error. Three queries rather than joins - a
+ *  ticket only has a plain auth.users FK (same reasoning as
+ *  fetchFriendCalendarData's separate profile fetch in friends.ts), and
+ *  "is this unseen" needs each ticket's newest member-sent message, which
+ *  is simpler to compute here than to express as a single PostgREST call. */
 export async function listAllTickets(): Promise<AdminSupportTicket[]> {
   const { data, error } = await supabase
     .from("support_tickets")
-    .select("id, user_id, type, description, status, created_at")
+    .select("id, user_id, type, description, status, created_at, admin_last_seen_at")
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
-  const rows = data as TicketRow[];
+  const rows = data as (TicketRow & { admin_last_seen_at: string | null })[];
 
   const userIds = Array.from(new Set(rows.map((r) => r.user_id)));
   const nameById = new Map<string, string>();
@@ -119,11 +124,36 @@ export async function listAllTickets(): Promise<AdminSupportTicket[]> {
     }
   }
 
-  return rows.map((row) => ({
-    ...mapRow(row),
-    userId: row.user_id,
-    displayName: nameById.get(row.user_id) ?? "Unknown",
-  }));
+  const adminId = await getCurrentUserId();
+  const ticketIds = rows.map((r) => r.id);
+  const lastMemberMessageAt = new Map<string, string>();
+  if (ticketIds.length > 0) {
+    const { data: messageRows, error: messageError } = await supabase
+      .from("support_ticket_messages")
+      .select("ticket_id, created_at")
+      .in("ticket_id", ticketIds)
+      .neq("sender_id", adminId);
+    if (messageError) throw new Error(messageError.message);
+    for (const m of messageRows as { ticket_id: string; created_at: string }[]) {
+      const existing = lastMemberMessageAt.get(m.ticket_id);
+      if (!existing || m.created_at > existing) {
+        lastMemberMessageAt.set(m.ticket_id, m.created_at);
+      }
+    }
+  }
+
+  return rows.map((row) => {
+    const lastMemberMessage = lastMemberMessageAt.get(row.id);
+    const unseenByAdmin =
+      row.admin_last_seen_at === null ||
+      (lastMemberMessage !== undefined && lastMemberMessage > row.admin_last_seen_at);
+    return {
+      ...mapRow(row),
+      userId: row.user_id,
+      displayName: nameById.get(row.user_id) ?? "Unknown",
+      unseenByAdmin,
+    };
+  });
 }
 
 /** Calls straight into the table (not a function) - the "admin update
@@ -154,4 +184,37 @@ export async function sendTicketMessage(ticketId: string, body: string): Promise
     .single();
   if (error) throw new Error(error.message);
   return mapMessageRow(data as MessageRow);
+}
+
+/** Admin's badge: tickets never opened, or with a member reply since the
+ *  admin last opened them - mirrors countUnseenMessagesForMember() but
+ *  counts tickets, not messages (see count_unseen_tickets_for_admin()). */
+export async function countUnseenTicketsForAdmin(): Promise<number> {
+  const { data, error } = await supabase.rpc("count_unseen_tickets_for_admin");
+  if (error) throw new Error(error.message);
+  return (data as number) ?? 0;
+}
+
+/** Call once when the admin opens a ticket's thread - resets both their
+ *  badge count and that ticket's own "new" marker. */
+export async function markTicketSeenByAdmin(ticketId: string): Promise<void> {
+  const { error } = await supabase.rpc("mark_ticket_seen_by_admin", { p_ticket_id: ticketId });
+  if (error) throw new Error(error.message);
+}
+
+/** Member's badge: admin replies they haven't opened the thread to see
+ *  yet - needs the join in count_unseen_messages_for_member(), not
+ *  something worth expressing as a plain PostgREST filter. */
+export async function countUnseenMessagesForMember(): Promise<number> {
+  const { data, error } = await supabase.rpc("count_unseen_messages_for_member");
+  if (error) throw new Error(error.message);
+  return (data as number) ?? 0;
+}
+
+/** Call once when a member opens their own ticket's thread - resets their
+ *  unseen-message count for it. No-op (silently touches zero rows) if
+ *  called for a ticket that isn't the caller's own. */
+export async function markTicketSeenByMember(ticketId: string): Promise<void> {
+  const { error } = await supabase.rpc("mark_ticket_seen_by_member", { p_ticket_id: ticketId });
+  if (error) throw new Error(error.message);
 }

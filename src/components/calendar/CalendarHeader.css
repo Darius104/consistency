@@ -79,6 +79,26 @@
   animation: phrase-badge-ping 1.8s ease-out infinite;
 }
 
+/* A numbered count, not just a dot - unlike the phrase nudge above, this
+   needs to say *how many*, so it's a small pill instead of a plain circle. */
+.cal-header__ticket-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: white;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 @keyframes phrase-badge-ping {
   0% {
     scale: 1;

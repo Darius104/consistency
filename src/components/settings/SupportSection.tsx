@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   createTicket,
   listMyTickets,
+  markTicketSeenByMember,
   type SupportTicket,
   type TicketStatus,
   type TicketType,
@@ -11,6 +12,7 @@ import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { Skeleton } from "../ui/Skeleton";
 import { AdminTicketsList } from "./AdminTicketsList";
+import { TicketStatusGroup } from "./TicketStatusGroup";
 import { TicketThreadModal } from "./TicketThreadModal";
 import "./SupportSection.css";
 
@@ -36,6 +38,8 @@ const STATUS_LABEL: Record<TicketStatus, string> = {
   resolved: "Resolved",
 };
 
+const STATUS_GROUP_ORDER: TicketStatus[] = ["open", "in_progress", "resolved"];
+
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, {
     month: "short",
@@ -43,6 +47,11 @@ function formatDate(iso: string): string {
     year: "numeric",
   });
 }
+
+// Quiet background refresh, same pattern as FriendsManager's own list -
+// lets a status change the admin makes (or a reply they send) show up here
+// without needing to leave and reopen this tab.
+const POLL_MS = 5000;
 
 /**
  * Admins get the ticket-management view (AdminTicketsList) instead of this
@@ -68,11 +77,23 @@ function MemberSupportForm() {
 
   function load() {
     listMyTickets()
-      .then(setTickets)
+      .then((result) => {
+        setTickets(result);
+        setOpenTicket((prev) => (prev ? result.find((t) => t.id === prev.id) ?? prev : prev));
+      })
       .catch((err) => setError(err instanceof Error ? err.message : String(err)));
   }
 
-  useEffect(load, []);
+  useEffect(() => {
+    load();
+    const id = window.setInterval(load, POLL_MS);
+    return () => window.clearInterval(id);
+  }, []);
+
+  function handleOpenTicket(ticket: SupportTicket) {
+    setOpenTicket(ticket);
+    markTicketSeenByMember(ticket.id).catch(() => {});
+  }
 
   async function handleSubmit() {
     const trimmed = description.trim();
@@ -142,27 +163,32 @@ function MemberSupportForm() {
       {tickets && tickets.length === 0 && (
         <span className="settings__hint">You haven't sent any tickets yet.</span>
       )}
-      {tickets && tickets.length > 0 && (
-        <div className="support-list">
-          {tickets.map((ticket) => (
-            <button
-              type="button"
-              className="support-list__row support-list__row--clickable"
-              key={ticket.id}
-              onClick={() => setOpenTicket(ticket)}
-            >
-              <div className="support-list__row-header">
-                <span className="support-list__type">{TICKET_TYPE_LABEL[ticket.type]}</span>
-                <span className={`support-list__status support-list__status--${ticket.status}`}>
-                  {STATUS_LABEL[ticket.status]}
-                </span>
-              </div>
-              <p className="support-list__description">{ticket.description}</p>
-              <span className="support-list__date">{formatDate(ticket.createdAt)}</span>
-            </button>
-          ))}
-        </div>
-      )}
+      {tickets &&
+        tickets.length > 0 &&
+        STATUS_GROUP_ORDER.map((status) => (
+          <TicketStatusGroup
+            key={status}
+            label={STATUS_LABEL[status]}
+            tickets={tickets.filter((t) => t.status === status)}
+            renderRow={(ticket) => (
+              <button
+                type="button"
+                className="support-list__row support-list__row--clickable"
+                key={ticket.id}
+                onClick={() => handleOpenTicket(ticket)}
+              >
+                <div className="support-list__row-header">
+                  <span className="support-list__type">{TICKET_TYPE_LABEL[ticket.type]}</span>
+                  <span className={`support-list__status support-list__status--${ticket.status}`}>
+                    {STATUS_LABEL[ticket.status]}
+                  </span>
+                </div>
+                <p className="support-list__description">{ticket.description}</p>
+                <span className="support-list__date">{formatDate(ticket.createdAt)}</span>
+              </button>
+            )}
+          />
+        ))}
 
       {openTicket && (
         <TicketThreadModal

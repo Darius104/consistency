@@ -39,6 +39,10 @@ interface CalendarHeaderProps {
    *  calendar - there's no friends list to jump to from in there. */
   onViewFriend?: (friend: Friend) => void;
   onlineFriendIds?: Set<string>;
+  /** Open tickets (admin) or unseen replies (member) - see
+   *  useSupportBadgeCount. Omitted while viewing a friend's calendar, same
+   *  as onOpenSettings itself. */
+  settingsBadgeCount?: number;
 }
 
 export function CalendarHeader({
@@ -54,6 +58,7 @@ export function CalendarHeader({
   syncing,
   onViewFriend,
   onlineFriendIds,
+  settingsBadgeCount,
 }: CalendarHeaderProps) {
   return (
     <div className="cal-header">
@@ -107,6 +112,11 @@ export function CalendarHeader({
         {onOpenSettings && (
           <Button className="btn--icon" onClick={onOpenSettings} aria-label="Settings">
             <SettingsIcon size={15} />
+            {!!settingsBadgeCount && (
+              <span className="cal-header__ticket-badge">
+                {settingsBadgeCount > 9 ? "9+" : settingsBadgeCount}
+              </span>
+            )}
           </Button>
         )}
       </div>

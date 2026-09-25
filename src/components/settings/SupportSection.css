@@ -64,6 +64,27 @@
   overflow-y: auto;
 }
 
+.ticket-status-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ticket-status-group__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.ticket-status-group__count {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
 .support-list__row {
   display: flex;
   flex-direction: column;
@@ -98,6 +119,17 @@
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--text);
+}
+
+/* A ticket the admin hasn't opened yet, or that has a new member reply
+   since they last did - same "something needs your attention" red as the
+   Settings-button/nav badges, just scaled down to sit inline on a row. */
+.support-list__new-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--danger);
 }
 
 .support-list__type {

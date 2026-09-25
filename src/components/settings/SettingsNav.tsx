@@ -6,6 +6,7 @@ export interface SettingsSection {
   id: string;
   label: string;
   icon: ComponentType<{ size?: number }>;
+  badge?: number;
 }
 
 interface SettingsNavProps {
@@ -32,6 +33,9 @@ export function SettingsNav({ sections, activeId, onSelect }: SettingsNavProps) 
               <Icon size={16} />
             </span>
             <span className="settings-nav__label">{section.label}</span>
+            {!!section.badge && (
+              <span className="settings-nav__badge">{section.badge > 9 ? "9+" : section.badge}</span>
+            )}
             <ChevronRightIcon size={15} className="settings-nav__chevron" />
           </button>
         );
