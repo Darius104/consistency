@@ -6,7 +6,7 @@ import { supabase } from "../lib/supabaseClient";
 // every member's tickets into a local admin's own cache).
 
 export type TicketType = "bug" | "feature" | "question";
-export type TicketStatus = "open" | "resolved";
+export type TicketStatus = "open" | "in_progress" | "resolved";
 
 export interface SupportTicket {
   id: string;
@@ -30,7 +30,33 @@ interface TicketRow {
   created_at: string;
 }
 
-async function currentUserId(): Promise<string> {
+export interface TicketMessage {
+  id: string;
+  ticketId: string;
+  senderId: string;
+  body: string;
+  createdAt: string;
+}
+
+interface MessageRow {
+  id: string;
+  ticket_id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
+}
+
+function mapMessageRow(row: MessageRow): TicketMessage {
+  return {
+    id: row.id,
+    ticketId: row.ticket_id,
+    senderId: row.sender_id,
+    body: row.body,
+    createdAt: row.created_at,
+  };
+}
+
+export async function getCurrentUserId(): Promise<string> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -49,7 +75,7 @@ function mapRow(row: TicketRow): SupportTicket {
 }
 
 export async function createTicket(type: TicketType, description: string): Promise<void> {
-  const userId = await currentUserId();
+  const userId = await getCurrentUserId();
   const { error } = await supabase
     .from("support_tickets")
     .insert({ user_id: userId, type, description });
@@ -57,7 +83,7 @@ export async function createTicket(type: TicketType, description: string): Promi
 }
 
 export async function listMyTickets(): Promise<SupportTicket[]> {
-  const userId = await currentUserId();
+  const userId = await getCurrentUserId();
   const { data, error } = await supabase
     .from("support_tickets")
     .select("id, user_id, type, description, status, created_at")
@@ -107,4 +133,25 @@ export async function listAllTickets(): Promise<AdminSupportTicket[]> {
 export async function setTicketStatus(ticketId: string, status: TicketStatus): Promise<void> {
   const { error } = await supabase.from("support_tickets").update({ status }).eq("id", ticketId);
   if (error) throw new Error(error.message);
+}
+
+export async function listTicketMessages(ticketId: string): Promise<TicketMessage[]> {
+  const { data, error } = await supabase
+    .from("support_ticket_messages")
+    .select("id, ticket_id, sender_id, body, created_at")
+    .eq("ticket_id", ticketId)
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  return (data as MessageRow[]).map(mapMessageRow);
+}
+
+export async function sendTicketMessage(ticketId: string, body: string): Promise<TicketMessage> {
+  const userId = await getCurrentUserId();
+  const { data, error } = await supabase
+    .from("support_ticket_messages")
+    .insert({ ticket_id: ticketId, sender_id: userId, body })
+    .select("id, ticket_id, sender_id, body, created_at")
+    .single();
+  if (error) throw new Error(error.message);
+  return mapMessageRow(data as MessageRow);
 }

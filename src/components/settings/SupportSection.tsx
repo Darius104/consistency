@@ -3,6 +3,7 @@ import {
   createTicket,
   listMyTickets,
   type SupportTicket,
+  type TicketStatus,
   type TicketType,
 } from "../../db/support";
 import type { MembershipState } from "../../hooks/useMembership";
@@ -10,6 +11,7 @@ import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { Skeleton } from "../ui/Skeleton";
 import { AdminTicketsList } from "./AdminTicketsList";
+import { TicketThreadModal } from "./TicketThreadModal";
 import "./SupportSection.css";
 
 interface SupportSectionProps {
@@ -26,6 +28,12 @@ const TICKET_TYPE_LABEL: Record<TicketType, string> = {
   bug: "Bug Report",
   feature: "Feature Request",
   question: "General Question",
+};
+
+const STATUS_LABEL: Record<TicketStatus, string> = {
+  open: "Open",
+  in_progress: "In Progress",
+  resolved: "Resolved",
 };
 
 function formatDate(iso: string): string {
@@ -56,6 +64,7 @@ function MemberSupportForm() {
   const [type, setType] = useState<TicketType>("bug");
   const [description, setDescription] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [openTicket, setOpenTicket] = useState<SupportTicket | null>(null);
 
   function load() {
     listMyTickets()
@@ -136,18 +145,31 @@ function MemberSupportForm() {
       {tickets && tickets.length > 0 && (
         <div className="support-list">
           {tickets.map((ticket) => (
-            <div className="support-list__row" key={ticket.id}>
+            <button
+              type="button"
+              className="support-list__row support-list__row--clickable"
+              key={ticket.id}
+              onClick={() => setOpenTicket(ticket)}
+            >
               <div className="support-list__row-header">
                 <span className="support-list__type">{TICKET_TYPE_LABEL[ticket.type]}</span>
                 <span className={`support-list__status support-list__status--${ticket.status}`}>
-                  {ticket.status === "open" ? "Open" : "Resolved"}
+                  {STATUS_LABEL[ticket.status]}
                 </span>
               </div>
               <p className="support-list__description">{ticket.description}</p>
               <span className="support-list__date">{formatDate(ticket.createdAt)}</span>
-            </div>
+            </button>
           ))}
         </div>
+      )}
+
+      {openTicket && (
+        <TicketThreadModal
+          ticket={openTicket}
+          isAdmin={false}
+          onClose={() => setOpenTicket(null)}
+        />
       )}
     </Card>
   );
