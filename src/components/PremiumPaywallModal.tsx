@@ -53,7 +53,7 @@ export function PremiumPaywallModal({ feature, onClose }: PremiumPaywallModalPro
             className="paywall__buy"
             onClick={() =>
               window.open(
-                "mailto:darius@islive.com?subject=Consistency%20Premium",
+                "mailto:comandarius@gmail.com?subject=Consistency%20Premium",
                 "_blank",
               )
             }
