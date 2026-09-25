@@ -78,7 +78,10 @@ export function TicketThreadModal({
     function load() {
       listTicketMessages(ticket.id)
         .then((result) => {
-          if (!cancelled) setMessages(result);
+          if (!cancelled) {
+            setMessages(result);
+            setError(null);
+          }
         })
         .catch((err) => {
           if (!cancelled) setError(err instanceof Error ? err.message : String(err));
