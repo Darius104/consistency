@@ -7,18 +7,28 @@
   border: 1px solid var(--accent);
   border-radius: var(--radius-md);
   padding: var(--space-2) var(--space-3);
-  opacity: 1;
-  transform: translateY(0) scale(1);
-  transition: opacity 220ms var(--ease-out), transform 220ms var(--ease-out);
-  /* Draws the eye for the first couple of seconds a note is on screen,
-     then settles back to the plain resting look above - this is separate
-     from the mount transition (@starting-style), which only ever fades/
-     slides it in once. */
-  animation: friend-note-attention 2s ease-out;
+  /* Two animations, not one - "enter" is a one-shot drop-and-settle for how
+     it arrives (it's inserted above everything else, so it reads as coming
+     from above with a little overshoot rather than just fading in flat),
+     "attention" is the separate few-second pulse that keeps drawing the eye
+     after it's already settled. They only share box-shadow/transform space
+     loosely (enter never touches box-shadow, attention never touches
+     transform), so running both at once doesn't fight itself. */
+  animation: friend-note-enter 340ms var(--ease-out), friend-note-attention 2s ease-out;
+}
 
-  @starting-style {
+@keyframes friend-note-enter {
+  0% {
     opacity: 0;
-    transform: translateY(-6px) scale(0.97);
+    transform: translateY(-14px) scale(0.96);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(4px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
