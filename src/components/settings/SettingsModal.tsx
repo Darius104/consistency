@@ -5,6 +5,7 @@ import type { Friend } from "../../db/friends";
 import type { MembershipState } from "../../hooks/useMembership";
 import type { ReminderStatus } from "../../hooks/useTaskReminders";
 import type { Tag, Task, Template, TemplateTaskBlueprint, ThemeId } from "../../types";
+import type { RandomThemeColors } from "../../utils/randomTheme";
 import { FREE_WIDGET_LIMIT, WIDGET_IDS, WIDGET_LABELS, type WidgetId } from "../../utils/panelOrder";
 import type { Quote } from "../../utils/quotes";
 import {
@@ -41,6 +42,7 @@ import {
 import { AdminPreviewSection } from "./AdminPreviewSection";
 import { AppUpdateSection } from "./AppUpdateSection";
 import { BackupSection } from "./BackupSection";
+import { CustomThemeCreator } from "./CustomThemeCreator";
 import { DeleteAccountModal } from "./DeleteAccountModal";
 import { DonateSection } from "./DonateSection";
 import { TemplateManager } from "./TemplateManager";
@@ -57,6 +59,8 @@ import "./SettingsModal.css";
 interface SettingsModalProps {
   theme: ThemeId;
   onChangeTheme: (theme: ThemeId) => void;
+  customThemeColors: RandomThemeColors | null;
+  onSetCustomTheme: (hexColor: string) => void;
   remindersEnabled: boolean;
   onChangeRemindersEnabled: (enabled: boolean) => void;
   reminderStatus: ReminderStatus;
@@ -122,6 +126,8 @@ const ADMIN_SECTION: SettingsSection = {
 export function SettingsModal({
   theme,
   onChangeTheme,
+  customThemeColors,
+  onSetCustomTheme,
   remindersEnabled,
   onChangeRemindersEnabled,
   reminderStatus,
@@ -220,6 +226,11 @@ export function SettingsModal({
                   <span className="settings__label">Theme</span>
                   <ThemeCarousel themes={THEMES} selected={theme} onSelect={onChangeTheme} />
                 </Card>
+                <CustomThemeCreator
+                  active={theme === "custom"}
+                  colors={customThemeColors}
+                  onApply={onSetCustomTheme}
+                />
                 <ProfileSection />
               </>
             )}

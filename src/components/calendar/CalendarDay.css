@@ -51,13 +51,24 @@
 /* A frozen day gets its own icy wash so it reads as protected at a glance,
    not just a plain gray badge in the corner - layered as a second
    background-image on top of the heat-alpha tint (rather than replacing
-   it) so completion heat still shows through underneath. */
+   it) so completion heat still shows through underneath. A flat
+   border-color alone read as just a colored outline, so the frost is
+   layered again as an inset box-shadow plus four corner radial-gradients -
+   together they read as ice creeping in from the edge toward the center,
+   fading out before it reaches the middle of the cell, instead of stopping
+   dead at the border line. */
 .cal-day--frozen {
   border-color: var(--frost);
-  background-image: linear-gradient(
-      rgba(var(--frost-rgb), 0.16),
-      rgba(var(--frost-rgb), 0.16)
+  box-shadow: inset 0 0 0 1px rgba(var(--frost-rgb), 0.5), inset 0 0 14px rgba(var(--frost-rgb), 0.35);
+  background-image: radial-gradient(
+      circle at top left,
+      rgba(var(--frost-rgb), 0.35),
+      transparent 65%
     ),
+    radial-gradient(circle at top right, rgba(var(--frost-rgb), 0.35), transparent 65%),
+    radial-gradient(circle at bottom left, rgba(var(--frost-rgb), 0.35), transparent 65%),
+    radial-gradient(circle at bottom right, rgba(var(--frost-rgb), 0.35), transparent 65%),
+    linear-gradient(rgba(var(--frost-rgb), 0.12), rgba(var(--frost-rgb), 0.12)),
     linear-gradient(
       rgba(var(--accent-rgb), var(--heat-alpha, 0)),
       rgba(var(--accent-rgb), var(--heat-alpha, 0))

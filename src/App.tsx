@@ -66,6 +66,7 @@ import {
 } from "./utils/stats";
 import { DEFAULT_THEME } from "./utils/themes";
 import {
+  generateCustomThemeColors,
   generateRandomThemeColors,
   RANDOM_THEME_CSS_VARS,
   type RandomThemeColors,
@@ -88,13 +89,37 @@ import { useAppUpdater } from "./hooks/useAppUpdater";
 import { UpdateAvailableModal } from "./components/UpdateAvailableModal";
 import "./App.css";
 
+// Legacy keys - each theme change used to write these as two or three
+// separate setSetting() calls. Every write kicks off its own sync (see
+// db/queries.ts's kickSync()), and pushPendingOps/pullFromServer aren't
+// atomic across separate calls - a pull triggered by the *first* write's
+// realtime echo could land between the two pushes and pull back a
+// theme="random" row paired with the *previous* roll's still-unpushed
+// randomThemeColors row, which refreshAll() would then apply, visible as a
+// flash back to the old colors before the second write's own sync caught
+// up and corrected it. Kept only for the one-time migration in refreshAll.
 const THEME_SETTING_KEY = "theme";
 const RANDOM_THEME_SETTING_KEY = "randomThemeColors";
+const CUSTOM_THEME_SETTING_KEY = "customThemeColors";
+// theme + randomColors + customColors together in one JSON value under one
+// key, so a theme change is exactly one setSetting() call - one push, one
+// consistent pull - and can't be observed half-applied.
+const THEME_STATE_SETTING_KEY = "themeState";
 const REMINDERS_SETTING_KEY = "remindersEnabled";
 const PANEL_ORDER_SETTING_KEY = "panelOrder";
 const HIDDEN_WIDGETS_SETTING_KEY = "hiddenWidgets";
 const PHRASE_VIEW_SETTING_KEY = "lastPhraseViewDate";
 const FREEZE_SUGGESTION_DISMISSED_KEY = "freezeSuggestionDismissedDate";
+
+interface StoredThemeState {
+  theme: ThemeId;
+  randomColors: RandomThemeColors | null;
+  customColors: RandomThemeColors | null;
+}
+
+async function persistThemeState(state: StoredThemeState): Promise<void> {
+  await setSetting(THEME_STATE_SETTING_KEY, JSON.stringify(state));
+}
 
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -117,6 +142,10 @@ export default function App() {
   const [dayPanelExpanded, setDayPanelExpanded] = useState(false);
   const [theme, setTheme] = useState<ThemeId>(DEFAULT_THEME);
   const [randomColors, setRandomColors] = useState<RandomThemeColors | null>(null);
+  // The profile page's "create your own theme" builder's last saved pick -
+  // kept separate from randomColors so switching random <-> custom back and
+  // forth never clobbers the other one's saved colors.
+  const [customColors, setCustomColors] = useState<RandomThemeColors | null>(null);
   const [remindersEnabled, setRemindersEnabled] = useState(false);
   const [panelOrder, setPanelOrder] = useState<PanelBlockId[]>(DEFAULT_PANEL_ORDER);
   const [hiddenWidgets, setHiddenWidgets] = useState<WidgetId[]>([]);
@@ -201,19 +230,20 @@ export default function App() {
   }, [theme, viewingFriend]);
 
   // The eight hand-picked themes are static [data-theme] blocks in
-  // tokens.css; "random" has no such block, so its colors are applied
-  // directly as inline custom properties instead - and cleared again the
-  // moment a real theme is picked, so its static block takes back over.
+  // tokens.css; "random" and "custom" have no such block, so their colors
+  // are applied directly as inline custom properties instead - and cleared
+  // again the moment a real theme is picked, so its static block takes
+  // back over.
   useEffect(() => {
     if (viewingFriend) return;
     const root = document.documentElement.style;
-    const active = theme === "random" ? randomColors : null;
+    const active = theme === "random" ? randomColors : theme === "custom" ? customColors : null;
     for (const key of Object.keys(RANDOM_THEME_CSS_VARS) as (keyof RandomThemeColors)[]) {
       const cssVar = RANDOM_THEME_CSS_VARS[key];
       if (active) root.setProperty(cssVar, active[key]);
       else root.removeProperty(cssVar);
     }
-  }, [theme, randomColors, viewingFriend]);
+  }, [theme, randomColors, customColors, viewingFriend]);
 
   const reminderStatus = useTaskReminders(tasks, completions, remindersEnabled);
 
@@ -262,8 +292,10 @@ export default function App() {
       completionRows,
       freezeRows,
       noteRows,
-      savedTheme,
-      savedRandomColors,
+      savedThemeState,
+      legacyTheme,
+      legacyRandomColors,
+      legacyCustomColors,
       savedReminders,
       savedPanelOrder,
       savedHiddenWidgets,
@@ -276,8 +308,10 @@ export default function App() {
       getAllCompletions(),
       getStreakFreezes(),
       getAllNotes(),
+      getSetting(THEME_STATE_SETTING_KEY),
       getSetting(THEME_SETTING_KEY),
       getSetting(RANDOM_THEME_SETTING_KEY),
+      getSetting(CUSTOM_THEME_SETTING_KEY),
       getSetting(REMINDERS_SETTING_KEY),
       getSetting(PANEL_ORDER_SETTING_KEY),
       getSetting(HIDDEN_WIDGETS_SETTING_KEY),
@@ -290,10 +324,33 @@ export default function App() {
     setCompletions(completionRows);
     setFreezes(freezeRows);
     setNotes(noteRows);
-    const resolvedTheme = savedTheme ? (savedTheme as ThemeId) : DEFAULT_THEME;
-    const resolvedRandomColors = savedRandomColors ? JSON.parse(savedRandomColors) : null;
-    if (savedTheme) setTheme(resolvedTheme);
-    if (savedRandomColors) setRandomColors(resolvedRandomColors);
+
+    let resolvedTheme: ThemeId;
+    let resolvedRandomColors: RandomThemeColors | null;
+    let resolvedCustomColors: RandomThemeColors | null;
+    if (savedThemeState) {
+      const parsed = JSON.parse(savedThemeState) as StoredThemeState;
+      resolvedTheme = parsed.theme;
+      resolvedRandomColors = parsed.randomColors;
+      resolvedCustomColors = parsed.customColors;
+    } else {
+      // One-time migration for accounts whose theme still lives under the
+      // old separate keys (see THEME_SETTING_KEY's comment) - folds them
+      // into the combined key so every write from here on is atomic.
+      resolvedTheme = legacyTheme ? (legacyTheme as ThemeId) : DEFAULT_THEME;
+      resolvedRandomColors = legacyRandomColors ? JSON.parse(legacyRandomColors) : null;
+      resolvedCustomColors = legacyCustomColors ? JSON.parse(legacyCustomColors) : null;
+      if (legacyTheme) {
+        await persistThemeState({
+          theme: resolvedTheme,
+          randomColors: resolvedRandomColors,
+          customColors: resolvedCustomColors,
+        });
+      }
+    }
+    setTheme(resolvedTheme);
+    setRandomColors(resolvedRandomColors);
+    setCustomColors(resolvedCustomColors);
     if (savedReminders !== null) setRemindersEnabled(savedReminders === "true");
     setPanelOrder(parsePanelOrder(savedPanelOrder));
     setHiddenWidgets(parseHiddenWidgets(savedHiddenWidgets));
@@ -301,8 +358,15 @@ export default function App() {
     setFreezeSuggestionDismissedDate(savedFreezeSuggestionDismissedDate);
     setLoading(false);
     // Covers accounts whose theme was already set before profiles/friends
-    // existed - not just future changes via handleChangeTheme below.
-    void syncMyThemeToProfile(resolvedTheme, resolvedRandomColors).catch(() => {});
+    // existed - not just future changes via handleChangeTheme/
+    // handleSetCustomTheme below.
+    const resolvedOverrideColors =
+      resolvedTheme === "random"
+        ? resolvedRandomColors
+        : resolvedTheme === "custom"
+          ? resolvedCustomColors
+          : null;
+    void syncMyThemeToProfile(resolvedTheme, resolvedOverrideColors).catch(() => {});
   }
 
   async function handleSignOut() {
@@ -338,19 +402,40 @@ export default function App() {
   }
 
   async function handleChangeTheme(next: ThemeId) {
-    setTheme(next);
-    await setSetting(THEME_SETTING_KEY, next);
-
     // Re-rolls every time "random" is picked, even if it's already active -
     // that's the whole point of it being random rather than just one more
     // fixed swatch.
-    let nextRandomColors: RandomThemeColors | null = null;
-    if (next === "random") {
-      nextRandomColors = generateRandomThemeColors();
-      setRandomColors(nextRandomColors);
-      await setSetting(RANDOM_THEME_SETTING_KEY, JSON.stringify(nextRandomColors));
-    }
-    await syncMyThemeToProfile(next, nextRandomColors);
+    //
+    // Both state updates happen together, before any await, and are
+    // persisted with ONE setSetting call (see THEME_STATE_SETTING_KEY) -
+    // not two. Two separate writes each kick off their own sync
+    // (db/queries.ts's kickSync()), and a pull triggered by the first
+    // write's realtime echo could land before the second write's push
+    // finished, resolving to theme="random" paired with the *previous*
+    // roll's randomColors - which refreshAll() would then apply, visible as
+    // a flash back to the old colors before the second write's sync caught
+    // up a moment later and corrected it.
+    const nextRandomColors = next === "random" ? generateRandomThemeColors() : randomColors;
+    setTheme(next);
+    if (next === "random") setRandomColors(nextRandomColors);
+
+    await persistThemeState({ theme: next, randomColors: nextRandomColors, customColors });
+    await syncMyThemeToProfile(
+      next,
+      next === "random" ? nextRandomColors : next === "custom" ? customColors : null,
+    );
+  }
+
+  /** Profile page's "create your own theme" builder - same legible shape as
+   *  every other theme, built from a hue someone chose by hand instead of
+   *  a dice roll or a fixed swatch. */
+  async function handleSetCustomTheme(hexColor: string) {
+    const colors = generateCustomThemeColors(hexColor);
+    setTheme("custom");
+    setCustomColors(colors);
+
+    await persistThemeState({ theme: "custom", randomColors, customColors: colors });
+    await syncMyThemeToProfile("custom", colors);
   }
 
   async function handleChangeRemindersEnabled(next: boolean) {
@@ -739,6 +824,8 @@ export default function App() {
         <SettingsModal
           theme={theme}
           onChangeTheme={handleChangeTheme}
+          customThemeColors={customColors}
+          onSetCustomTheme={handleSetCustomTheme}
           remindersEnabled={remindersEnabled}
           onChangeRemindersEnabled={handleChangeRemindersEnabled}
           reminderStatus={reminderStatus}

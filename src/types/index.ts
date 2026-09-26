@@ -9,7 +9,8 @@ export type ThemeId =
   | "lavender"
   | "crimson"
   | "amber"
-  | "random";
+  | "random"
+  | "custom";
 
 export type RecurrenceType = "none" | "daily" | "weekly";
 
