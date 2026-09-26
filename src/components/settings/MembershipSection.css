@@ -41,6 +41,145 @@
   color: var(--text-secondary);
 }
 
+.membership-upsell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(217, 164, 65, 0.4);
+  background: linear-gradient(135deg, rgba(217, 164, 65, 0.14), rgba(217, 164, 65, 0.04));
+}
+
+.membership-upsell__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.membership-upsell__icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 30%, #f6d580, #d9a441 60%, #b5822b);
+  color: #3a2a08;
+}
+
+.membership-upsell__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.membership-upsell__tier {
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.membership-upsell__hint {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.membership-upsell__perks {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.membership-upsell__perks li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.membership-upsell__perk-check {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: rgba(217, 164, 65, 0.18);
+  color: var(--priority-medium);
+}
+
+.membership-upsell__button {
+  width: 100%;
+  background: linear-gradient(135deg, #f0b429, #d9a441);
+  border-color: transparent;
+  color: #3a2a08;
+  font-weight: 600;
+  transition: transform 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
+}
+
+.membership-upsell__button:hover {
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 6px 18px rgba(217, 164, 65, 0.4);
+}
+
+.membership-upsell__note {
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.membership-upsell__redeem-toggle {
+  align-self: center;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-decoration: underline;
+}
+
+.membership-upsell__redeem-toggle:hover {
+  color: var(--text-secondary);
+}
+
+.membership-upsell__redeem {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.membership-upsell__redeem-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  font-family: monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.membership-upsell__redeem-input:hover {
+  border-color: var(--border-strong);
+}
+
+.membership-upsell__redeem-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
 .membership-preview {
   display: flex;
   flex-direction: column;

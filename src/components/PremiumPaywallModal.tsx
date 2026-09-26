@@ -4,7 +4,10 @@ import { Modal } from "./ui/Modal";
 import "./PremiumPaywallModal.css";
 
 interface PremiumPaywallModalProps {
-  feature: string;
+  /** Omitted when opened directly from the Membership page (not gated
+   *  behind a specific action) - shows a general pitch instead of
+   *  "X is a Premium feature." */
+  feature?: string;
   onClose: () => void;
 }
 
@@ -31,7 +34,9 @@ export function PremiumPaywallModal({ feature, onClose }: PremiumPaywallModalPro
             <CrownIcon size={28} />
           </div>
         </div>
-        <p className="paywall__feature">{feature} is a Premium feature.</p>
+        <p className="paywall__feature">
+          {feature ? `${feature} is a Premium feature.` : "Unlock everything Premium has to offer."}
+        </p>
         <ul className="paywall__perks">
           {PERKS.map((perk, i) => (
             <li key={perk} style={{ animationDelay: `${120 + i * 90}ms` }}>
@@ -43,7 +48,7 @@ export function PremiumPaywallModal({ feature, onClose }: PremiumPaywallModalPro
           ))}
         </ul>
         <div className="paywall__price">
-          <span className="paywall__price-badge">One-time purchase</span>
+          <span className="paywall__price-badge">€9,99 - one-time purchase</span>
           <span className="paywall__price-sub">Yours forever - never a subscription.</span>
         </div>
         <div className="paywall__actions">

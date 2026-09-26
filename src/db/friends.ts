@@ -123,6 +123,16 @@ export async function deleteMyAccount(): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+/** Upgrades the caller to Premium if the code is valid, unused/under its
+ *  redemption limit, and not expired - see redeem_premium_code() in
+ *  supabase/premium_codes_schema.sql. useMembership's own realtime
+ *  subscription on the profiles row picks up the tier change on its own,
+ *  no separate refresh needed here. */
+export async function redeemPremiumCode(code: string): Promise<void> {
+  const { error } = await supabase.rpc("redeem_premium_code", { p_code: code });
+  if (error) throw new Error(error.message);
+}
+
 export async function updateDisplayName(name: string): Promise<void> {
   const userId = await currentUserId();
   const { error } = await supabase

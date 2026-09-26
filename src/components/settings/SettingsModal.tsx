@@ -86,6 +86,7 @@ interface SettingsModalProps {
   onClose: () => void;
   onSignOut: () => void;
   onAccountDeleted: () => void;
+  onUpgrade: () => void;
   online: boolean;
   onViewFriend: (friend: Friend) => void;
   membership: MembershipState;
@@ -144,6 +145,7 @@ export function SettingsModal({
   onClose,
   onSignOut,
   onAccountDeleted,
+  onUpgrade,
   online,
   onViewFriend,
   membership,
@@ -349,6 +351,7 @@ export function SettingsModal({
                   onViewFriend(member);
                   onClose();
                 }}
+                onUpgrade={onUpgrade}
               />
             )}
 
