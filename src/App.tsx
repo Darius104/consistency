@@ -770,7 +770,6 @@ export default function App() {
           onClose={() => setSettingsOpen(false)}
           onSignOut={handleSignOut}
           onAccountDeleted={handleAccountDeleted}
-          onUpgrade={() => setPaywallFeature("")}
           onFriendLimitReached={() => setPaywallFeature("More friends")}
           online={online}
           onViewFriend={setViewingFriend}
@@ -781,11 +780,8 @@ export default function App() {
         />
       )}
 
-      {paywallFeature !== null && (
-        <PremiumPaywallModal
-          feature={paywallFeature || undefined}
-          onClose={() => setPaywallFeature(null)}
-        />
+      {paywallFeature && (
+        <PremiumPaywallModal feature={paywallFeature} onClose={() => setPaywallFeature(null)} />
       )}
 
       {phraseModalOpen && (

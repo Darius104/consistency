@@ -1,0 +1,214 @@
+.premium-card__gated {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+}
+
+/* Deliberately its own fixed gold palette, not the active theme's --accent
+   - "Premium" is a fixed brand idea, not something that should go dull/
+   gray on a muted theme like Steel or clash on a themed accent that
+   happens to already mean something else in that theme. */
+.premium-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4) var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(217, 164, 65, 0.5);
+  background: linear-gradient(180deg, rgba(217, 164, 65, 0.16), var(--bg-elevated) 65%);
+  box-shadow: 0 10px 30px -14px rgba(217, 164, 65, 0.45);
+}
+
+.premium-card__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--priority-medium);
+}
+
+.premium-card__price-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.premium-card__price {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.premium-card__price-sub {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.premium-card__perks {
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.premium-card__perks li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.premium-card__perk-check {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: rgba(217, 164, 65, 0.18);
+  color: var(--priority-medium);
+}
+
+/* Green, not gold - once it's owned this reads as "confirmed/active"
+   rather than "here's the thing you could buy", the same green/gold split
+   already used for e.g. a completed task-group vs a regular one. Placed
+   after every base .premium-card* rule above so these overrides actually
+   win the cascade (equal specificity, later wins). */
+.premium-card--active {
+  align-items: center;
+  text-align: center;
+  border-color: rgba(70, 201, 143, 0.5);
+  background: linear-gradient(180deg, rgba(70, 201, 143, 0.16), var(--bg-elevated) 65%);
+  box-shadow: 0 10px 30px -14px rgba(70, 201, 143, 0.45);
+}
+
+.premium-card__label--active {
+  color: var(--success);
+}
+
+.premium-card__active-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  margin: var(--space-2) 0;
+  border-radius: 999px;
+  background: var(--success);
+  color: #0a2419;
+  animation: premium-card-check-pop 480ms var(--ease-out);
+}
+
+@keyframes premium-card-check-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.14);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.premium-card__active-title {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.premium-card__perks--active li {
+  justify-content: center;
+}
+
+.premium-card__perk-check--active {
+  background: rgba(70, 201, 143, 0.18);
+  color: var(--success);
+}
+
+.btn.premium-card__button {
+  width: 100%;
+  height: auto;
+  margin-top: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: linear-gradient(135deg, #f0b429, #d9a441);
+  border: 1px solid transparent;
+  color: #2c1e06;
+  font-weight: 600;
+  transition: transform 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
+}
+
+.btn.premium-card__button:hover {
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 6px 18px rgba(217, 164, 65, 0.4);
+}
+
+.premium-card__trust {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding-top: var(--space-3);
+  margin-top: var(--space-1);
+  border-top: 1px solid rgba(217, 164, 65, 0.25);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/* Side by side on Settings > Membership for a free member, so "what you
+   have" and "what upgrading adds" read as one comparison instead of two
+   separate pitches. Slightly tighter sizing than the single-column modal
+   context, since two cards now share the same width. */
+.premium-compare {
+  display: flex;
+  gap: var(--space-3);
+  align-items: stretch;
+}
+
+.premium-compare > .premium-card {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-4) var(--space-3) var(--space-3);
+}
+
+.premium-compare .premium-card__price {
+  font-size: 26px;
+}
+
+.premium-compare .premium-card__perks li {
+  font-size: var(--text-xs);
+}
+
+/* Plain and quiet on purpose - the contrast with Premium's gold glow is
+   part of what sells the upgrade, not just the perk list itself. */
+.premium-card--free {
+  border-color: var(--border);
+  background: var(--bg-elevated);
+  box-shadow: none;
+}
+
+.premium-card__label--free {
+  color: var(--text-secondary);
+}
+
+.premium-card__perk--excluded {
+  color: var(--text-muted);
+}
+
+.premium-card__perk-check--excluded {
+  background: var(--surface);
+  color: var(--text-muted);
+}

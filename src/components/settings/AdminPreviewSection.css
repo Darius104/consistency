@@ -1,0 +1,27 @@
+.admin-preview__options {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.admin-preview__btn {
+  flex: 1;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.admin-preview__btn:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.admin-preview__btn--active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}

@@ -28,6 +28,7 @@ import {
   BellIcon,
   ChevronLeftIcon,
   CrownIcon,
+  EyeIcon,
   FrostIcon,
   GridIcon,
   HeartIcon,
@@ -37,6 +38,7 @@ import {
   UserIcon,
   UsersIcon,
 } from "../ui/icons";
+import { AdminPreviewSection } from "./AdminPreviewSection";
 import { AppUpdateSection } from "./AppUpdateSection";
 import { BackupSection } from "./BackupSection";
 import { DeleteAccountModal } from "./DeleteAccountModal";
@@ -86,7 +88,6 @@ interface SettingsModalProps {
   onClose: () => void;
   onSignOut: () => void;
   onAccountDeleted: () => void;
-  onUpgrade: () => void;
   onFriendLimitReached: () => void;
   online: boolean;
   onViewFriend: (friend: Friend) => void;
@@ -111,6 +112,12 @@ const BASE_SECTIONS: SettingsSection[] = [
   { id: "support", label: "Support", icon: HelpIcon },
   { id: "account", label: "Account", icon: UserIcon },
 ];
+
+const ADMIN_SECTION: SettingsSection = {
+  id: "admin-preview",
+  label: "Preview Mode",
+  icon: EyeIcon,
+};
 
 export function SettingsModal({
   theme,
@@ -146,7 +153,6 @@ export function SettingsModal({
   onClose,
   onSignOut,
   onAccountDeleted,
-  onUpgrade,
   onFriendLimitReached,
   online,
   onViewFriend,
@@ -155,10 +161,10 @@ export function SettingsModal({
   supportBadgeCount,
   onSupportSeen,
 }: SettingsModalProps) {
-  const SECTIONS = BASE_SECTIONS.map((s) => {
-    if (s.id === "support") return { ...s, badge: supportBadgeCount };
-    return s;
-  });
+  const SECTIONS = [
+    ...BASE_SECTIONS.map((s) => (s.id === "support" ? { ...s, badge: supportBadgeCount } : s)),
+    ...(membership.actualTier === "admin" ? [ADMIN_SECTION] : []),
+  ];
   const [activeId, setActiveId] = useState(SECTIONS[0].id);
   // Only meaningful on phone-sized modal widths, where the nav list and the
   // section detail can't both fit - mirrors the same list/detail pattern
@@ -355,7 +361,6 @@ export function SettingsModal({
                   onViewFriend(member);
                   onClose();
                 }}
-                onUpgrade={onUpgrade}
               />
             )}
 
@@ -408,6 +413,8 @@ export function SettingsModal({
                 </Card>
               </>
             )}
+
+            {activeId === "admin-preview" && <AdminPreviewSection membership={membership} />}
           </div>
           </div>
         </div>

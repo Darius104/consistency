@@ -1,3 +1,13 @@
+/* The Premium-confirmed state is just one short card with nothing below
+   it - left top-aligned, it stranded in a sea of empty space in a modal
+   sized for the taller tabs (see .settings-detail__pane's min-height).
+   Centering it vertically makes it read as an intentional "you're all
+   set" moment instead of a mostly-empty page. */
+.membership-section-card--center {
+  flex: 1;
+  justify-content: center;
+}
+
 .membership-badge {
   display: flex;
   align-items: center;
@@ -41,172 +51,16 @@
   color: var(--text-secondary);
 }
 
-/* Deliberately its own fixed gold palette, not the active theme's --accent
-   - "Premium" is a fixed brand idea (same gold PremiumPaywallModal.css
-   already uses for the crown/price badge/buy button this card leads
-   into), not something that should go dull/gray on a muted theme like
-   Steel or clash on a themed accent that happens to already mean
-   something else in that theme. */
-.membership-upsell {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-5) var(--space-4) var(--space-4);
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(217, 164, 65, 0.5);
-  background: linear-gradient(180deg, rgba(217, 164, 65, 0.16), var(--bg-elevated) 65%);
-  box-shadow: 0 10px 30px -14px rgba(217, 164, 65, 0.45);
-}
-
-.membership-upsell__label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--priority-medium);
-}
-
-.membership-upsell__price-row {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  margin-top: var(--space-1);
-}
-
-.membership-upsell__price {
-  font-size: 34px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--text);
-}
-
-.membership-upsell__price-sub {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-}
-
-.membership-upsell__perks {
-  margin: var(--space-2) 0 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 9px;
-}
-
-.membership-upsell__perks li {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-}
-
-.membership-upsell__perk-check {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 999px;
-  background: rgba(217, 164, 65, 0.18);
-  color: var(--priority-medium);
-}
-
-/* Green, not gold - once it's owned this reads as "confirmed/active"
-   rather than "here's the thing you could buy", the same green/gold split
-   already used for e.g. a completed task-group vs a regular one. Placed
-   after every base .membership-upsell* rule above so these overrides
-   actually win the cascade (equal specificity, later wins). */
-.membership-upsell--active {
-  align-items: center;
-  text-align: center;
-  border-color: rgba(70, 201, 143, 0.5);
-  background: linear-gradient(180deg, rgba(70, 201, 143, 0.16), var(--bg-elevated) 65%);
-  box-shadow: 0 10px 30px -14px rgba(70, 201, 143, 0.45);
-}
-
-.membership-upsell__label--active {
-  color: var(--success);
-}
-
-.membership-upsell__active-check {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 52px;
-  height: 52px;
-  margin: var(--space-2) 0;
-  border-radius: 999px;
-  background: var(--success);
-  color: #0a2419;
-  animation: membership-check-pop 480ms var(--ease-out);
-}
-
-@keyframes membership-check-pop {
-  0% {
-    transform: scale(0.4);
-    opacity: 0;
-  }
-  60% {
-    transform: scale(1.14);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-  }
-}
-
-.membership-upsell__active-title {
-  font-size: var(--text-lg);
-  font-weight: 700;
-  color: var(--text);
-}
-
-.membership-upsell__perks--active li {
-  justify-content: center;
-}
-
-.membership-upsell__perk-check--active {
-  background: rgba(70, 201, 143, 0.18);
-  color: var(--success);
-}
-
-.btn.membership-upsell__button {
-  width: 100%;
-  height: auto;
-  margin-top: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  background: linear-gradient(135deg, #f0b429, #d9a441);
-  border: 1px solid transparent;
-  color: #2c1e06;
-  font-weight: 600;
-  transition: transform 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
-}
-
-.btn.membership-upsell__button:hover {
-  transform: translateY(-1px) scale(1.01);
-  box-shadow: 0 6px 18px rgba(217, 164, 65, 0.4);
-}
-
-.membership-upsell__trust {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding-top: var(--space-3);
-  margin-top: var(--space-1);
-  border-top: 1px solid rgba(217, 164, 65, 0.25);
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  text-align: center;
-}
-
+/* The card itself lives in ../PremiumCard.css now (shared with
+   PremiumPaywallModal) - these are just the redeem-code affordance that
+   sits below it, which is specific to this settings page. Both get their
+   own margin-top on top of the Card's default gap - the Premium card's
+   own gold box-shadow reaches a good 25px+ past its bottom edge (blur 30,
+   spread -14, offset 10), so the default gap alone left it looking like
+   the glow was bleeding into "Have a code?"/the redeem row. */
 .membership-upsell__redeem-toggle {
   align-self: center;
+  margin-top: var(--space-3);
   background: none;
   border: none;
   padding: 0;
@@ -222,6 +76,7 @@
 .membership-upsell__redeem {
   display: flex;
   gap: var(--space-2);
+  margin-top: var(--space-3);
 }
 
 .membership-upsell__redeem-input {
@@ -247,38 +102,4 @@
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-.membership-preview {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-}
-
-.membership-preview__options {
-  display: flex;
-  gap: var(--space-2);
-}
-
-.membership-preview__btn {
-  flex: 1;
-  padding: 6px 10px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  transition: border-color 0.15s ease, color 0.15s ease;
-}
-
-.membership-preview__btn:hover {
-  border-color: var(--border-strong);
-  color: var(--text);
-}
-
-.membership-preview__btn--active {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-soft);
 }
