@@ -364,6 +364,22 @@ interface FriendTagRow {
   sort_order: number;
 }
 
+function mapFriendTaskRow(row: FriendTaskRow): Task {
+  return {
+    id: row.id,
+    title: row.title,
+    notes: row.notes,
+    time: row.time,
+    tagId: row.tag_id,
+    priority: row.priority as Priority,
+    recurrenceType: row.recurrence_type as RecurrenceType,
+    recurrenceDays: row.recurrence_days ? row.recurrence_days.split(",").map(Number) : null,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    sortOrder: row.sort_order,
+  };
+}
+
 export async function fetchFriendCalendarData(friendUserId: string): Promise<FriendCalendarData> {
   const [{ data, error }, profileResult] = await Promise.all([
     supabase.rpc("get_friend_calendar_data", { p_friend_id: friendUserId }),
@@ -393,19 +409,7 @@ export async function fetchFriendCalendarData(friendUserId: string): Promise<Fri
     hidden_widgets: string | null;
   };
 
-  const tasks: Task[] = raw.tasks.map((row) => ({
-    id: row.id,
-    title: row.title,
-    notes: row.notes,
-    time: row.time,
-    tagId: row.tag_id,
-    priority: row.priority as Priority,
-    recurrenceType: row.recurrence_type as RecurrenceType,
-    recurrenceDays: row.recurrence_days ? row.recurrence_days.split(",").map(Number) : null,
-    startDate: row.start_date,
-    endDate: row.end_date,
-    sortOrder: row.sort_order,
-  }));
+  const tasks: Task[] = raw.tasks.map(mapFriendTaskRow);
 
   const tags: Tag[] = raw.tags.map((row) => ({
     id: row.id,
@@ -430,4 +434,47 @@ export async function fetchFriendCalendarData(friendUserId: string): Promise<Fri
     panelOrder: parsePanelOrder(raw.panel_order),
     hiddenWidgets: parseHiddenWidgets(raw.hidden_widgets),
   };
+}
+
+export interface FriendOfFriendStreakData {
+  userId: string;
+  displayName: string;
+  avatarId: AvatarId;
+  tasks: Task[];
+  completions: Set<string>;
+  freezes: Set<string>;
+}
+
+/** Backs the Friend Comparison widget when it's replicated onto a friend's
+ *  calendar view (see FriendCalendarView) - that friend's *own* friends, not
+ *  yours, so the widget shows the exact same comparison they'd see on their
+ *  own device. Same trust boundary get_friend_calendar_data already
+ *  extends (you can see a direct friend's full calendar) stretched one hop
+ *  further, purely to compute a streak number - see the RPC's own comment
+ *  in supabase/friend_streak_comparisons_schema.sql. */
+export async function fetchFriendOfFriendStreaks(
+  friendUserId: string,
+): Promise<FriendOfFriendStreakData[]> {
+  const { data, error } = await supabase.rpc("get_friend_streak_comparisons", {
+    p_friend_id: friendUserId,
+  });
+  if (error) throw new Error(error.message);
+
+  const rows = data as {
+    user_id: string;
+    display_name: string;
+    avatar_id: string | null;
+    tasks: FriendTaskRow[];
+    completions: { task_id: string; date: string }[];
+    freezes: { date: string }[];
+  }[];
+
+  return rows.map((row) => ({
+    userId: row.user_id,
+    displayName: row.display_name,
+    avatarId: parseAvatarId(row.avatar_id),
+    tasks: row.tasks.map(mapFriendTaskRow),
+    completions: new Set(row.completions.map((c) => `${c.task_id}:${c.date}`)),
+    freezes: new Set(row.freezes.map((f) => f.date)),
+  }));
 }

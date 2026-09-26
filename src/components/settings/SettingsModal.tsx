@@ -207,8 +207,8 @@ export function SettingsModal({
       case "friendStreaks":
         return (
           <FriendStreakCompare
-            yourStreak={streak}
-            yourAvatarId={yourAvatarId}
+            primaryStreak={streak}
+            primaryAvatarId={yourAvatarId}
             friends={friendStreakEntries}
             loading={friendStreaksLoading}
           />

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   type Friend,
   generateFriendCode,
@@ -50,12 +50,20 @@ export function FriendsManager({
   // Holds the friend awaiting a second confirming tap, so an accidental
   // stray tap on the X doesn't instantly unlink someone.
   const [confirmingRemoveId, setConfirmingRemoveId] = useState<string | null>(null);
+  // Remembered across loads (not reset each time) so the loading skeleton
+  // guesses from how many friends you actually had last time, instead of a
+  // fixed placeholder count that doesn't match and visibly resizes once the
+  // real list loads in. Starts at 1 - a reasonable single-row guess before
+  // this has ever loaded once.
+  const lastKnownCountRef = useRef(1);
 
   async function loadAll() {
     setLoading(true);
     setError(null);
     try {
-      setFriends(await listFriends());
+      const result = await listFriends();
+      setFriends(result);
+      lastKnownCountRef.current = Math.max(1, result.length);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Couldn't load your friends.");
     } finally {
@@ -73,7 +81,10 @@ export function FriendsManager({
   useEffect(() => {
     const id = window.setInterval(() => {
       listFriends()
-        .then(setFriends)
+        .then((result) => {
+          setFriends(result);
+          lastKnownCountRef.current = Math.max(1, result.length);
+        })
         .catch(() => {});
     }, 4000);
     return () => window.clearInterval(id);
@@ -192,7 +203,7 @@ export function FriendsManager({
         <span className="settings__label">Your friends</span>
         {loading ? (
           <div className="friends-manager__list">
-            {[0, 1].map((i) => (
+            {Array.from({ length: lastKnownCountRef.current }, (_, i) => (
               <div className="friends-manager__row" key={i}>
                 <div className="friends-manager__identity">
                   <Skeleton width={28} height={28} radius="50%" />

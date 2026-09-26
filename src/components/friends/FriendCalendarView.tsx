@@ -1,9 +1,16 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { fetchFriendCalendarData, type Friend, type FriendCalendarData } from "../../db/friends";
+import {
+  fetchFriendCalendarData,
+  fetchFriendOfFriendStreaks,
+  type Friend,
+  type FriendCalendarData,
+  type FriendOfFriendStreakData,
+} from "../../db/friends";
 import type { Tag, Task } from "../../types";
 import { parseDateKey, startOfWeek, todayKey } from "../../utils/dates";
 import type { PanelBlockId, WidgetId } from "../../utils/panelOrder";
+import { getQuoteOfDay } from "../../utils/quotes";
 import { RANDOM_THEME_CSS_VARS, type RandomThemeColors } from "../../utils/randomTheme";
 import { tasksScheduledOn } from "../../utils/recurrence";
 import {
@@ -12,12 +19,17 @@ import {
   computeTemplateBreakdown,
   computeTodayStatus,
   computeWeeklyCompletion,
+  freezesRemainingInMonth,
+  MAX_FREEZES_PER_MONTH,
 } from "../../utils/stats";
 import { CalendarView } from "../calendar/CalendarView";
 import "../day-panel/DayPanel.css";
 import { TaskGroup } from "../day-panel/TaskGroup";
 import "../day-panel/TaskList.css";
 import { AvatarBadge } from "../stats/AvatarBadge";
+import { FreezeSummary } from "../stats/FreezeSummary";
+import { FriendStreakCompare } from "../stats/FriendStreakCompare";
+import { QuoteWidget } from "../stats/QuoteWidget";
 import { StreakCounter } from "../stats/StreakCounter";
 import { TemplateBreakdown } from "../stats/TemplateBreakdown";
 import { WeeklyCompletion } from "../stats/WeeklyCompletion";
@@ -29,12 +41,22 @@ import { FriendTaskRow } from "./FriendTaskRow";
 import { SendNoteModal } from "./SendNoteModal";
 import "./FriendCalendarView.css";
 
-// Only the widgets whose data is both available here and actually about the
-// friend, not you - "freezes" (needs their membership tier, which this view
-// never fetches) and "quote" (the same quote-of-the-day for everyone,
-// nothing friend-specific to show) are deliberately left out, so their
-// order entry is just skipped rather than rendered as a stray gap.
-const REPLICABLE_WIDGET_IDS: PanelBlockId[] = ["streak", "weekly", "templates"];
+// Every hideable widget is replicated here, in the friend's own order and
+// visibility - this view is meant to be an exact mirror of what the friend
+// sees on their own device, never gated on the *viewer's* membership tier
+// (freezesRemainingInMonth is a flat monthly cap, not tier-dependent - a
+// free member just never has any dates in `freezes` to begin with, so it
+// renders correctly regardless of their tier either way). "friendStreaks"
+// shows *their* friends and *their* streaks (via
+// fetchFriendOfFriendStreaks), not the viewer's.
+const REPLICABLE_WIDGET_IDS: PanelBlockId[] = [
+  "streak",
+  "weekly",
+  "freezes",
+  "templates",
+  "quote",
+  "friendStreaks",
+];
 
 interface FriendCalendarViewProps {
   friend: Friend;
@@ -89,6 +111,10 @@ export function FriendCalendarView({ friend, onBack }: FriendCalendarViewProps) 
   // whole screen instead of always sharing it with the compact calendar.
   const [expanded, setExpanded] = useState(false);
   const [sendingNote, setSendingNote] = useState(false);
+  const [friendOfFriendStreaks, setFriendOfFriendStreaks] = useState<FriendOfFriendStreakData[]>(
+    [],
+  );
+  const [friendStreaksLoading, setFriendStreaksLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -105,6 +131,25 @@ export function FriendCalendarView({ friend, onBack }: FriendCalendarViewProps) 
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [friend.userId]);
+
+  // Separate from the main fetch above - the Friend Comparison widget is
+  // decorative, and a slow or failed fetch for it shouldn't hold up (or
+  // fail) showing the rest of the friend's calendar.
+  useEffect(() => {
+    let cancelled = false;
+    setFriendStreaksLoading(true);
+    fetchFriendOfFriendStreaks(friend.userId)
+      .then((result) => {
+        if (!cancelled) setFriendOfFriendStreaks(result);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setFriendStreaksLoading(false);
       });
     return () => {
       cancelled = true;
@@ -215,6 +260,8 @@ export function FriendCalendarView({ friend, onBack }: FriendCalendarViewProps) 
               onToggleGroup={toggleGroup}
               expanded={expanded}
               onToggleExpanded={() => setExpanded((v) => !v)}
+              friendOfFriendStreaks={friendOfFriendStreaks}
+              friendStreaksLoading={friendStreaksLoading}
             />
           </div>
         </div>
@@ -238,6 +285,8 @@ function FriendDayContent({
   onToggleGroup,
   expanded,
   onToggleExpanded,
+  friendOfFriendStreaks,
+  friendStreaksLoading,
 }: {
   data: FriendCalendarData;
   selectedDate: string;
@@ -245,6 +294,8 @@ function FriendDayContent({
   onToggleGroup: (key: string) => void;
   expanded: boolean;
   onToggleExpanded: () => void;
+  friendOfFriendStreaks: FriendOfFriendStreakData[];
+  friendStreaksLoading: boolean;
 }) {
   const label = parseDateKey(selectedDate).toLocaleDateString(undefined, {
     weekday: "short",
@@ -269,6 +320,13 @@ function FriendDayContent({
 
   const groups = groupByTag(occurrences, data.tags);
 
+  const friendStreakEntries = friendOfFriendStreaks.map((f) => ({
+    userId: f.userId,
+    displayName: f.displayName,
+    avatarId: f.avatarId,
+    streak: computeStreak(f.tasks, f.completions, f.freezes, todayKey()),
+  }));
+
   // "tasks" is included here (unlike REPLICABLE_WIDGET_IDS, which only
   // covers the hideable widgets) so the task list renders in its actual
   // position in the friend's order - it's a fixed anchor in their own
@@ -277,7 +335,24 @@ function FriendDayContent({
   const blocks: Partial<Record<PanelBlockId, ReactNode>> = {
     streak: <StreakCounter streak={streak} best={bestStreak} today={todayStatus} />,
     weekly: <WeeklyCompletion data={weekly} />,
+    freezes: (
+      <FreezeSummary
+        remaining={freezesRemainingInMonth(data.freezes, selectedDate)}
+        total={MAX_FREEZES_PER_MONTH}
+      />
+    ),
     templates: <TemplateBreakdown data={templateBreakdown} tags={data.tags} />,
+    quote: <QuoteWidget quote={getQuoteOfDay(todayKey())} />,
+    friendStreaks: (
+      <FriendStreakCompare
+        primaryStreak={streak}
+        primaryAvatarId={data.avatarId}
+        primaryLabel={data.displayName}
+        friends={friendStreakEntries}
+        loading={friendStreaksLoading}
+        emptyMessage={`${data.displayName} hasn't added any friends yet.`}
+      />
+    ),
     tasks:
       occurrences.length === 0 ? (
         <EmptyState icon={<CheckIcon size={16} />} iconClassName="empty-state__icon--success">
