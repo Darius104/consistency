@@ -19,9 +19,24 @@ interface FriendsManagerProps {
   online: boolean;
   onlineFriendIds: Set<string>;
   onViewFriend: (friend: Friend) => void;
+  isPremium: boolean;
+  /** Opens the paywall modal - checked client-side first so hitting the
+   *  limit shows the actual upsell instead of a plain red error, but the
+   *  real enforcement is server-side in redeem_friend_code() (see
+   *  friends_schema.sql), since the other side of a redemption gains a
+   *  friend too without ever calling this themselves. */
+  onFriendLimitReached: () => void;
 }
 
-export function FriendsManager({ online, onlineFriendIds, onViewFriend }: FriendsManagerProps) {
+const FREE_FRIEND_LIMIT = 1;
+
+export function FriendsManager({
+  online,
+  onlineFriendIds,
+  onViewFriend,
+  isPremium,
+  onFriendLimitReached,
+}: FriendsManagerProps) {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -86,6 +101,10 @@ export function FriendsManager({ online, onlineFriendIds, onViewFriend }: Friend
   async function handleRedeem() {
     const trimmed = redeemInput.trim();
     if (!trimmed) return;
+    if (!isPremium && friends.length >= FREE_FRIEND_LIMIT) {
+      onFriendLimitReached();
+      return;
+    }
     setRedeeming(true);
     setError(null);
     setRedeemMessage(null);
@@ -162,6 +181,11 @@ export function FriendsManager({ online, onlineFriendIds, onViewFriend }: Friend
           </Button>
         </div>
         {redeemMessage && <span className="friends-manager__success">{redeemMessage}</span>}
+        {!isPremium && friends.length >= FREE_FRIEND_LIMIT && (
+          <span className="settings__hint">
+            Free members can have {FREE_FRIEND_LIMIT} friend - upgrade to Premium to add more.
+          </span>
+        )}
       </Card>
 
       <Card>

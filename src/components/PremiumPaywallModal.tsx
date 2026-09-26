@@ -11,7 +11,12 @@ interface PremiumPaywallModalProps {
   onClose: () => void;
 }
 
-const PERKS = ["Save your own task templates", "Unlock every day-panel widget", "Protect your streak with freeze days"];
+const PERKS = [
+  "Save your own task templates",
+  "Unlock every day-panel widget",
+  "Protect your streak with freeze days",
+  "Connect with more than 1 friend",
+];
 
 /**
  * Shown whenever a Free account hits a gated action (see useMembership's

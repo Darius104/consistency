@@ -297,3 +297,11 @@ export function HeartIcon({ size = 16, ...props }: IconProps) {
   );
 }
 
+export function ShieldIcon({ size = 16, ...props }: IconProps) {
+  return (
+    <svg {...base(size, props)}>
+      <path d="M12 3 4 6v6c0 4.8 3.4 8.3 8 9.5 4.6-1.2 8-4.7 8-9.5V6l-8-3Z" />
+    </svg>
+  );
+}
+

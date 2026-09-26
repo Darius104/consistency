@@ -41,59 +41,59 @@
   color: var(--text-secondary);
 }
 
+/* Deliberately its own fixed gold palette, not the active theme's --accent
+   - "Premium" is a fixed brand idea (same gold PremiumPaywallModal.css
+   already uses for the crown/price badge/buy button this card leads
+   into), not something that should go dull/gray on a muted theme like
+   Steel or clash on a themed accent that happens to already mean
+   something else in that theme. */
 .membership-upsell {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(217, 164, 65, 0.4);
-  background: linear-gradient(135deg, rgba(217, 164, 65, 0.14), rgba(217, 164, 65, 0.04));
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4) var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(217, 164, 65, 0.5);
+  background: linear-gradient(180deg, rgba(217, 164, 65, 0.16), var(--bg-elevated) 65%);
+  box-shadow: 0 10px 30px -14px rgba(217, 164, 65, 0.45);
 }
 
-.membership-upsell__header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.membership-upsell__icon {
-  flex: none;
+.membership-upsell__label {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 999px;
-  background: radial-gradient(circle at 35% 30%, #f6d580, #d9a441 60%, #b5822b);
-  color: #3a2a08;
-}
-
-.membership-upsell__text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.membership-upsell__tier {
-  font-size: var(--text-md);
+  gap: 6px;
+  font-size: var(--text-sm);
   font-weight: 600;
+  color: var(--priority-medium);
+}
+
+.membership-upsell__price-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.membership-upsell__price {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   color: var(--text);
 }
 
-.membership-upsell__hint {
+.membership-upsell__price-sub {
   font-size: var(--text-sm);
   color: var(--text-secondary);
 }
 
 .membership-upsell__perks {
-  margin: 0;
+  margin: var(--space-2) 0 0;
   padding: 0;
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 9px;
 }
 
 .membership-upsell__perks li {
@@ -116,24 +116,93 @@
   color: var(--priority-medium);
 }
 
-.membership-upsell__button {
+/* Green, not gold - once it's owned this reads as "confirmed/active"
+   rather than "here's the thing you could buy", the same green/gold split
+   already used for e.g. a completed task-group vs a regular one. Placed
+   after every base .membership-upsell* rule above so these overrides
+   actually win the cascade (equal specificity, later wins). */
+.membership-upsell--active {
+  align-items: center;
+  text-align: center;
+  border-color: rgba(70, 201, 143, 0.5);
+  background: linear-gradient(180deg, rgba(70, 201, 143, 0.16), var(--bg-elevated) 65%);
+  box-shadow: 0 10px 30px -14px rgba(70, 201, 143, 0.45);
+}
+
+.membership-upsell__label--active {
+  color: var(--success);
+}
+
+.membership-upsell__active-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  margin: var(--space-2) 0;
+  border-radius: 999px;
+  background: var(--success);
+  color: #0a2419;
+  animation: membership-check-pop 480ms var(--ease-out);
+}
+
+@keyframes membership-check-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.14);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.membership-upsell__active-title {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.membership-upsell__perks--active li {
+  justify-content: center;
+}
+
+.membership-upsell__perk-check--active {
+  background: rgba(70, 201, 143, 0.18);
+  color: var(--success);
+}
+
+.btn.membership-upsell__button {
   width: 100%;
+  height: auto;
+  margin-top: var(--space-2);
+  padding: var(--space-3) var(--space-4);
   background: linear-gradient(135deg, #f0b429, #d9a441);
-  border-color: transparent;
-  color: #3a2a08;
+  border: 1px solid transparent;
+  color: #2c1e06;
   font-weight: 600;
   transition: transform 150ms var(--ease-out), box-shadow 150ms var(--ease-out);
 }
 
-.membership-upsell__button:hover {
+.btn.membership-upsell__button:hover {
   transform: translateY(-1px) scale(1.01);
   box-shadow: 0 6px 18px rgba(217, 164, 65, 0.4);
 }
 
-.membership-upsell__note {
-  text-align: center;
+.membership-upsell__trust {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding-top: var(--space-3);
+  margin-top: var(--space-1);
+  border-top: 1px solid rgba(217, 164, 65, 0.25);
   font-size: var(--text-xs);
-  color: var(--text-muted);
+  color: var(--text-secondary);
+  text-align: center;
 }
 
 .membership-upsell__redeem-toggle {

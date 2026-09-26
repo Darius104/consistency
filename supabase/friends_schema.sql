@@ -140,6 +140,9 @@ declare
   v_display_name text;
   v_a uuid;
   v_b uuid;
+  v_caller_tier text;
+  v_owner_tier text;
+  v_friend_count int;
 begin
   select user_id, expires_at into v_owner, v_expires
   from public.friend_codes
@@ -156,6 +159,28 @@ begin
 
   if v_owner = auth.uid() then
     raise exception 'You can''t redeem your own code.';
+  end if;
+
+  -- Free members are capped at 1 friend - checked on both sides, since a
+  -- friendship row links two accounts symmetrically regardless of who
+  -- actually calls this function (whoever types the code in redeems it,
+  -- but the other side gains a friend too). Premium/admin are unlimited.
+  select membership_tier into v_caller_tier from public.profiles where user_id = auth.uid();
+  if coalesce(v_caller_tier, 'free') = 'free' then
+    select count(*) into v_friend_count
+      from public.friendships where user_a = auth.uid() or user_b = auth.uid();
+    if v_friend_count >= 1 then
+      raise exception 'Free members can only have 1 friend - upgrade to Premium to add more.';
+    end if;
+  end if;
+
+  select membership_tier into v_owner_tier from public.profiles where user_id = v_owner;
+  if coalesce(v_owner_tier, 'free') = 'free' then
+    select count(*) into v_friend_count
+      from public.friendships where user_a = v_owner or user_b = v_owner;
+    if v_friend_count >= 1 then
+      raise exception 'That person is a Free member and already has a friend linked.';
+    end if;
   end if;
 
   if v_owner < auth.uid() then

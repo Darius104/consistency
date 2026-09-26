@@ -771,6 +771,7 @@ export default function App() {
           onSignOut={handleSignOut}
           onAccountDeleted={handleAccountDeleted}
           onUpgrade={() => setPaywallFeature("")}
+          onFriendLimitReached={() => setPaywallFeature("More friends")}
           online={online}
           onViewFriend={setViewingFriend}
           membership={membership}

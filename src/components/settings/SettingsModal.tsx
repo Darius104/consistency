@@ -87,6 +87,7 @@ interface SettingsModalProps {
   onSignOut: () => void;
   onAccountDeleted: () => void;
   onUpgrade: () => void;
+  onFriendLimitReached: () => void;
   online: boolean;
   onViewFriend: (friend: Friend) => void;
   membership: MembershipState;
@@ -146,6 +147,7 @@ export function SettingsModal({
   onSignOut,
   onAccountDeleted,
   onUpgrade,
+  onFriendLimitReached,
   online,
   onViewFriend,
   membership,
@@ -340,6 +342,8 @@ export function SettingsModal({
                   onViewFriend(friend);
                   onClose();
                 }}
+                isPremium={membership.isPremium}
+                onFriendLimitReached={onFriendLimitReached}
               />
             )}
 

@@ -3,7 +3,7 @@ import { redeemPremiumCode, type Friend, type MembershipTier } from "../../db/fr
 import type { MembershipState } from "../../hooks/useMembership";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
-import { CheckIcon, CrownIcon } from "../ui/icons";
+import { CheckIcon, CrownIcon, ShieldIcon } from "../ui/icons";
 import { AdminMembersList } from "./AdminMembersList";
 import "./MembershipSection.css";
 
@@ -34,6 +34,7 @@ const UPSELL_PERKS = [
   "Save your own task templates",
   "Unlock every day-panel widget",
   "Protect your streak with freeze days",
+  "Connect with more than 1 friend",
 ];
 
 const PREVIEW_OPTIONS: { value: "admin" | "free" | "premium"; label: string }[] = [
@@ -83,22 +84,18 @@ export function MembershipSection({
 
   return (
     <Card>
-      <span className="settings__label">Membership</span>
       {error && <span className="settings__hint settings__hint--warning">{error}</span>}
 
       {effectiveTier === "free" ? (
         <div className="membership-upsell">
-          <div className="membership-upsell__header">
-            <span className="membership-upsell__icon">
-              <CrownIcon size={20} />
-            </span>
-            <div className="membership-upsell__text">
-              <span className="membership-upsell__tier">Free Member</span>
-              <span className="membership-upsell__hint">
-                You're missing out on templates, extra widgets, and streak freezes.
-              </span>
-            </div>
+          <span className="membership-upsell__label">
+            <CrownIcon size={13} /> Premium
+          </span>
+          <div className="membership-upsell__price-row">
+            <span className="membership-upsell__price">€9,99</span>
           </div>
+          <span className="membership-upsell__price-sub">One-time payment - lifetime access</span>
+
           <ul className="membership-upsell__perks">
             {UPSELL_PERKS.map((perk) => (
               <li key={perk}>
@@ -109,12 +106,15 @@ export function MembershipSection({
               </li>
             ))}
           </ul>
+
           <Button variant="primary" className="membership-upsell__button" onClick={onUpgrade}>
-            Upgrade to Premium - €9,99
+            Upgrade to Premium →
           </Button>
-          <span className="membership-upsell__note">
+
+          <div className="membership-upsell__trust">
+            <ShieldIcon size={13} />
             One-time purchase - yours forever, never a subscription.
-          </span>
+          </div>
 
           {showRedeem ? (
             <div className="membership-upsell__redeem">
@@ -146,6 +146,29 @@ export function MembershipSection({
           {redeemError && (
             <span className="settings__hint settings__hint--warning">{redeemError}</span>
           )}
+        </div>
+      ) : effectiveTier === "premium" ? (
+        <div className="membership-upsell membership-upsell--active">
+          <span className="membership-upsell__label membership-upsell__label--active">
+            <CrownIcon size={13} /> Premium
+          </span>
+
+          <span className="membership-upsell__active-check">
+            <CheckIcon size={24} />
+          </span>
+          <span className="membership-upsell__active-title">You have Premium</span>
+          <span className="membership-upsell__price-sub">Thanks for supporting Consistency.</span>
+
+          <ul className="membership-upsell__perks membership-upsell__perks--active">
+            {UPSELL_PERKS.map((perk) => (
+              <li key={perk}>
+                <span className="membership-upsell__perk-check membership-upsell__perk-check--active">
+                  <CheckIcon size={11} />
+                </span>
+                {perk}
+              </li>
+            ))}
+          </ul>
         </div>
       ) : (
         effectiveTier && (
