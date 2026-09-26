@@ -1,7 +1,7 @@
 import type { Update } from "@tauri-apps/plugin-updater";
 import { Button } from "./ui/Button";
 import { Modal } from "./ui/Modal";
-import { RefreshIcon } from "./ui/icons";
+import { CheckIcon, ChevronRightIcon, RefreshIcon } from "./ui/icons";
 import "./UpdateAvailableModal.css";
 
 interface UpdateAvailableModalProps {
@@ -35,31 +35,54 @@ export function UpdateAvailableModal({
   return (
     <Modal title="Update available" onClose={onLater}>
       <div className="update-modal">
-        <div className="update-modal__header">
+        <div className="update-modal__hero">
           <span className="update-modal__icon">
-            <RefreshIcon size={20} />
+            <RefreshIcon size={22} />
           </span>
-          <p className="update-modal__message">
-            A new version of Consistency is ready - <strong>{update.version}</strong>
-            <span className="update-modal__from"> (you're on {update.currentVersion})</span>
-          </p>
+          <h3 className="update-modal__title">A new version is ready</h3>
+          <div className="update-modal__version-chip">
+            <span className="update-modal__version-from">{update.currentVersion}</span>
+            <ChevronRightIcon size={12} className="update-modal__version-arrow" />
+            <span className="update-modal__version-to">{update.version}</span>
+          </div>
         </div>
+
         {notes.length > 0 && (
-          <ul className="update-modal__notes">
-            {notes.map((line, i) => (
-              <li key={i}>{line}</li>
-            ))}
-          </ul>
+          <div className="update-modal__notes-section">
+            <span className="settings__label">What's new</span>
+            <ul className="update-modal__notes">
+              {notes.map((line, i) => (
+                <li key={i}>
+                  <span className="update-modal__note-check">
+                    <CheckIcon size={10} />
+                  </span>
+                  {line}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
+
         {error && <div className="update-modal__error">{error}</div>}
+
         <div className="update-modal__actions">
-          <Button onClick={onLater} disabled={installing}>
+          <Button onClick={onLater} disabled={installing} className="update-modal__later">
             Not now
           </Button>
-          <Button variant="primary" onClick={onInstall} disabled={installing}>
+          <Button
+            variant="primary"
+            onClick={onInstall}
+            disabled={installing}
+            className="update-modal__install"
+          >
             {installing ? "Downloading…" : "Update & Restart"}
           </Button>
         </div>
+        {installing && (
+          <div className="update-modal__progress" role="progressbar" aria-label="Downloading update">
+            <span className="update-modal__progress-fill" />
+          </div>
+        )}
       </div>
     </Modal>
   );
