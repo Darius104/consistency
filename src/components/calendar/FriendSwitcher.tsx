@@ -21,11 +21,20 @@ export function FriendSwitcher({ onlineFriendIds, onViewFriend }: FriendSwitcher
   const [friends, setFriends] = useState<Friend[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
+  // Remembered across opens (not reset to null/default each time) so the
+  // skeleton on the *next* open guesses from how many friends you actually
+  // had last time, instead of a fixed placeholder count that doesn't match
+  // and visibly resizes once the real list loads in. Starts at 1 - a
+  // reasonable single-row guess before this has ever loaded once.
+  const lastKnownCountRef = useRef(1);
 
   useEffect(() => {
     if (!open) return;
     listFriends()
-      .then(setFriends)
+      .then((result) => {
+        setFriends(result);
+        lastKnownCountRef.current = Math.max(1, result.length);
+      })
       .catch((err) => setError(err instanceof Error ? err.message : "Couldn't load your friends."));
   }, [open]);
 
@@ -55,7 +64,7 @@ export function FriendSwitcher({ onlineFriendIds, onViewFriend }: FriendSwitcher
             <span className="friend-switcher__hint friend-switcher__hint--warning">{error}</span>
           ) : !friends ? (
             <div className="friend-switcher__list">
-              {[0, 1].map((i) => (
+              {Array.from({ length: lastKnownCountRef.current }, (_, i) => (
                 <div className="friend-switcher__row" key={i}>
                   <Skeleton width={24} height={24} radius="50%" />
                   <Skeleton width={90} height="0.85em" />

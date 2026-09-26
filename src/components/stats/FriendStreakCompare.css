@@ -58,5 +58,5 @@
    sit inline with a compact row's text instead of towering over it. */
 .friend-streak-compare__streak .flame {
   transform: scale(0.5);
-  margin: -8px -7px;
+  margin: -8px -3px -8px -7px;
 }
