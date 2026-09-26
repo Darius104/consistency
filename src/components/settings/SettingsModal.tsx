@@ -4,7 +4,9 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import type { Friend } from "../../db/friends";
 import type { MembershipState } from "../../hooks/useMembership";
 import type { ReminderStatus } from "../../hooks/useTaskReminders";
+import type { FriendStreakEntry } from "../../hooks/useFriendStreaks";
 import type { Tag, Task, Template, TemplateTaskBlueprint, ThemeId } from "../../types";
+import type { AvatarId } from "../../utils/avatars";
 import type { RandomThemeColors } from "../../utils/randomTheme";
 import { FREE_WIDGET_LIMIT, WIDGET_IDS, WIDGET_LABELS, type WidgetId } from "../../utils/panelOrder";
 import type { Quote } from "../../utils/quotes";
@@ -18,6 +20,7 @@ import {
 import { THEMES } from "../../utils/themes";
 import { TemplateBreakdown } from "../stats/TemplateBreakdown";
 import { FreezeSummary } from "../stats/FreezeSummary";
+import { FriendStreakCompare } from "../stats/FriendStreakCompare";
 import { QuoteWidget } from "../stats/QuoteWidget";
 import { StreakCounter } from "../stats/StreakCounter";
 import { WeeklyCompletion } from "../stats/WeeklyCompletion";
@@ -89,6 +92,9 @@ interface SettingsModalProps {
   weekly: WeeklyCompletionData;
   templateBreakdown: TemplateBreakdownItem[];
   quote: Quote;
+  yourAvatarId: AvatarId | null;
+  friendStreakEntries: FriendStreakEntry[];
+  friendStreaksLoading: boolean;
   onClose: () => void;
   onSignOut: () => void;
   onAccountDeleted: () => void;
@@ -156,6 +162,9 @@ export function SettingsModal({
   weekly,
   templateBreakdown,
   quote,
+  yourAvatarId,
+  friendStreakEntries,
+  friendStreaksLoading,
   onClose,
   onSignOut,
   onAccountDeleted,
@@ -195,6 +204,15 @@ export function SettingsModal({
         return <TemplateBreakdown data={templateBreakdown} tags={tags} />;
       case "quote":
         return <QuoteWidget quote={quote} />;
+      case "friendStreaks":
+        return (
+          <FriendStreakCompare
+            yourStreak={streak}
+            yourAvatarId={yourAvatarId}
+            friends={friendStreakEntries}
+            loading={friendStreaksLoading}
+          />
+        );
     }
   }
 

@@ -27,6 +27,13 @@
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
+  /* A rounded border-radius only rounds the panel's OWN background - a
+     child with its own distinct background (like Settings' left nav,
+     var(--bg) instead of this panel's var(--bg-elevated)) stretching to
+     the panel's edge still renders as a flat rectangle poking past the
+     rounded corner underneath. Clipping every child to the panel's own
+     rounding fixes that everywhere at once, not just for Settings. */
+  overflow: hidden;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   transform-origin: center;
   opacity: 1;

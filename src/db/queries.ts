@@ -49,8 +49,27 @@ import {
 // also enqueue an outbox entry and kick a non-blocking sync attempt; the
 // actual Supabase calls live in ../sync.ts, the only place network happens.
 
+// Debounced rather than firing trySync() immediately on every call: two
+// writes made back-to-back (e.g. changing a setting that touches two keys,
+// or several quick edits) each enqueue their own outbox op before kicking a
+// sync - but trySync() firing immediately for the *first* one could start
+// pushing/pulling before the *second* one's op has been enqueued yet. That
+// pull then reflects a state that's missing the second write, and
+// pullFromServer()'s pull is exactly what refreshAll() re-applies to React
+// state - so the second change visibly reverts for a moment (this is what
+// caused the random-theme flash, and the same class of bug for widget
+// visibility toggles). Coalescing every kickSync() in a short window into
+// one trySync() call means it only ever runs once every relevant enqueueOp
+// has already completed.
+const KICK_SYNC_DEBOUNCE_MS = 300;
+let kickSyncTimer: number | null = null;
+
 function kickSync(): void {
-  void trySync();
+  if (kickSyncTimer !== null) window.clearTimeout(kickSyncTimer);
+  kickSyncTimer = window.setTimeout(() => {
+    kickSyncTimer = null;
+    void trySync();
+  }, KICK_SYNC_DEBOUNCE_MS);
 }
 
 function rowToTask(row: TaskRow): Task {

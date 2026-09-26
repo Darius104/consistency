@@ -1,6 +1,8 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { FriendNote } from "../../db/friendNotes";
+import type { FriendStreakEntry } from "../../hooks/useFriendStreaks";
+import type { AvatarId } from "../../utils/avatars";
 import type { DayNote, Tag, Task, Template, TemplateTaskBlueprint } from "../../types";
 import { parseDateKey } from "../../utils/dates";
 import { WIDGET_LABELS, type PanelBlockId, type WidgetId } from "../../utils/panelOrder";
@@ -16,6 +18,7 @@ import { Button } from "../ui/Button";
 import { ChevronDownIcon, ChevronUpIcon, GripIcon, MoreIcon, XIcon } from "../ui/icons";
 import { TemplateBreakdown } from "../stats/TemplateBreakdown";
 import { FreezeSummary } from "../stats/FreezeSummary";
+import { FriendStreakCompare } from "../stats/FriendStreakCompare";
 import { QuoteWidget } from "../stats/QuoteWidget";
 import { StreakCounter } from "../stats/StreakCounter";
 import { WeeklyCompletion } from "../stats/WeeklyCompletion";
@@ -65,6 +68,9 @@ interface DayPanelProps {
   freezesRemaining: number;
   templateBreakdown: TemplateBreakdownItem[];
   quote: Quote;
+  yourAvatarId: AvatarId | null;
+  friendStreakEntries: FriendStreakEntry[];
+  friendStreaksLoading: boolean;
   order: PanelBlockId[];
   onReorder: (order: PanelBlockId[]) => void;
   arranging: boolean;
@@ -113,6 +119,9 @@ export function DayPanel({
   freezesRemaining,
   templateBreakdown,
   quote,
+  yourAvatarId,
+  friendStreakEntries,
+  friendStreaksLoading,
   order,
   onReorder,
   arranging,
@@ -324,6 +333,14 @@ export function DayPanel({
     freezes: <FreezeSummary remaining={freezesRemaining} total={MAX_FREEZES_PER_MONTH} />,
     templates: <TemplateBreakdown data={templateBreakdown} tags={tags} />,
     quote: <QuoteWidget quote={quote} />,
+    friendStreaks: (
+      <FriendStreakCompare
+        yourStreak={streak}
+        yourAvatarId={yourAvatarId}
+        friends={friendStreakEntries}
+        loading={friendStreaksLoading}
+      />
+    ),
     tasks: (
       <TaskList
         selectedDate={selectedDate}

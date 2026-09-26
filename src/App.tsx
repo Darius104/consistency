@@ -76,12 +76,14 @@ import {
   DEFAULT_PANEL_ORDER,
   parsePanelOrder,
   parseHiddenWidgets,
+  resolveNewWidgetIds,
   FREE_WIDGET_LIMIT,
   WIDGET_IDS,
   type PanelBlockId,
   type WidgetId,
 } from "./utils/panelOrder";
 import { useTaskReminders } from "./hooks/useTaskReminders";
+import { useFriendStreaks } from "./hooks/useFriendStreaks";
 import { useMembership } from "./hooks/useMembership";
 import { useSupportBadgeCount } from "./hooks/useSupportBadgeCount";
 import { useFriendNotes } from "./hooks/useFriendNotes";
@@ -108,6 +110,9 @@ const THEME_STATE_SETTING_KEY = "themeState";
 const REMINDERS_SETTING_KEY = "remindersEnabled";
 const PANEL_ORDER_SETTING_KEY = "panelOrder";
 const HIDDEN_WIDGETS_SETTING_KEY = "hiddenWidgets";
+// Separate from hiddenWidgets - see resolveNewWidgetIds's own comment for
+// why hiddenWidgets alone can't tell "shown" apart from "never migrated".
+const KNOWN_WIDGET_IDS_SETTING_KEY = "knownWidgetIds";
 const PHRASE_VIEW_SETTING_KEY = "lastPhraseViewDate";
 const FREEZE_SUGGESTION_DISMISSED_KEY = "freezeSuggestionDismissedDate";
 
@@ -246,6 +251,12 @@ export default function App() {
   }, [theme, randomColors, customColors, viewingFriend]);
 
   const reminderStatus = useTaskReminders(tasks, completions, remindersEnabled);
+  // Also enabled while Settings is open (regardless of tab) so the Widgets
+  // gallery's live preview has real data the moment someone switches to it,
+  // even before they've turned the widget on.
+  const friendStreaks = useFriendStreaks(
+    !hiddenWidgets.includes("friendStreaks") || settingsOpen,
+  );
 
   const membership = useMembership();
   const { count: supportBadgeCount, refresh: refreshSupportBadge } = useSupportBadgeCount(
@@ -299,6 +310,7 @@ export default function App() {
       savedReminders,
       savedPanelOrder,
       savedHiddenWidgets,
+      savedKnownWidgetIds,
       savedPhraseViewDate,
       savedFreezeSuggestionDismissedDate,
     ] = await Promise.all([
@@ -315,6 +327,7 @@ export default function App() {
       getSetting(REMINDERS_SETTING_KEY),
       getSetting(PANEL_ORDER_SETTING_KEY),
       getSetting(HIDDEN_WIDGETS_SETTING_KEY),
+      getSetting(KNOWN_WIDGET_IDS_SETTING_KEY),
       getSetting(PHRASE_VIEW_SETTING_KEY),
       getSetting(FREEZE_SUGGESTION_DISMISSED_KEY),
     ]);
@@ -353,7 +366,30 @@ export default function App() {
     setCustomColors(resolvedCustomColors);
     if (savedReminders !== null) setRemindersEnabled(savedReminders === "true");
     setPanelOrder(parsePanelOrder(savedPanelOrder));
-    setHiddenWidgets(parseHiddenWidgets(savedHiddenWidgets));
+    // hiddenWidgets only ever records what's hidden - a widget that's
+    // absent from it is either genuinely visible (shown on purpose) or
+    // simply didn't exist yet when this account last saved its widget
+    // settings, and those two cases look identical from hiddenWidgets
+    // alone. knownWidgetIds is the separate record that tells them apart:
+    // any current widget id missing from IT (not from hiddenWidgets)
+    // starts hidden, same as a fresh account - and then both get written
+    // back together so every id this app currently ships is accounted for
+    // exactly once. Without this, showing a brand new widget just made it
+    // absent from hiddenWidgets again, indistinguishable from "never
+    // migrated" on the very next reload - which silently re-hid it a
+    // moment after turning it on.
+    const parsedHiddenWidgets = parseHiddenWidgets(savedHiddenWidgets);
+    const newWidgetIds = resolveNewWidgetIds(savedKnownWidgetIds).filter(
+      (id) => !parsedHiddenWidgets.includes(id),
+    );
+    const resolvedHiddenWidgets = [...parsedHiddenWidgets, ...newWidgetIds];
+    setHiddenWidgets(resolvedHiddenWidgets);
+    if (newWidgetIds.length > 0 || !savedKnownWidgetIds) {
+      void Promise.all([
+        setSetting(HIDDEN_WIDGETS_SETTING_KEY, JSON.stringify(resolvedHiddenWidgets)),
+        setSetting(KNOWN_WIDGET_IDS_SETTING_KEY, JSON.stringify(WIDGET_IDS)),
+      ]).catch(() => {});
+    }
     setLastPhraseViewDate(savedPhraseViewDate);
     setFreezeSuggestionDismissedDate(savedFreezeSuggestionDismissedDate);
     setLoading(false);
@@ -768,6 +804,9 @@ export default function App() {
         freezesRemaining={freezesRemainingThisMonth}
         templateBreakdown={templateBreakdown}
         quote={quote}
+        yourAvatarId={friendStreaks.yourAvatarId}
+        friendStreakEntries={friendStreaks.friends}
+        friendStreaksLoading={friendStreaks.loading}
         order={panelOrder}
         onReorder={handleReorderPanel}
         hiddenWidgets={hiddenWidgets}
@@ -854,6 +893,9 @@ export default function App() {
           weekly={weekly}
           templateBreakdown={templateBreakdown}
           quote={quote}
+          yourAvatarId={friendStreaks.yourAvatarId}
+          friendStreakEntries={friendStreaks.friends}
+          friendStreaksLoading={friendStreaks.loading}
           onClose={() => setSettingsOpen(false)}
           onSignOut={handleSignOut}
           onAccountDeleted={handleAccountDeleted}

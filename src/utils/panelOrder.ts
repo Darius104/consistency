@@ -4,6 +4,7 @@ export type PanelBlockId =
   | "freezes"
   | "templates"
   | "quote"
+  | "friendStreaks"
   | "tasks";
 
 export const DEFAULT_PANEL_ORDER: PanelBlockId[] = [
@@ -12,6 +13,7 @@ export const DEFAULT_PANEL_ORDER: PanelBlockId[] = [
   "freezes",
   "templates",
   "quote",
+  "friendStreaks",
   "tasks",
 ];
 
@@ -46,12 +48,20 @@ export const WIDGET_LABELS: Record<WidgetId, string> = {
   freezes: "Streak Freezes",
   templates: "Template Breakdown",
   quote: "Quote of the Day",
+  friendStreaks: "Friend Comparison",
 };
 
 // Canonical listing order for management UIs (e.g. Settings > Widgets) -
 // deliberately fixed, unlike the user's freely-draggable panelOrder, so that
 // page doesn't reshuffle itself as the user reorders their actual panel.
-export const WIDGET_IDS: WidgetId[] = ["streak", "weekly", "freezes", "templates", "quote"];
+export const WIDGET_IDS: WidgetId[] = [
+  "streak",
+  "weekly",
+  "freezes",
+  "templates",
+  "quote",
+  "friendStreaks",
+];
 
 // Free accounts can have this many widgets visible at once - exactly the
 // default on-boarding state (only "streak" - see DEFAULT_HIDDEN_WIDGETS
@@ -68,11 +78,17 @@ const VALID_WIDGET_IDS = new Set<WidgetId>(WIDGET_IDS);
 // new widget onto the panel the moment it's added.
 const DEFAULT_HIDDEN_WIDGETS: WidgetId[] = WIDGET_IDS.filter((id) => id !== "streak");
 
-/** Parses saved hidden-widget ids. Unlike parsePanelOrder, an invalid entry
- *  here just gets dropped rather than resetting the whole list back to
- *  the default - one bad id shouldn't un-hide everything else. "tasks" can
+/** Parses saved hidden-widget ids as-is - an invalid entry just gets
+ *  dropped rather than resetting the whole list back to the default (one
+ *  bad id shouldn't un-hide everything else), and a missing/malformed
+ *  value hides everything but streak, same as a fresh account. "tasks" can
  *  never appear here (VALID_WIDGET_IDS excludes it), so it can never be
- *  hidden even from a corrupted or hand-edited setting value. */
+ *  hidden even from a corrupted or hand-edited setting value.
+ *
+ *  Deliberately does NOT try to guess whether some id's absence means "was
+ *  shown" or "predates this save" - hiddenWidgets only ever records what's
+ *  hidden, so both look identical from here. See resolveNewWidgetIds,
+ *  which uses a separate record to actually tell them apart. */
 export function parseHiddenWidgets(raw: string | null): WidgetId[] {
   if (!raw) return DEFAULT_HIDDEN_WIDGETS;
   try {
@@ -84,4 +100,32 @@ export function parseHiddenWidgets(raw: string | null): WidgetId[] {
     // fall through to default
   }
   return DEFAULT_HIDDEN_WIDGETS;
+}
+
+/** Every widget id this account's settings have ever resolved - a separate
+ *  record from hiddenWidgets specifically because hiddenWidgets can't tell
+ *  "deliberately shown" (absent, but previously accounted for) apart from
+ *  "didn't exist yet when this account last saved its widget settings"
+ *  (also just absent) - both look the same from hiddenWidgets alone. */
+export function parseKnownWidgetIds(raw: string | null): WidgetId[] {
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((id): id is WidgetId => VALID_WIDGET_IDS.has(id));
+    }
+  } catch {
+    // fall through
+  }
+  return [];
+}
+
+/** Widget ids this app currently ships that this account's knownWidgetIds
+ *  record has never seen - added to the app after this account last wrote
+ *  its widget settings, so it never had the chance to start hidden the way
+ *  a fresh account's DEFAULT_HIDDEN_WIDGETS does. Excludes "streak", which
+ *  is never hidden regardless. */
+export function resolveNewWidgetIds(knownIdsRaw: string | null): WidgetId[] {
+  const known = new Set(parseKnownWidgetIds(knownIdsRaw));
+  return WIDGET_IDS.filter((id) => id !== "streak" && !known.has(id));
 }

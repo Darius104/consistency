@@ -220,24 +220,46 @@ export function onSyncComplete(fn: SyncListener): () => void {
  *  the same moment (e.g. the instant a session becomes ready). Without this,
  *  two concurrent pulls each run their own "delete everything, reinsert" pass
  *  on the same cache tables and collide with each other's inserts.
+ *
+ *  Rerun-queued: a call arriving while one is already in flight doesn't just
+ *  ride along on that one's result - its own pushPendingOps() call may have
+ *  already read the outbox *before* whatever just enqueued this new call's
+ *  op existed, so its pull can reflect a state that's missing it, and
+ *  refreshAll() (via onSyncComplete) applies that pull straight to React
+ *  state - visibly reverting the still-unpushed change for a moment (this
+ *  is what caused a widget visibility toggle to seemingly "cancel" itself
+ *  right after being turned on). Queuing one more full push+pull pass right
+ *  after the in-flight one finishes guarantees a pass that starts only once
+ *  every op enqueued up to that point - including this one - is in the
+ *  outbox.
  */
 let inFlightSync: Promise<boolean> | null = null;
+let rerunQueued = false;
+
+async function runSyncOnce(): Promise<boolean> {
+  try {
+    const { failed } = await pushPendingOps();
+    if (failed) return false;
+    await pullFromServer();
+    listeners.forEach((fn) => fn());
+    return true;
+  } catch (err) {
+    console.error("[sync] trySync failed", err);
+    return false;
+  }
+}
 
 export async function trySync(): Promise<boolean> {
-  if (inFlightSync) return inFlightSync;
-  inFlightSync = (async () => {
-    try {
-      const { failed } = await pushPendingOps();
-      if (failed) return false;
-      await pullFromServer();
-      listeners.forEach((fn) => fn());
-      return true;
-    } catch (err) {
-      console.error("[sync] trySync failed", err);
-      return false;
-    } finally {
-      inFlightSync = null;
-    }
-  })();
-  return inFlightSync;
+  if (inFlightSync) {
+    rerunQueued = true;
+    return inFlightSync;
+  }
+  inFlightSync = runSyncOnce();
+  const result = await inFlightSync;
+  inFlightSync = null;
+  if (rerunQueued) {
+    rerunQueued = false;
+    void trySync();
+  }
+  return result;
 }
