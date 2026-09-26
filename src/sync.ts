@@ -158,6 +158,35 @@ async function fetchAllRemote<T>(table: string, columns: string): Promise<T[]> {
   return rows;
 }
 
+/** Folds in any task_completions writes still sitting in the outbox,
+ *  unconfirmed - a fast run of toggling several tasks complete enqueues one
+ *  op per click, and each one kicks its own (debounced) sync attempt.
+ *  Without this, a pull that happens to run before THIS device's own push
+ *  for one of those clicks has gone out would fetch server data missing
+ *  it, and replaceTable's prune step would then delete that completion
+ *  right back out of the local cache - refreshAll (via onSyncComplete)
+ *  reads the cache straight after, so the checkbox would flicker back to
+ *  unchecked for a moment before a later sync pass corrected it again.
+ *  Treating a still-queued write as more authoritative than a pull that
+ *  might predate it closes that gap. */
+async function reconcileWithPendingCompletions(
+  completions: { task_id: string; date: string }[],
+): Promise<{ task_id: string; date: string }[]> {
+  const pending = (await listPendingOps()).filter((op) => op.table_name === "task_completions");
+  if (pending.length === 0) return completions;
+
+  const byRowId = new Map(completions.map((c) => [`${c.task_id}:${c.date}`, c]));
+  for (const op of pending) {
+    if (op.op === "upsert") {
+      const [task_id, date] = op.row_id.split(":");
+      byRowId.set(op.row_id, { task_id, date });
+    } else {
+      byRowId.delete(op.row_id);
+    }
+  }
+  return [...byRowId.values()];
+}
+
 /** Overwrites the local cache with fresh data from Supabase - last-write-wins. */
 export async function pullFromServer(): Promise<void> {
   const [tags, tasks, completions, freezes, templates, templateTasks, notes, settingsRows] =
@@ -184,7 +213,12 @@ export async function pullFromServer(): Promise<void> {
   // never missing.
   await replaceTable("tags", ["id", "name", "color", "sort_order"], tags, ["id"]);
   await replaceTable("tasks", TASK_CACHE_COLUMNS, tasks, ["id"]);
-  await replaceTable("task_completions", ["task_id", "date"], completions, ["task_id", "date"]);
+  await replaceTable(
+    "task_completions",
+    ["task_id", "date"],
+    await reconcileWithPendingCompletions(completions),
+    ["task_id", "date"],
+  );
   await replaceTable("streak_freezes", ["date"], freezes, ["date"]);
   await replaceTable("templates", ["id", "name", "tag_id"], templates, ["id"]);
   await replaceTable(
