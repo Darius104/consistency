@@ -93,7 +93,7 @@ interface DayPanelProps {
   onRemoveTemplate: (templateId: string) => void;
   templates: Template[];
   templateTaskBlueprints: Record<string, TemplateTaskBlueprint[]>;
-  onApplyTemplate: (templateId: string) => void;
+  onApplyTemplate: (templateId: string, taskIndices: number[]) => void;
   onAddTask: () => void;
   notes: DayNote[];
   onAddNote: () => void;
@@ -152,7 +152,6 @@ export function DayPanel({
   onToggleExpanded,
 }: DayPanelProps) {
   const [draggedId, setDraggedId] = useState<PanelBlockId | null>(null);
-  const [dropIndex, setDropIndex] = useState<number | null>(null);
   // Which widget's "Remove widget / Arrange widgets" sheet is open, if any -
   // replaces what used to be a single-purpose "Arrange panel?" confirm
   // modal with no idea which block was actually held.
@@ -175,6 +174,16 @@ export function DayPanel({
   const scrollContainerRef = useRef<HTMLElement | null>(null);
   const lastPointerYRef = useRef<number | null>(null);
   const initialScrollTopRef = useRef(0);
+  // The dragged block's own height, measured once when the drag starts -
+  // every other block shifts by exactly this much to open/close the gap it
+  // leaves behind, regardless of that other block's own height.
+  const draggedHeightRef = useRef(0);
+  const lastAppliedDropIndexRef = useRef<number | null>(null);
+  // Every block's position/height *before* any shift transform is applied
+  // - see useReorderDrag's identical field for why indexForY must read
+  // from this snapshot instead of live getBoundingClientRect() calls once
+  // shifting starts.
+  const originalRectsRef = useRef<Map<PanelBlockId, { top: number; height: number }>>(new Map());
 
   const label = parseDateKey(selectedDate).toLocaleDateString(undefined, {
     weekday: "short",
@@ -193,6 +202,55 @@ export function DayPanel({
     scrollContainerRef.current = findScrollParent(anyBlock ?? null);
     initialScrollTopRef.current = scrollContainerRef.current?.scrollTop ?? 0;
 
+    const draggedEl = blockRefs.current[draggedId];
+    draggedHeightRef.current = draggedEl?.getBoundingClientRect().height ?? 0;
+    originalRectsRef.current = new Map();
+    for (const [id, el] of Object.entries(blockRefs.current)) {
+      if (!el) continue;
+      const rect = el.getBoundingClientRect();
+      originalRectsRef.current.set(id as PanelBlockId, { top: rect.top, height: rect.height });
+    }
+    for (const [id, el] of Object.entries(blockRefs.current)) {
+      if (id !== draggedId && el) el.style.transition = "transform 180ms ease";
+    }
+
+    // Slides every other block out of the dragged one's way as it passes
+    // over them, the same way useReorderDrag does for tasks/tags - see its
+    // own comment for the full reasoning.
+    function applyShifts(dropIdx: number) {
+      if (lastAppliedDropIndexRef.current === dropIdx) return;
+      lastAppliedDropIndexRef.current = dropIdx;
+      const from = order.indexOf(draggedId as PanelBlockId);
+      if (from === -1) return;
+      for (let i = 0; i < order.length; i++) {
+        const id = order[i];
+        if (id === draggedId) continue;
+        const el = blockRefs.current[id];
+        if (!el) continue;
+        // See useReorderDrag's identical shift logic for why this must be
+        // i < dropIdx (not i <= dropIdx) - an off-by-one here shifted one
+        // block too many when dragging down, which broke un-shifting
+        // cleanly on a reversed drag back toward the start.
+        let shift = 0;
+        if (from < dropIdx && i > from && i < dropIdx) {
+          shift = -draggedHeightRef.current;
+        } else if (from > dropIdx && i >= dropIdx && i < from) {
+          shift = draggedHeightRef.current;
+        }
+        el.style.transform = shift !== 0 ? `translateY(${shift}px)` : "";
+      }
+    }
+
+    function clearShifts() {
+      lastAppliedDropIndexRef.current = null;
+      for (const [id, el] of Object.entries(blockRefs.current)) {
+        if (id !== draggedId && el) {
+          el.style.transform = "";
+          el.style.transition = "";
+        }
+      }
+    }
+
     function applyDragTransform() {
       const el = blockRefs.current[draggedId as PanelBlockId];
       if (!el || dragStartYRef.current === null || lastPointerYRef.current === null) return;
@@ -203,25 +261,27 @@ export function DayPanel({
     }
 
     function indexForY(clientY: number): number {
+      const container = scrollContainerRef.current;
+      const scrollDelta = container ? container.scrollTop - initialScrollTopRef.current : 0;
       for (let i = 0; i < order.length; i++) {
-        // The dragged block's own rect is displaced by the live translateY
-        // transform following the pointer (see onMove below) - it's not a
-        // real boundary to compare against, and checking it anyway can
-        // spuriously match against its own relocated position and stop the
-        // drop index from advancing (most visible dragging something from
-        // near the top of the list further down).
+        // The dragged block is excluded for the same reason as before (its
+        // own live position follows the pointer, not a real boundary) -
+        // every other block now compares against its pre-shift snapshot
+        // (adjusted for how much has scrolled since) rather than a live
+        // rect, which a shift transform would otherwise have moved.
         if (order[i] === draggedId) continue;
-        const el = blockRefs.current[order[i]];
-        if (!el) continue;
-        const rect = el.getBoundingClientRect();
-        if (clientY < rect.top + rect.height / 2) return i;
+        const original = originalRectsRef.current.get(order[i]);
+        if (!original) continue;
+        const top = original.top - scrollDelta;
+        if (clientY < top + original.height / 2) return i;
       }
       return order.length;
     }
 
     function onMove(e: PointerEvent) {
       lastPointerYRef.current = e.clientY;
-      setDropIndex(indexForY(e.clientY));
+      const newDropIndex = indexForY(e.clientY);
+      applyShifts(newDropIndex);
 
       scrollSpeedRef.current = 0;
       const container = scrollContainerRef.current;
@@ -243,6 +303,7 @@ export function DayPanel({
       scrollSpeedRef.current = 0;
       const draggedEl = blockRefs.current[draggedId as PanelBlockId];
       if (draggedEl) draggedEl.style.transform = "";
+      clearShifts();
       dragStartYRef.current = null;
       lastPointerYRef.current = null;
 
@@ -255,7 +316,6 @@ export function DayPanel({
         onReorder(next);
       }
       setDraggedId(null);
-      setDropIndex(null);
     }
 
     let rafId = window.requestAnimationFrame(function tick() {
@@ -280,12 +340,12 @@ export function DayPanel({
       lastPointerYRef.current = null;
       const el = blockRefs.current[draggedId as PanelBlockId];
       if (el) el.style.transform = "";
+      clearShifts();
     };
   }, [draggedId, order, onReorder]);
 
   function startDrag(id: PanelBlockId, startY: number) {
     setDraggedId(id);
-    setDropIndex(order.indexOf(id));
     dragStartYRef.current = startY;
   }
 
@@ -407,13 +467,9 @@ export function DayPanel({
         ))}
 
       {visibleOrder.map((id) => {
-        const trueIndex = order.indexOf(id);
         const isWidget = id !== "tasks";
         return (
           <Fragment key={id}>
-            {draggedId !== null && dropIndex === trueIndex && (
-              <div className="day-panel__drop-line" />
-            )}
             <div
               ref={(el) => {
                 blockRefs.current[id] = el ?? undefined;
@@ -445,9 +501,6 @@ export function DayPanel({
           </Fragment>
         );
       })}
-      {draggedId !== null && dropIndex === order.length && (
-        <div className="day-panel__drop-line" />
-      )}
 
       {!arranging && hiddenWidgets.length > 0 && (
         <button

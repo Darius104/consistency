@@ -255,19 +255,9 @@ export function TaskList({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [completionSignature, selectedDate]);
 
-  // Which task/group is currently being dragged, derived from the hooks'
-  // own draggedId rather than tracked separately - a task never changes
-  // group mid-drag (only its position within one), so scanning the live
-  // (always-current) `groups` for whichever one contains draggedTaskId is
-  // all that's needed to know where to render the task's drop-line.
   const draggedTaskId = taskDrag.draggedId;
-  const taskDropIndex = taskDrag.dropIndex;
-  const draggingTaskGroupKey = draggedTaskId
-    ? groups.find((g) => g.occurrences.some((o) => o.task.id === draggedTaskId))?.key ?? null
-    : null;
 
   const draggedLayoutId = layoutDrag.draggedId;
-  const layoutDropIndex = layoutDrag.dropIndex;
   const draggedGroupKey = draggedLayoutId?.startsWith("group:")
     ? draggedLayoutId.slice("group:".length)
     : null;
@@ -296,25 +286,13 @@ export function TaskList({
     );
   }
 
-  let draggableIndex = -1;
-
   return (
     <div className="task-list">
       {layout.map((entry) => {
-        if (entry.draggable) draggableIndex += 1;
-        const thisDraggableIndex = entry.draggable ? draggableIndex : null;
-        const dropLineBefore =
-          draggedLayoutId !== null &&
-          thisDraggableIndex !== null &&
-          layoutDropIndex === thisDraggableIndex && (
-            <div className="task-list__drop-line" />
-          );
-
         if (entry.note) {
           const note = entry.note;
           return (
             <Fragment key={entry.itemId}>
-              {dropLineBefore}
               <div ref={layoutDrag.registerItemRef(entry.itemId)}>
                 <NoteRow
                   note={note}
@@ -335,7 +313,6 @@ export function TaskList({
 
         return (
           <Fragment key={entry.itemId}>
-            {dropLineBefore}
             <div ref={isDraggable ? layoutDrag.registerItemRef(entry.itemId) : undefined}>
               <TaskGroup
                 label={tag?.name ?? "No template"}
@@ -396,11 +373,8 @@ export function TaskList({
                   );
                 })()}
               >
-                {groupOccurrences.map(({ task, completed }, index) => (
+                {groupOccurrences.map(({ task, completed }) => (
                   <Fragment key={task.id}>
-                    {draggingTaskGroupKey === key && taskDropIndex === index && (
-                      <div className="task-list__drop-line" />
-                    )}
                     <div ref={taskDrag.registerItemRef(task.id)}>
                       <TaskItem
                         task={task}
@@ -418,17 +392,11 @@ export function TaskList({
                     </div>
                   </Fragment>
                 ))}
-                {draggingTaskGroupKey === key && taskDropIndex === groupOccurrences.length && (
-                  <div className="task-list__drop-line" />
-                )}
               </TaskGroup>
             </div>
           </Fragment>
         );
       })}
-      {draggedLayoutId !== null && layoutDropIndex === draggableLayout.length && (
-        <div className="task-list__drop-line" />
-      )}
     </div>
   );
 }

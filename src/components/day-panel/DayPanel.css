@@ -231,13 +231,6 @@
   min-width: 0;
 }
 
-.day-panel__drop-line {
-  flex: none;
-  height: 3px;
-  border-radius: 999px;
-  background: #84cc16;
-  box-shadow: 0 0 8px rgba(132, 204, 22, 0.7);
-}
 
 /* Phone-sized screens: stacked below the fixed-height calendar instead of
    split side by side. The calendar above never scrolls out of view, so

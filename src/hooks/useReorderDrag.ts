@@ -121,14 +121,13 @@ function startMomentum(container: HTMLElement, initialVelocity: number) {
  */
 export function useReorderDrag(onReorder: (nextIds: string[]) => void) {
   const [draggedId, setDraggedId] = useState<string | null>(null);
-  const [dropIndex, setDropIndex] = useState<number | null>(null);
   const itemRefs = useRef<Partial<Record<string, HTMLElement>>>({});
 
   // Always the latest onReorder, read from inside the drag effect without
   // being one of its dependencies - callers pass a fresh inline function on
-  // every render, and since dropIndex/draggedId are this hook's own state,
-  // the consuming component re-renders on virtually every pointermove while
-  // dragging. Depending on onReorder directly used to tear down and re-run
+  // every render, and since draggedId is this hook's own state, the
+  // consuming component re-renders whenever a drag starts or ends.
+  // Depending on onReorder directly used to tear down and re-run
   // the whole effect on each of those renders, which silently recaptured
   // "the scrollTop the drag started at" from whatever the CURRENT (already
   // auto-scrolled) position was - throwing off the transform math and
@@ -141,6 +140,17 @@ export function useReorderDrag(onReorder: (nextIds: string[]) => void) {
   const idsRef = useRef<string[]>([]);
   const dragStartYRef = useRef<number | null>(null);
   const lastPointerYRef = useRef<number | null>(null);
+  // The dragged item's own height, measured once when the drag starts -
+  // every other item shifts by exactly this much to open/close the gap it
+  // leaves behind, regardless of that other item's own height (a group
+  // header and a two-line task row shift the same amount, since what's
+  // moving past them is always the same dragged element).
+  const draggedHeightRef = useRef(0);
+  const lastAppliedDropIndexRef = useRef<number | null>(null);
+  // Every item's position/height *before* any shift transform is applied -
+  // see the effect below for why indexForY must read from this snapshot
+  // instead of live getBoundingClientRect() calls once shifting starts.
+  const originalRectsRef = useRef<Map<string, { top: number; height: number }>>(new Map());
   const scrollSpeedRef = useRef(0);
   const scrollContainerRef = useRef<HTMLElement | null>(null);
   const initialScrollTopRef = useRef(0);
@@ -173,19 +183,89 @@ export function useReorderDrag(onReorder: (nextIds: string[]) => void) {
     scrollContainerRef.current = findScrollParent(anyEl ?? null);
     initialScrollTopRef.current = scrollContainerRef.current?.scrollTop ?? 0;
 
+    const draggedEl = itemRefs.current[draggedId];
+    draggedHeightRef.current = draggedEl?.getBoundingClientRect().height ?? 0;
+    // Snapshotted once, before any shift is ever applied - reading rects
+    // live later on would see *shifted* items (a translateY doesn't move a
+    // box in the layout, but it does move where getBoundingClientRect()
+    // reports it), which fed back into indexForY's own comparisons and
+    // made the drop position it computed drift depending on what had
+    // already been shifted, worse (and asymmetrically between dragging up
+    // vs. down) the more items were in play.
+    originalRectsRef.current = new Map();
+    for (const [id, el] of Object.entries(itemRefs.current)) {
+      if (!el) continue;
+      const rect = el.getBoundingClientRect();
+      originalRectsRef.current.set(id, { top: rect.top, height: rect.height });
+    }
+    // Every other item gets a transition (so its shift animates smoothly);
+    // the dragged item itself never does, anywhere in this hook - it needs
+    // to track the pointer 1:1 with zero lag.
+    for (const [id, el] of Object.entries(itemRefs.current)) {
+      if (id !== draggedId && el) el.style.transition = "transform 180ms ease";
+    }
+
+    // Slides every other item out of the dragged one's way as it passes
+    // over them - shifted by the dragged item's own height (see
+    // draggedHeightRef above), in the direction it's coming from, so the
+    // list reads as "already reordered" rather than just a static
+    // drop-line with everything else sitting still until release.
+    function applyShifts(dropIdx: number) {
+      if (lastAppliedDropIndexRef.current === dropIdx) return;
+      lastAppliedDropIndexRef.current = dropIdx;
+      const ids = idsRef.current;
+      const from = ids.indexOf(draggedId as string);
+      if (from === -1) return;
+      for (let i = 0; i < ids.length; i++) {
+        const id = ids[i];
+        if (id === draggedId) continue;
+        const el = itemRefs.current[id];
+        if (!el) continue;
+        // dropIdx is "insert before this index", scanned (like indexForY
+        // itself) over the full original list including the dragged item's
+        // own slot - so when dragging down, the item currently sitting
+        // exactly *at* dropIdx is the one about to be passed, not yet
+        // passed, and must NOT shift (it ends up taking over the dragged
+        // item's old slot instead). Only strictly-between items do - an
+        // off-by-one here (i <= dropIdx instead of i < dropIdx) shifted one
+        // item too many downward, which is what made a reversed drag (back
+        // toward the start) look like it stopped un-shifting correctly
+        // partway through.
+        let shift = 0;
+        if (from < dropIdx && i > from && i < dropIdx) {
+          shift = -draggedHeightRef.current;
+        } else if (from > dropIdx && i >= dropIdx && i < from) {
+          shift = draggedHeightRef.current;
+        }
+        el.style.transform = shift !== 0 ? `translateY(${shift}px)` : "";
+      }
+    }
+
+    function clearShifts() {
+      lastAppliedDropIndexRef.current = null;
+      for (const [id, el] of Object.entries(itemRefs.current)) {
+        if (id !== draggedId && el) {
+          el.style.transform = "";
+          el.style.transition = "";
+        }
+      }
+    }
+
     function indexForY(clientY: number): number {
       const ids = idsRef.current;
+      const container = scrollContainerRef.current;
+      const scrollDelta = container ? container.scrollTop - initialScrollTopRef.current : 0;
       for (let i = 0; i < ids.length; i++) {
-        // The dragged item's own rect is displaced by the live translateY
-        // transform following the pointer (see applyDragTransform) - it's
-        // not a real boundary to compare against, and checking it anyway
-        // can spuriously match against its own relocated position and stop
-        // the drop index from ever advancing.
+        // The dragged item is excluded for the same reason as before (its
+        // own live position follows the pointer, not a real boundary) -
+        // every other item now compares against its pre-shift snapshot
+        // (adjusted for how much has scrolled since) rather than a live
+        // rect, which a shift transform would otherwise have moved.
         if (ids[i] === draggedId) continue;
-        const el = itemRefs.current[ids[i]];
-        if (!el) continue;
-        const rect = el.getBoundingClientRect();
-        if (clientY < rect.top + rect.height / 2) return i;
+        const original = originalRectsRef.current.get(ids[i]);
+        if (!original) continue;
+        const top = original.top - scrollDelta;
+        if (clientY < top + original.height / 2) return i;
       }
       return ids.length;
     }
@@ -208,7 +288,8 @@ export function useReorderDrag(onReorder: (nextIds: string[]) => void) {
       // gesture has been committed to yet.
       e.preventDefault();
       lastPointerYRef.current = e.clientY;
-      setDropIndex(indexForY(e.clientY));
+      const newDropIndex = indexForY(e.clientY);
+      applyShifts(newDropIndex);
 
       scrollSpeedRef.current = 0;
       const container = scrollContainerRef.current;
@@ -230,6 +311,7 @@ export function useReorderDrag(onReorder: (nextIds: string[]) => void) {
       scrollSpeedRef.current = 0;
       const el = itemRefs.current[draggedId as string];
       if (el) el.style.transform = "";
+      clearShifts();
       dragStartYRef.current = null;
       lastPointerYRef.current = null;
 
@@ -246,7 +328,6 @@ export function useReorderDrag(onReorder: (nextIds: string[]) => void) {
       }
       suppressClickRef.current = true;
       setDraggedId(null);
-      setDropIndex(null);
     }
 
     let rafId = window.requestAnimationFrame(function tick() {
@@ -270,6 +351,7 @@ export function useReorderDrag(onReorder: (nextIds: string[]) => void) {
       lastPointerYRef.current = null;
       const el = itemRefs.current[draggedId as string];
       if (el) el.style.transform = "";
+      clearShifts();
     };
     // Deliberately only draggedId - see onReorderRef above for why onReorder
     // itself must NOT be a dependency here.
@@ -281,7 +363,6 @@ export function useReorderDrag(onReorder: (nextIds: string[]) => void) {
     dragStartYRef.current = startY;
     lastPointerYRef.current = startY;
     setDraggedId(id);
-    setDropIndex(ids.indexOf(id));
   }
 
   /** Attach to whichever element should visually lift and be hit-tested
@@ -466,7 +547,6 @@ export function useReorderDrag(onReorder: (nextIds: string[]) => void) {
 
   return {
     draggedId,
-    dropIndex,
     registerItemRef,
     bindPointerDown,
     bindHandlePointerDown,
