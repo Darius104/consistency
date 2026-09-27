@@ -25,6 +25,7 @@ export function NoteForm({ note, onSave, onClose }: NoteFormProps) {
         <textarea
           className="note-form__textarea"
           placeholder="Write a quick note for today…"
+          aria-label="Note text"
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={(e) => {

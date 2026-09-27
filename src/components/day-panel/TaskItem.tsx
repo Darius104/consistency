@@ -29,9 +29,22 @@ export function TaskItem({
   return (
     <div
       className={`task-item ${completed ? "task-item--completed" : ""} ${dragging ? "task-item--dragging" : ""}`}
+      role="button"
+      tabIndex={0}
       onClick={(e) => {
         if (suppressClick(e)) return;
         onView();
+      }}
+      onKeyDown={(e) => {
+        // Only when the row itself has focus - the checkbox and delete
+        // button are their own real, separately-focusable controls that
+        // already handle their own Enter/Space, and this would otherwise
+        // also fire from their bubbled keydown events.
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onView();
+        }
       }}
     >
       <span className="task-item__handle" onPointerDown={onHandlePointerDown} aria-hidden="true">

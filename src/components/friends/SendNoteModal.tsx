@@ -50,6 +50,7 @@ export function SendNoteModal({ recipientId, recipientName, onClose }: SendNoteM
             <textarea
               className="send-note__input"
               placeholder="A short note - keep it quick…"
+              aria-label="Note text"
               value={body}
               onChange={(e) => setBody(e.target.value.slice(0, MAX_NOTE_LENGTH))}
               rows={3}

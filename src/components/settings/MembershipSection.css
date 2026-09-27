@@ -98,7 +98,7 @@
   border-color: var(--border-strong);
 }
 
-.membership-upsell__redeem-input:focus {
+.membership-upsell__redeem-input:focus-visible {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);

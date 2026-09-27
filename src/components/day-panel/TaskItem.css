@@ -18,6 +18,12 @@
   user-select: none;
 }
 
+.task-item:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
 /* Grabbing anywhere on the row used to permanently disable native touch
    scrolling here (WebKit locks in scroll permission at the very first touch
    of a gesture and never reconsiders it mid-gesture), which meant every

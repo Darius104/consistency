@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import "./ActionSheet.css";
@@ -30,6 +30,14 @@ export function ActionSheet({ title, actions, onClose }: ActionSheetProps) {
     setClosing(true);
     window.setTimeout(onClose, CLOSE_DURATION_MS);
   }
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") requestClose();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [closing]);
 
   return createPortal(
     <div

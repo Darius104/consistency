@@ -194,7 +194,7 @@
   border-color: var(--border-strong);
 }
 
-.ticket-thread__input:focus {
+.ticket-thread__input:focus-visible {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);

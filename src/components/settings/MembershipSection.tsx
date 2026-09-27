@@ -79,6 +79,9 @@ export function MembershipSection({ online, onViewMember, membership }: Membersh
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 placeholder="CODE"
+                aria-label="Premium code"
+                autoComplete="off"
+                spellCheck={false}
                 maxLength={20}
                 autoFocus
                 onKeyDown={(e) => {

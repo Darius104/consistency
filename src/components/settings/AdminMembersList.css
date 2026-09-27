@@ -30,7 +30,7 @@
   border-color: var(--border-strong);
 }
 
-.admin-members__search:focus {
+.admin-members__search:focus-visible {
   outline: none;
   border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);

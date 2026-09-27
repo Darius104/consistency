@@ -49,6 +49,15 @@ export function FriendSwitcher({ onlineFriendIds, onViewFriend }: FriendSwitcher
     return () => document.removeEventListener("pointerdown", onOutside);
   }, [open]);
 
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
   return (
     <div className="friend-switcher" ref={rootRef}>
       <Button

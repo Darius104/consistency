@@ -178,6 +178,9 @@ export function FriendsManager({
             value={redeemInput}
             onChange={(e) => setRedeemInput(e.target.value.toUpperCase())}
             placeholder="ABC123"
+            aria-label="Friend code"
+            autoComplete="off"
+            spellCheck={false}
             maxLength={8}
             onKeyDown={(e) => {
               if (e.key === "Enter") void handleRedeem();

@@ -205,9 +205,11 @@ export function AuthScreen() {
           <input
             className="auth-screen__input"
             type="email"
+            name="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="email"
+            spellCheck={false}
             required
           />
         </label>
@@ -217,6 +219,7 @@ export function AuthScreen() {
             <input
               className="auth-screen__input"
               type={showPassword ? "text" : "password"}
+              name="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               autoComplete={mode === "signup" ? "new-password" : "current-password"}
@@ -241,6 +244,7 @@ export function AuthScreen() {
               <input
                 className="auth-screen__input"
                 type={showConfirmPassword ? "text" : "password"}
+                name="confirm-password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 autoComplete="new-password"
@@ -287,7 +291,11 @@ export function AuthScreen() {
           </div>
         )}
 
-        {error && <div className="auth-screen__error">{error}</div>}
+        {error && (
+          <div className="auth-screen__error" role="alert" aria-live="polite">
+            {error}
+          </div>
+        )}
 
         <Button type="submit" variant="primary" disabled={busy} className="auth-screen__submit">
           {busy ? "…" : mode === "signup" ? "Create account" : "Sign in"}

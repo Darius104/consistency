@@ -39,7 +39,7 @@
   border-color: var(--border-strong);
 }
 
-.delete-account__input:focus {
+.delete-account__input:focus-visible {
   outline: none;
   border-color: var(--danger);
   box-shadow: 0 0 0 3px rgba(229, 104, 107, 0.16);

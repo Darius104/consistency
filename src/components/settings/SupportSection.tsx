@@ -159,6 +159,7 @@ function MemberSupportForm({ onSeen }: MemberSupportFormProps) {
         <textarea
           className="support-form__textarea"
           placeholder="Describe the issue, idea, or question…"
+          aria-label="Support message"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={4}

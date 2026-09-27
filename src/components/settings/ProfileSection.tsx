@@ -118,19 +118,26 @@ export function ProfileSection() {
             </span>
           </button>
           <div className="profile-card__name-field">
-            <span className="settings__label">Name (shown to friends)</span>
+            <label className="settings__label" htmlFor="profile-name-input">
+              Name (shown to friends)
+            </label>
             <input
+              id="profile-name-input"
               className="profile-section__input"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Your name"
+              autoComplete="name"
             />
           </div>
         </div>
 
         <div className="profile-card__bio-field">
-          <span className="settings__label">Bio</span>
+          <label className="settings__label" htmlFor="profile-bio-input">
+            Bio
+          </label>
           <textarea
+            id="profile-bio-input"
             className="profile-section__bio"
             value={bio}
             onChange={(e) => setBio(e.target.value.slice(0, MAX_BIO_LENGTH))}

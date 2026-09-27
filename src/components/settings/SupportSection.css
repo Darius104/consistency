@@ -41,7 +41,7 @@
   min-height: 80px;
 }
 
-.support-form__textarea:focus {
+.support-form__textarea:focus-visible {
   border-color: var(--accent);
 }
 

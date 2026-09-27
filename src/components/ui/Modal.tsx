@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { XIcon } from "./icons";
@@ -26,6 +26,17 @@ export function Modal({ title, onClose, children, size = "default" }: ModalProps
     setClosing(true);
     window.setTimeout(onClose, CLOSE_DURATION_MS);
   }
+
+  // Keyboard users had no way to dismiss a modal short of tabbing all the
+  // way to the close button - outside-click was the only other escape
+  // hatch, and that's mouse-only.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") requestClose();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [closing]);
 
   // Rendered into document.body rather than wherever this component happens
   // to be mounted - a position:fixed overlay nested inside a scrollable,
