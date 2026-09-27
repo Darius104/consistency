@@ -126,6 +126,20 @@ export async function updateTagOrder(tagIds: string[]): Promise<void> {
 }
 
 export async function deleteTag(id: string): Promise<void> {
+  // A template is meaningless without its tag (Settings' own template list
+  // only ever walks tags to find them - see TemplateManager.tsx), so
+  // deleting the tag out from under one without also deleting the
+  // template left it permanently orphaned: invisible in Settings, but
+  // still a live row the day panel's "+ Add > Use a template" picker kept
+  // offering forever.
+  const template = await cacheFindTemplateByTagId(id);
+  if (template) {
+    await cacheDeleteTemplate(template.id);
+    await discardPendingOpsFor("templates", template.id);
+    await enqueueOp({ table: "templates", op: "delete", rowId: template.id });
+    await enqueueOp({ table: "template_tasks", op: "delete", rowId: `template:${template.id}` });
+  }
+
   await cacheDeleteTag(id);
   // Discard any still-queued writes for this row (no point pushing an edit
   // to something about to be deleted) and always queue the delete itself -
@@ -379,10 +393,21 @@ export async function exportAllData(): Promise<ExportedData> {
 // ---------- Templates ----------
 
 export async function getTemplates(): Promise<Template[]> {
-  const rows = await cacheGetTemplates();
+  const [rows, tagRows] = await Promise.all([cacheGetTemplates(), cacheGetTags()]);
+  // Ordered to match the same tag order Settings > Templates shows (and
+  // lets you drag-reorder) - cacheGetTags() already comes back sorted by
+  // sort_order, so a tag's index in it is exactly its rank there. Sorting
+  // templates alphabetically by their own name instead (the previous
+  // behavior) meant the day panel's "+ Add > Use a template" list never
+  // matched whatever order you'd actually arranged in Settings.
+  const tagRank = new Map(tagRows.map((t, i) => [t.id, i]));
   return rows
     .map((r) => ({ id: r.id, name: r.name, tagId: r.tag_id, taskCount: r.task_count }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => {
+      const rankA = a.tagId ? (tagRank.get(a.tagId) ?? Infinity) : Infinity;
+      const rankB = b.tagId ? (tagRank.get(b.tagId) ?? Infinity) : Infinity;
+      return rankA - rankB;
+    });
 }
 
 export async function getTemplateTasks(templateId: string): Promise<TemplateTaskBlueprint[]> {
@@ -437,11 +462,19 @@ export async function createTemplateFromTasks(
   return { id: templateId, name, tagId, taskCount: taskRows.length };
 }
 
-/** Stamps fresh, independent (non-recurring) copies of a template's tasks onto `date`. */
-export async function applyTemplate(templateId: string, date: string): Promise<void> {
+/** Stamps fresh, independent (non-recurring) copies of a template's tasks
+ *  onto `date` - all of them by default, or just the ones at `taskIndices`
+ *  (into the same order getTemplateTasks returns) if given, so a
+ *  template can be applied partially instead of all-or-nothing. */
+export async function applyTemplate(
+  templateId: string,
+  date: string,
+  taskIndices?: number[],
+): Promise<void> {
   const template = (await cacheGetTemplates()).find((t) => t.id === templateId);
   if (!template) return;
-  const blueprints = await cacheGetTemplateTasks(templateId);
+  const allBlueprints = await cacheGetTemplateTasks(templateId);
+  const blueprints = taskIndices ? taskIndices.map((i) => allBlueprints[i]).filter(Boolean) : allBlueprints;
   if (blueprints.length === 0) return;
 
   let sortOrder = await cacheNextTaskSortOrder();

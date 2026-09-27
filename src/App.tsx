@@ -333,7 +333,21 @@ export default function App() {
     ]);
     setTasks(taskRows);
     setTags(tagRows);
-    setTemplates(templateRows);
+    const tagIds = new Set(tagRows.map((t) => t.id));
+    const orphanedTemplates = templateRows.filter((t) => !t.tagId || !tagIds.has(t.tagId));
+    setTemplates(
+      orphanedTemplates.length > 0
+        ? templateRows.filter((t) => !orphanedTemplates.includes(t))
+        : templateRows,
+    );
+    if (orphanedTemplates.length > 0) {
+      // Self-heals any template a tag deletion left orphaned before
+      // deleteTag() started cleaning these up itself (see its own
+      // comment) - a template with no matching tag was invisible in
+      // Settings (which only ever lists templates by walking tags) but
+      // still a live row the day panel's template picker kept offering.
+      void Promise.all(orphanedTemplates.map((t) => deleteTemplate(t.id))).catch(() => {});
+    }
     setCompletions(completionRows);
     setFreezes(freezeRows);
     setNotes(noteRows);
@@ -633,8 +647,8 @@ export default function App() {
     });
   }
 
-  async function handleApplyTemplate(templateId: string) {
-    await applyTemplate(templateId, selectedDate);
+  async function handleApplyTemplate(templateId: string, taskIndices: number[]) {
+    await applyTemplate(templateId, selectedDate, taskIndices);
     await refreshAll();
   }
 

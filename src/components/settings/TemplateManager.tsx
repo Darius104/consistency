@@ -8,6 +8,7 @@ import { Card } from "../ui/Card";
 import { EmptyState } from "../ui/EmptyState";
 import { EditIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { Skeleton } from "../ui/Skeleton";
+import { TemplateTaskModal } from "./TemplateTaskModal";
 import "./TemplateManager.css";
 
 interface TemplateManagerProps {
@@ -45,6 +46,11 @@ export function TemplateManager({
   const [draftTasks, setDraftTasks] = useState<TemplateTaskBlueprint[]>([]);
   const [draftTasksLoading, setDraftTasksLoading] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
+  // Which starter task (by index in draftTasks) has its full edit modal
+  // open, if any - there was previously no way to change a starter task's
+  // notes/time/priority, or even fix its title, short of deleting it and
+  // re-adding it from scratch.
+  const [editingTaskIndex, setEditingTaskIndex] = useState<number | null>(null);
 
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
@@ -62,7 +68,7 @@ export function TemplateManager({
   // (mouse) reordering - same interaction model now shared with the day
   // view's tag groups and tasks (see useReorderDrag), so nothing about this
   // list needs its own drag handling any more.
-  const { draggedId: draggedTagId, dropIndex, registerItemRef, bindPointerDown } = useReorderDrag(
+  const { draggedId: draggedTagId, registerItemRef, bindPointerDown } = useReorderDrag(
     (nextIds) => onReorderTags(nextIds),
   );
 
@@ -71,6 +77,7 @@ export function TemplateManager({
     setDraftName(tag.name);
     setDraftColor(tag.color);
     setNewTaskTitle("");
+    setEditingTaskIndex(null);
     const requestId = ++editRequestRef.current;
     const template = templates.find((t) => t.tagId === tag.id);
     if (template) {
@@ -96,6 +103,12 @@ export function TemplateManager({
 
   function removeDraftTask(index: number) {
     setDraftTasks((prev) => prev.filter((_, i) => i !== index));
+    if (editingTaskIndex === index) setEditingTaskIndex(null);
+  }
+
+  function saveEditedTask(index: number, task: TemplateTaskBlueprint) {
+    setDraftTasks((prev) => prev.map((t, i) => (i === index ? task : t)));
+    setEditingTaskIndex(null);
   }
 
   function commitEdit() {
@@ -142,6 +155,7 @@ export function TemplateManager({
             <input
               className="template-manager__input template-manager__input--name"
               placeholder="Template name"
+              aria-label="Template name"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => {
@@ -180,7 +194,7 @@ export function TemplateManager({
         <EmptyState icon={<TagIcon size={16} />}>No templates yet - create one above.</EmptyState>
       ) : (
         <div className="template-manager__list">
-          {tags.map((tag, index) => {
+          {tags.map((tag) => {
             const isEditing = editingId === tag.id;
 
             if (isEditing) {
@@ -190,6 +204,7 @@ export function TemplateManager({
                     <div className="template-manager__editing-fields">
                       <input
                         className="template-manager__input template-manager__input--name"
+                        aria-label="Template name"
                         value={draftName}
                         onChange={(e) => setDraftName(e.target.value)}
                         onKeyDown={(e) => {
@@ -236,7 +251,21 @@ export function TemplateManager({
                           <div className="template-manager__starter-list">
                             {draftTasks.map((t, i) => (
                               <div className="template-manager__starter-row" key={i}>
-                                <span className="template-manager__starter-title">{t.title}</span>
+                                <button
+                                  type="button"
+                                  className="template-manager__starter-title template-manager__starter-title--editable"
+                                  onClick={() => setEditingTaskIndex(i)}
+                                >
+                                  {t.title}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="template-manager__icon-btn"
+                                  aria-label={`Edit ${t.title}`}
+                                  onClick={() => setEditingTaskIndex(i)}
+                                >
+                                  <EditIcon size={13} />
+                                </button>
                                 <button
                                   type="button"
                                   className="template-manager__icon-btn template-manager__icon-btn--danger"
@@ -253,6 +282,7 @@ export function TemplateManager({
                           <input
                             className="template-manager__input"
                             placeholder="Add a starter task"
+                            aria-label="Starter task title"
                             value={newTaskTitle}
                             onChange={(e) => setNewTaskTitle(e.target.value)}
                             onKeyDown={(e) => {
@@ -274,6 +304,15 @@ export function TemplateManager({
                       Done
                     </Button>
                   </div>
+
+                  {editingTaskIndex !== null && draftTasks[editingTaskIndex] && (
+                    <TemplateTaskModal
+                      task={draftTasks[editingTaskIndex]}
+                      onSave={(task) => saveEditedTask(editingTaskIndex, task)}
+                      onDelete={() => removeDraftTask(editingTaskIndex)}
+                      onClose={() => setEditingTaskIndex(null)}
+                    />
+                  )}
                 </div>
               );
             }
@@ -302,9 +341,6 @@ export function TemplateManager({
 
             return (
               <Fragment key={tag.id}>
-                {draggedTagId !== null && dropIndex === index && (
-                  <div className="template-manager__drop-line" />
-                )}
                 <div
                   className={`template-manager__item ${
                     draggedTagId === tag.id ? "template-manager__item--dragging" : ""
@@ -346,9 +382,6 @@ export function TemplateManager({
               </Fragment>
             );
           })}
-          {draggedTagId !== null && dropIndex === tags.length && (
-            <div className="template-manager__drop-line" />
-          )}
         </div>
       )}
     </Card>

@@ -187,6 +187,64 @@ async function reconcileWithPendingCompletions(
   return [...byRowId.values()];
 }
 
+/** Same race as reconcileWithPendingCompletions above, but for the "delete"
+ *  side on any table whose pending-op row_id is just the row's own id
+ *  (tasks, tags, templates, notes) - a pull that races ahead of this
+ *  device's own not-yet-pushed delete would fetch server data that still
+ *  has the row (the server hasn't processed the delete yet), and
+ *  replaceTable's upsert step would then reinsert it into the local cache
+ *  - refreshAll reads that cache right after, so a fast run of deletes
+ *  (several taps in quick succession) could show a just-deleted item
+ *  flash back for a moment before a later sync pass removed it again.
+ *  Dropping any row with a still-queued delete from the fresh pull before
+ *  it ever reaches replaceTable closes that gap. */
+async function excludePendingDeletes<T extends { id: string }>(
+  table: string,
+  rows: T[],
+): Promise<T[]> {
+  const pendingDeleteIds = new Set(
+    (await listPendingOps())
+      .filter((op) => op.table_name === table && op.op === "delete")
+      .map((op) => op.row_id),
+  );
+  if (pendingDeleteIds.size === 0) return rows;
+  return rows.filter((r) => !pendingDeleteIds.has(r.id));
+}
+
+/** template_tasks' own version of the same race, but neither of the two
+ *  generic helpers above quite fits: saving a template's starter-task list
+ *  (createTemplateFromTasks) replaces the whole list at once - one bulk
+ *  "delete everything for this template" op (row_id "template:<id>", not
+ *  an individual row id) plus one upsert op per new row, all queued
+ *  together. A pull racing ahead of that push would fetch the template's
+ *  *previous* rows from the server (upsert step reintroduces the stale,
+ *  supposedly-edited-away tasks) while also pruning away the brand new
+ *  rows this device just wrote locally (they don't exist on the server
+ *  yet, so they're absent from the pulled set) - together, exactly "I
+ *  briefly see old/no-longer-saved template tasks". Fixed the same way:
+ *  drop every pulled row for a template that's mid-replace, then add back
+ *  whatever this device actually has queued for it (the true, if not yet
+ *  pushed, contents) before replaceTable ever runs. */
+async function reconcileTemplateTasks(rows: TemplateTaskRow[]): Promise<TemplateTaskRow[]> {
+  const pending = (await listPendingOps()).filter((op) => op.table_name === "template_tasks");
+  if (pending.length === 0) return rows;
+
+  const pendingTemplateIds = new Set(
+    pending
+      .filter((op) => op.op === "delete" && op.row_id.startsWith("template:"))
+      .map((op) => op.row_id.slice("template:".length)),
+  );
+  if (pendingTemplateIds.size === 0) return rows;
+
+  const pendingRows = pending
+    .filter((op): op is PendingOp & { payload: string } => op.op === "upsert" && !!op.payload)
+    .map((op) => JSON.parse(op.payload) as TemplateTaskRow)
+    .filter((row) => pendingTemplateIds.has(row.template_id));
+
+  const withoutStaleRows = rows.filter((r) => !pendingTemplateIds.has(r.template_id));
+  return [...withoutStaleRows, ...pendingRows];
+}
+
 /** Overwrites the local cache with fresh data from Supabase - last-write-wins. */
 export async function pullFromServer(): Promise<void> {
   const [tags, tasks, completions, freezes, templates, templateTasks, notes, settingsRows] =
@@ -211,8 +269,18 @@ export async function pullFromServer(): Promise<void> {
   // why this isn't wrapped in a transaction) - a failure partway through
   // any one of these leaves that table's already-processed rows correct,
   // never missing.
-  await replaceTable("tags", ["id", "name", "color", "sort_order"], tags, ["id"]);
-  await replaceTable("tasks", TASK_CACHE_COLUMNS, tasks, ["id"]);
+  await replaceTable(
+    "tags",
+    ["id", "name", "color", "sort_order"],
+    await excludePendingDeletes("tags", tags),
+    ["id"],
+  );
+  await replaceTable(
+    "tasks",
+    TASK_CACHE_COLUMNS,
+    await excludePendingDeletes("tasks", tasks),
+    ["id"],
+  );
   await replaceTable(
     "task_completions",
     ["task_id", "date"],
@@ -220,17 +288,22 @@ export async function pullFromServer(): Promise<void> {
     ["task_id", "date"],
   );
   await replaceTable("streak_freezes", ["date"], freezes, ["date"]);
-  await replaceTable("templates", ["id", "name", "tag_id"], templates, ["id"]);
+  await replaceTable(
+    "templates",
+    ["id", "name", "tag_id"],
+    await excludePendingDeletes("templates", templates),
+    ["id"],
+  );
   await replaceTable(
     "template_tasks",
     ["id", "template_id", "title", "notes", "time", "priority", "sort_order"],
-    templateTasks,
+    await reconcileTemplateTasks(templateTasks),
     ["id"],
   );
   await replaceTable(
     "notes",
     ["id", "date", "content", "sort_order", "after_group_key"],
-    notes,
+    await excludePendingDeletes("notes", notes),
     ["id"],
   );
   await replaceTable("settings", ["key", "value"], settingsRows, ["key"]);

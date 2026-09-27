@@ -79,15 +79,6 @@
   touch-action: none;
 }
 
-.template-manager__drop-line {
-  flex: none;
-  height: 3px;
-  border-radius: 999px;
-  background: #84cc16;
-  box-shadow: 0 0 8px rgba(132, 204, 22, 0.7);
-  margin: 2px 0;
-}
-
 .template-manager__dot {
   width: 9px;
   height: 9px;
@@ -316,6 +307,22 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.template-manager__starter-title--editable {
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  text-align: left;
+  color: var(--text);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.template-manager__starter-title--editable:hover {
+  color: var(--accent);
 }
 
 .template-manager__starter-add {
