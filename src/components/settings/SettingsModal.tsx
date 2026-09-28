@@ -38,6 +38,7 @@ import {
   HeartIcon,
   HelpIcon,
   ProfileIcon,
+  ShuffleIcon,
   TagIcon,
   UserIcon,
   UsersIcon,
@@ -53,6 +54,7 @@ import { FriendsManager } from "./FriendsManager";
 import { MembershipSection } from "./MembershipSection";
 import { ProfileSection } from "./ProfileSection";
 import { ReminderList } from "./ReminderList";
+import { SettingsCardHeader } from "./SettingsCardHeader";
 import { SettingsNav, type SettingsSection } from "./SettingsNav";
 import { StreakFreezeManager } from "./StreakFreezeManager";
 import { SupportSection } from "./SupportSection";
@@ -67,6 +69,7 @@ interface SettingsModalProps {
   remindersEnabled: boolean;
   onChangeRemindersEnabled: (enabled: boolean) => void;
   reminderStatus: ReminderStatus;
+  onJumpToReminder: (taskId: string, date: string) => void;
   tasks: Task[];
   completions: Set<string>;
   tags: Tag[];
@@ -137,6 +140,7 @@ export function SettingsModal({
   remindersEnabled,
   onChangeRemindersEnabled,
   reminderStatus,
+  onJumpToReminder,
   tasks,
   completions,
   tags,
@@ -241,62 +245,66 @@ export function SettingsModal({
             {activeId === "profile" && (
               <>
                 <Card>
-                  <span className="settings__label">Theme</span>
+                  <SettingsCardHeader
+                    icon={<ShuffleIcon size={16} />}
+                    label="Appearance"
+                    hint="Pick a theme, or build your own from any color."
+                    color="#2dd4bf"
+                  />
                   <ThemeCarousel themes={THEMES} selected={theme} onSelect={onChangeTheme} />
+                  <CustomThemeCreator
+                    active={theme === "custom"}
+                    colors={customThemeColors}
+                    onApply={onSetCustomTheme}
+                  />
                 </Card>
-                <CustomThemeCreator
-                  active={theme === "custom"}
-                  colors={customThemeColors}
-                  onApply={onSetCustomTheme}
-                />
                 <ProfileSection />
               </>
             )}
 
             {activeId === "widgets" && (
-              <>
-                <Card>
-                  <div className="settings__row">
-                    <span className="settings__row-text">
-                      <span className="only-desktop">Reorder widgets on the right panel</span>
-                      <span className="only-mobile">Reorder your widgets</span>
-                    </span>
-                    <Button onClick={onStartArranging}>
-                      <span className="only-desktop">Arrange right panel</span>
-                      <span className="only-mobile">Arrange panel</span>
-                    </Button>
-                  </div>
-                </Card>
+              <Card>
+                <SettingsCardHeader
+                  icon={<GridIcon size={16} />}
+                  label="Widgets"
+                  hint="Choose which widgets show up on your day panel, and preview what each one looks like with your real data."
+                  color="#fb923c"
+                />
 
-                <Card>
-                  <span className="settings__hint">
-                    Choose which widgets show up on your day panel, and preview what
-                    each one looks like with your real data.
+                <div className="settings__row settings__row--divided">
+                  <span className="settings__row-text">
+                    <span className="only-desktop">Reorder widgets on the right panel</span>
+                    <span className="only-mobile">Reorder your widgets</span>
                   </span>
-                  <div className="widget-gallery">
-                    {WIDGET_IDS.map((id) => {
-                      const visible = !hiddenWidgets.includes(id);
-                      const visibleCount = WIDGET_IDS.length - hiddenWidgets.length;
-                      const locked = !visible && !membership.isPremium && visibleCount >= FREE_WIDGET_LIMIT;
-                      return (
-                        <div className="widget-gallery__item" key={id}>
-                          <div
-                            className={`widget-gallery__preview ${visible ? "" : "widget-gallery__preview--hidden"}`}
-                            aria-hidden="true"
-                          >
-                            {renderWidgetPreview(id)}
-                          </div>
-                          <Checkbox
-                            checked={visible}
-                            onChange={(checked) => (checked ? onShowWidget(id) : onHideWidget(id))}
-                            label={locked ? `${WIDGET_LABELS[id]} (Premium)` : WIDGET_LABELS[id]}
-                          />
+                  <Button onClick={onStartArranging}>
+                    <span className="only-desktop">Arrange right panel</span>
+                    <span className="only-mobile">Arrange panel</span>
+                  </Button>
+                </div>
+
+                <div className="widget-gallery">
+                  {WIDGET_IDS.map((id) => {
+                    const visible = !hiddenWidgets.includes(id);
+                    const visibleCount = WIDGET_IDS.length - hiddenWidgets.length;
+                    const locked = !visible && !membership.isPremium && visibleCount >= FREE_WIDGET_LIMIT;
+                    return (
+                      <div className="widget-gallery__item" key={id}>
+                        <Checkbox
+                          checked={visible}
+                          onChange={(checked) => (checked ? onShowWidget(id) : onHideWidget(id))}
+                          label={locked ? `${WIDGET_LABELS[id]} (Premium)` : WIDGET_LABELS[id]}
+                        />
+                        <div
+                          className={`widget-gallery__preview ${visible ? "" : "widget-gallery__preview--hidden"}`}
+                          aria-hidden="true"
+                        >
+                          {renderWidgetPreview(id)}
                         </div>
-                      );
-                    })}
-                  </div>
-                </Card>
-              </>
+                      </div>
+                    );
+                  })}
+                </div>
+              </Card>
             )}
 
             {activeId === "templates" && (
@@ -345,25 +353,39 @@ export function SettingsModal({
                       Couldn't schedule reminders: {reminderStatus.lastError}
                     </div>
                   )}
-                  {remindersEnabled && reminderStatus.permission === "granted" && (
-                    <div
-                      className={`settings-status-banner ${
-                        reminderStatus.attemptedCount > reminderStatus.confirmedCount
-                          ? "settings-status-banner--warning"
-                          : "settings-status-banner--success"
-                      }`}
-                    >
-                      {reminderStatus.attemptedCount > reminderStatus.confirmedCount
-                        ? `${reminderStatus.attemptedCount - reminderStatus.confirmedCount} of ${reminderStatus.attemptedCount} reminders didn't actually register with the system - they may not arrive.`
-                        : `${reminderStatus.confirmedCount} reminder${reminderStatus.confirmedCount === 1 ? "" : "s"} confirmed with the system.`}
-                    </div>
-                  )}
+                  {remindersEnabled &&
+                    reminderStatus.permission === "granted" &&
+                    reminderStatus.usesLiveFallback && (
+                      <div className="settings-status-banner settings-status-banner--info">
+                        This device checks for due reminders every 30 seconds while
+                        Consistency is open - they won't arrive while the app is closed.
+                      </div>
+                    )}
+                  {remindersEnabled &&
+                    reminderStatus.permission === "granted" &&
+                    !reminderStatus.usesLiveFallback && (
+                      <div
+                        className={`settings-status-banner ${
+                          reminderStatus.attemptedCount > reminderStatus.confirmedCount
+                            ? "settings-status-banner--warning"
+                            : "settings-status-banner--success"
+                        }`}
+                      >
+                        {reminderStatus.attemptedCount > reminderStatus.confirmedCount
+                          ? `${reminderStatus.attemptedCount - reminderStatus.confirmedCount} of ${reminderStatus.attemptedCount} reminders didn't actually register with the system - they may not arrive.`
+                          : `${reminderStatus.confirmedCount} reminder${reminderStatus.confirmedCount === 1 ? "" : "s"} confirmed with the system.`}
+                      </div>
+                    )}
                 </Card>
 
                 {remindersEnabled && (
                   <Card>
                     <span className="settings__label">Upcoming Reminders</span>
-                    <ReminderList tasks={tasks} completions={completions} />
+                    <ReminderList
+                      tasks={tasks}
+                      completions={completions}
+                      onSelectReminder={onJumpToReminder}
+                    />
                   </Card>
                 )}
               </>

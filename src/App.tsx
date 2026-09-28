@@ -658,6 +658,18 @@ export default function App() {
     setViewingTask(null);
   }
 
+  // Reached from Settings > Reminders - jumps the calendar to that
+  // occurrence's own date (not just wherever the calendar happens to be
+  // sitting right now) before opening the task, so editing it doesn't
+  // silently apply to the wrong day for a recurring task.
+  function handleJumpToReminder(taskId: string, date: string) {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+    setSelectedDate(date);
+    setSettingsOpen(false);
+    setFormState({ open: true, task });
+  }
+
   async function handleDeleteTemplate(id: string) {
     await deleteTemplate(id);
     setTemplates((prev) => prev.filter((t) => t.id !== id));
@@ -733,10 +745,11 @@ export default function App() {
   );
 
   const freezesRemainingThisMonth = freezesRemainingInMonth(freezes, todayKey());
-  const frozenDaysThisMonth = Array.from(freezes)
-    .filter((d) => d.startsWith(todayKey().slice(0, 7)))
-    .sort()
-    .reverse();
+  // Every frozen day, not just this month's - the 3-per-month quota only
+  // applies to how many NEW freezes you can spend right now, but a day
+  // frozen last month is still frozen and should stay unfreezable, not
+  // silently vanish from this list the moment the month rolls over.
+  const allFrozenDays = Array.from(freezes).sort().reverse();
   const freezeCandidates = getFreezeCandidates(tasks, completions, freezes, todayKey());
   const yesterdayKey = addDays(todayKey(), -1);
   const missedYesterday = freezeCandidates.some((c) => c.date === yesterdayKey);
@@ -882,6 +895,7 @@ export default function App() {
           remindersEnabled={remindersEnabled}
           onChangeRemindersEnabled={handleChangeRemindersEnabled}
           reminderStatus={reminderStatus}
+          onJumpToReminder={handleJumpToReminder}
           tasks={tasks}
           completions={completions}
           tags={tags}
@@ -892,7 +906,7 @@ export default function App() {
           templates={templates}
           onSaveAsTemplate={handleSaveAsTemplate}
           onDeleteTemplate={handleDeleteTemplate}
-          frozenDays={frozenDaysThisMonth}
+          frozenDays={allFrozenDays}
           freezeCandidates={freezeCandidates}
           freezesRemaining={freezesRemainingThisMonth}
           onFreezeDay={handleFreezeDay}

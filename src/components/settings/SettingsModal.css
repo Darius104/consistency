@@ -115,11 +115,25 @@
   border-color: rgba(70, 201, 143, 0.35);
 }
 
+.settings-status-banner--info {
+  color: var(--text-secondary);
+  background: var(--surface);
+  border-color: var(--border);
+}
+
 .settings__row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+}
+
+/* Same divider technique used elsewhere (CustomThemeCreator, ProfileSection's
+   bio field) - marks this row as a second, related setting inside a card
+   that already opened with its own SettingsCardHeader above. */
+.settings__row--divided {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
 }
 
 .settings__row-text {
@@ -167,13 +181,24 @@
 .widget-gallery {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
 }
 
+/* Each widget is now one self-contained bordered card (checkbox + label as
+   its own title bar, the live preview inside the same box below it) rather
+   than a preview floating loose above a naked checkbox - a long list of
+   those read as an undifferentiated stack with no boundary between one
+   widget's preview ending and the next one's checkbox starting. */
 .widget-gallery__item {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
 }
 
 /* The real StreakCounter/WeeklyCompletion, rendered with the user's actual
