@@ -1,7 +1,13 @@
+/* A fixed blue, not the theme's own --accent - a muted/low-saturation
+   theme (Steel, Midnight) washed the old accent-based "selected" pill and
+   Send button out to near-invisible, the same problem Donate/Membership
+   had before those got their own fixed color. Scoped to this file only, so
+   it never fights the app's real accent anywhere else. */
 .support-form {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  margin-top: var(--space-3);
 }
 
 .support-form__types {
@@ -17,6 +23,7 @@
   background: var(--surface);
   color: var(--text-secondary);
   font-size: var(--text-sm);
+  transition: border-color 0.12s ease, color 0.12s ease, background-color 0.12s ease;
 }
 
 .support-form__type-btn:hover {
@@ -25,9 +32,9 @@
 }
 
 .support-form__type-btn--active {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-soft);
+  border-color: #5b8ff9;
+  color: #5b8ff9;
+  background: rgba(91, 143, 249, 0.14);
 }
 
 .support-form__textarea {
@@ -39,15 +46,30 @@
   color: var(--text);
   resize: vertical;
   min-height: 80px;
+  transition: border-color 0.15s ease;
 }
 
 .support-form__textarea:focus-visible {
-  border-color: var(--accent);
+  outline: none;
+  border-color: #5b8ff9;
+}
+
+/* .btn.support-form__send (not just .support-form__send) for specificity
+   over .btn--primary's own fixed background - ties the one actionable
+   element in the form to this same fixed blue instead of the theme accent. */
+.btn.support-form__send {
+  align-self: flex-start;
+  background: #5b8ff9;
+  color: #0c1830;
+}
+
+.btn.support-form__send:hover {
+  filter: brightness(1.08);
 }
 
 .support-list__header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
 }
 
@@ -205,8 +227,8 @@
 }
 
 .support-list__status--in_progress {
-  color: var(--accent);
-  background: var(--accent-soft);
+  color: #5b8ff9;
+  background: rgba(91, 143, 249, 0.14);
 }
 
 .support-list__status--resolved {
