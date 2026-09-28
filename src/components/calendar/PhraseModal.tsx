@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import { QUOTE_CATEGORY_COLOR_VAR, QUOTE_CATEGORY_LABEL, type Quote } from "../../utils/quotes";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
+import { QuoteIcon } from "../ui/icons";
 import "./PhraseModal.css";
 
 interface PhraseModalProps {
@@ -15,19 +16,21 @@ export function PhraseModal({ quote, onClose }: PhraseModalProps) {
   return (
     <Modal title="Phrase of the Day" onClose={onClose}>
       <div className="phrase-modal" style={{ "--phrase-color": `var(${colorVar})` } as CSSProperties}>
-        <span className="phrase-modal__mark" aria-hidden="true">
-          “
-        </span>
-        <span className="phrase-modal__category">{QUOTE_CATEGORY_LABEL[quote.category]}</span>
-        <p className="phrase-modal__text">{quote.text}</p>
-        {/* People screenshot this view to share as a story/post - this is
-            the app's own small watermark on that shared image, grouped with
-            the quote itself (not the "Got it" button) since that's the part
-            most likely to survive someone's crop. */}
-        <span className="phrase-modal__brand">Consistency</span>
-        <Button variant="primary" className="phrase-modal__done" onClick={onClose}>
-          Got it
-        </Button>
+        <div className="phrase-modal__hero">
+          <div className="phrase-modal__icon">
+            <QuoteIcon size={13} />
+          </div>
+          <span className="phrase-modal__eyebrow">{QUOTE_CATEGORY_LABEL[quote.category]}</span>
+        </div>
+        <div className="phrase-modal__quote-row">
+          <span className="phrase-modal__bar" aria-hidden="true" />
+          <p className="phrase-modal__text">{quote.text}</p>
+        </div>
+        <div className="phrase-modal__footer">
+          <Button variant="primary" className="phrase-modal__done" onClick={onClose}>
+            Got it
+          </Button>
+        </div>
       </div>
     </Modal>
   );
