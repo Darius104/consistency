@@ -5,6 +5,7 @@ import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { EmptyState } from "../ui/EmptyState";
 import { FrostIcon, TrashIcon } from "../ui/icons";
+import { SettingsCardHeader } from "./SettingsCardHeader";
 import "./StreakFreezeManager.css";
 
 // How long the "X frozen" confirmation stays up after clicking Freeze.
@@ -55,10 +56,19 @@ export function StreakFreezeManager({
   return (
     <div className="freeze-manager">
       <Card>
-        <span className="freeze-manager__remaining">
-          <FrostIcon size={13} />
-          {freezesRemaining} of {MAX_FREEZES_PER_MONTH} freezes left this month
-        </span>
+        <SettingsCardHeader
+          icon={<FrostIcon size={16} />}
+          label="Streak Freezes"
+          hint="Protect your streak on a day you miss, without breaking it."
+          color="#5ec8e8"
+        />
+
+        <div className="freeze-manager__remaining">
+          <span className="freeze-manager__remaining-count">{freezesRemaining}</span>
+          <span className="freeze-manager__remaining-text">
+            of {MAX_FREEZES_PER_MONTH} freezes left this month
+          </span>
+        </div>
 
         {confirmation && (
           <div className="freeze-manager__confirm" key={confirmation.id}>
@@ -73,7 +83,7 @@ export function StreakFreezeManager({
           <span className="settings__label">Frozen days</span>
           <div className="freeze-manager__list">
             {frozenDays.map((date) => (
-              <div className="freeze-manager__row" key={date}>
+              <div className="freeze-manager__row freeze-manager__row--frozen" key={date}>
                 <span className="freeze-manager__date">
                   <FrostIcon size={13} />
                   {formatDate(date)}
@@ -100,19 +110,30 @@ export function StreakFreezeManager({
           </EmptyState>
         ) : (
           <div className="freeze-manager__list">
-            {candidates.map((c) => (
-              <div className="freeze-manager__row" key={c.date}>
-                <span className="freeze-manager__date">
-                  {formatDate(c.date)}
-                  <span className="freeze-manager__rate">
-                    {Math.round(c.rate * 100)}% done
-                  </span>
-                </span>
-                <Button onClick={() => handleFreezeClick(c.date)} disabled={freezesRemaining === 0}>
-                  Freeze
-                </Button>
-              </div>
-            ))}
+            {candidates.map((c) => {
+              const percent = Math.round(c.rate * 100);
+              return (
+                <div className="freeze-manager__row freeze-manager__row--candidate" key={c.date}>
+                  <div className="freeze-manager__candidate-info">
+                    <div className="freeze-manager__candidate-header">
+                      <span className="freeze-manager__date">{formatDate(c.date)}</span>
+                      <span className="freeze-manager__rate">{percent}% done</span>
+                    </div>
+                    <div className="freeze-manager__progress">
+                      <div className="freeze-manager__progress-fill" style={{ width: `${percent}%` }} />
+                    </div>
+                  </div>
+                  <Button
+                    variant="primary"
+                    className="freeze-manager__freeze-btn"
+                    onClick={() => handleFreezeClick(c.date)}
+                    disabled={freezesRemaining === 0}
+                  >
+                    Freeze
+                  </Button>
+                </div>
+              );
+            })}
           </div>
         )}
       </Card>

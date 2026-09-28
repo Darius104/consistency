@@ -4,10 +4,25 @@
   gap: var(--space-5);
 }
 
+/* The one number that actually matters on this page ("how many do I have
+   left") - previously buried in a plain sentence the same size and weight
+   as every other line of text, easy to skim right past. */
 .freeze-manager__remaining {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.freeze-manager__remaining-count {
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--frost);
+}
+
+.freeze-manager__remaining-text {
   font-size: var(--text-sm);
   color: var(--text-secondary);
 }
@@ -42,6 +57,8 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  max-height: 320px;
+  overflow-y: auto;
 }
 
 .freeze-manager__row {
@@ -55,6 +72,45 @@
   padding: 6px 10px;
 }
 
+/* An already-frozen day reads as "protected" - the same icy tint as the
+   confirmation banner, so it's visually obvious this day is safe rather
+   than looking like just another plain row. */
+.freeze-manager__row--frozen {
+  background: var(--frost-soft);
+  border-color: rgba(var(--frost-rgb), 0.4);
+}
+
+.freeze-manager__row--candidate {
+  padding: var(--space-3);
+}
+
+.freeze-manager__candidate-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.freeze-manager__candidate-header {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.freeze-manager__progress {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.freeze-manager__progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--frost);
+}
+
 .freeze-manager__date {
   display: flex;
   align-items: center;
@@ -66,6 +122,20 @@
 .freeze-manager__rate {
   font-size: var(--text-xs);
   color: var(--text-muted);
+}
+
+/* .btn.freeze-manager__freeze-btn (not just .freeze-manager__freeze-btn)
+   for specificity over .btn--primary's own fixed background - ties the
+   one actionable element on this page to the same frost color as
+   everything else here, instead of the app's unrelated theme accent. */
+.btn.freeze-manager__freeze-btn {
+  flex: none;
+  background: var(--frost);
+  color: #062430;
+}
+
+.btn.freeze-manager__freeze-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
 }
 
 .freeze-manager__unfreeze {
