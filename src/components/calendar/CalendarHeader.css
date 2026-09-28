@@ -45,17 +45,33 @@
 
 .cal-header__nav {
   display: flex;
+  align-items: center;
   gap: var(--space-2);
 }
 
-.cal-header__sync-icon--spinning {
-  animation: cal-header-sync-spin 800ms linear infinite;
+/* Prev/Today/Next as one visually cohesive segmented control (one border,
+   thin dividers between segments) instead of three separate button chips
+   competing for attention next to everything else in this row. */
+.cal-header__date-nav {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
 }
 
-@keyframes cal-header-sync-spin {
-  to {
-    transform: rotate(360deg);
-  }
+.cal-header__date-nav .btn {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.cal-header__date-nav .btn:not(:last-child) {
+  border-right: 1px solid var(--border);
+}
+
+.cal-header__date-nav .btn:hover {
+  background: var(--surface-hover);
 }
 
 /* A quiet nudge that today's phrase hasn't been opened yet - stops

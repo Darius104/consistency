@@ -210,8 +210,6 @@ export function CalendarView({
           onOpenSettings={onOpenSettings}
           onOpenPhrase={onOpenPhrase}
           phraseUnseen={phraseUnseen}
-          onSyncNow={onSyncNow}
-          syncing={syncing}
           onViewFriend={onViewFriend}
           onlineFriendIds={onlineFriendIds}
           settingsBadgeCount={settingsBadgeCount}

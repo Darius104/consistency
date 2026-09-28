@@ -1,12 +1,6 @@
 import type { Friend, MembershipTier } from "../../db/friends";
 import { Button } from "../ui/Button";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  QuoteIcon,
-  RefreshIcon,
-  SettingsIcon,
-} from "../ui/icons";
+import { ChevronLeftIcon, ChevronRightIcon, QuoteIcon, SettingsIcon } from "../ui/icons";
 import { FriendSwitcher } from "./FriendSwitcher";
 import "./CalendarHeader.css";
 
@@ -30,11 +24,6 @@ interface CalendarHeaderProps {
   onOpenSettings?: () => void;
   onOpenPhrase?: () => void;
   phraseUnseen?: boolean;
-  /** Desktop-only manual "sync now" - mobile gets pull-to-refresh instead
-   *  (see DayPanel.tsx), so this button is hidden there via CSS rather than
-   *  giving the same action two different triggers on the same platform. */
-  onSyncNow?: () => void;
-  syncing?: boolean;
   /** Omitted entirely (not just a no-op) while viewing a friend's read-only
    *  calendar - there's no friends list to jump to from in there. */
   onViewFriend?: (friend: Friend) => void;
@@ -54,8 +43,6 @@ export function CalendarHeader({
   onOpenSettings,
   onOpenPhrase,
   phraseUnseen,
-  onSyncNow,
-  syncing,
   onViewFriend,
   onlineFriendIds,
   settingsBadgeCount,
@@ -85,27 +72,15 @@ export function CalendarHeader({
             )}
           </span>
         )}
-        <Button className="btn--icon" onClick={onPrev} aria-label="Previous month">
-          <ChevronLeftIcon size={15} />
-        </Button>
-        <Button onClick={onToday}>Today</Button>
-        <Button className="btn--icon" onClick={onNext} aria-label="Next month">
-          <ChevronRightIcon size={15} />
-        </Button>
-        {onSyncNow && (
-          <Button
-            className="btn--icon only-desktop"
-            onClick={onSyncNow}
-            disabled={syncing}
-            aria-label="Sync now"
-            title="Sync now"
-          >
-            <RefreshIcon
-              size={15}
-              className={syncing ? "cal-header__sync-icon--spinning" : ""}
-            />
+        <div className="cal-header__date-nav">
+          <Button className="btn--icon" onClick={onPrev} aria-label="Previous month">
+            <ChevronLeftIcon size={15} />
           </Button>
-        )}
+          <Button onClick={onToday}>Today</Button>
+          <Button className="btn--icon" onClick={onNext} aria-label="Next month">
+            <ChevronRightIcon size={15} />
+          </Button>
+        </div>
         {onViewFriend && (
           <FriendSwitcher onlineFriendIds={onlineFriendIds ?? new Set()} onViewFriend={onViewFriend} />
         )}
