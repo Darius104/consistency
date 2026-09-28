@@ -5,18 +5,24 @@
 -- to be an exact mirror of what the friend sees on their own device, which
 -- means showing *their* friends and *their* streaks, not the viewer's.
 --
--- Same shape and security model as get_friend_calendar_data (see
--- friends_schema.sql's own comment on why this isn't plain RLS, and
--- admin_view_calendar_schema.sql for the is_admin() exemption this
--- mirrors so an admin previewing a member's calendar sees this widget
--- too): checks the friendship, then returns one hop further - every
--- friend of p_friend_id, with just enough of their own
--- tasks/completions/freezes for the client to compute a streak the same
--- way computeStreak() already does for a direct friend. This deliberately
--- extends the same trust boundary a direct friendship already grants (you
--- can already see a friend's entire calendar) one hop further, purely to
--- render a number - nothing here is queryable for an arbitrary stranger
--- two hops away.
+-- Same security model as get_friend_calendar_data (see friends_schema.sql's
+-- own comment on why this isn't plain RLS, and admin_view_calendar_schema.sql
+-- for the is_admin() exemption this mirrors so an admin previewing a
+-- member's calendar sees this widget too): checks the friendship, then
+-- returns one hop further - every friend of p_friend_id.
+--
+-- Deliberately NOT the same *shape* as get_friend_calendar_data, unlike an
+-- earlier version of this function: computeStreak() (src/utils/stats.ts)
+-- only ever reads a task's id/recurrence_type/recurrence_days/start_date/
+-- end_date to decide "was this scheduled on date X" - it never looks at
+-- title, notes, time, tag_id, priority, or sort_order. The earlier version
+-- selected all of those anyway, which meant a two-hop stranger (a friend of
+-- a friend) could read the actual free-text content of someone else's tasks
+-- and notes purely to render a streak NUMBER for them - a real over-exposure
+-- past what docs/privacy.html and docs/terms.html both promise ("the only
+-- data intentionally shared with anyone else" is a direct friend's calendar
+-- view). Selecting only the columns the client math actually needs closes
+-- that gap without changing the streak calculation at all.
 create or replace function public.get_friend_streak_comparisons(p_friend_id uuid)
 returns jsonb
 language plpgsql
@@ -44,16 +50,10 @@ begin
     'tasks', (
       select coalesce(jsonb_agg(jsonb_build_object(
         'id', t.id,
-        'title', t.title,
-        'notes', t.notes,
-        'time', t.time,
-        'tag_id', t.tag_id,
-        'priority', t.priority,
         'recurrence_type', t.recurrence_type,
         'recurrence_days', t.recurrence_days,
         'start_date', t.start_date,
-        'end_date', t.end_date,
-        'sort_order', t.sort_order
+        'end_date', t.end_date
       )), '[]'::jsonb)
       from public.tasks t
       where t.user_id = p.user_id

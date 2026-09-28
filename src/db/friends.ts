@@ -445,13 +445,48 @@ export interface FriendOfFriendStreakData {
   freezes: Set<string>;
 }
 
+/** Only the columns get_friend_streak_comparisons actually selects - see
+ *  that RPC's own comment for why this is deliberately narrower than
+ *  FriendTaskRow above. computeStreak() (utils/stats.ts) never reads a
+ *  task's title/notes/time/tag/priority/sort_order, only its id and
+ *  recurrence fields, so those are the only ones a two-hop stranger
+ *  (a friend of a friend) ever needs to see. */
+interface FriendStreakTaskRow {
+  id: string;
+  recurrence_type: string;
+  recurrence_days: string | null;
+  start_date: string;
+  end_date: string | null;
+}
+
+// Placeholder values for the Task fields this path has no data for (and
+// computeStreak/isTaskScheduledOn never read) - keeps the shared Task type
+// rather than inventing a second one, without ever holding another user's
+// actual task text in memory.
+function mapFriendStreakTaskRow(row: FriendStreakTaskRow): Task {
+  return {
+    id: row.id,
+    title: "",
+    notes: null,
+    time: null,
+    tagId: null,
+    priority: "low" as Priority,
+    recurrenceType: row.recurrence_type as RecurrenceType,
+    recurrenceDays: row.recurrence_days ? row.recurrence_days.split(",").map(Number) : null,
+    startDate: row.start_date,
+    endDate: row.end_date,
+    sortOrder: 0,
+  };
+}
+
 /** Backs the Friend Comparison widget when it's replicated onto a friend's
  *  calendar view (see FriendCalendarView) - that friend's *own* friends, not
  *  yours, so the widget shows the exact same comparison they'd see on their
  *  own device. Same trust boundary get_friend_calendar_data already
  *  extends (you can see a direct friend's full calendar) stretched one hop
  *  further, purely to compute a streak number - see the RPC's own comment
- *  in supabase/friend_streak_comparisons_schema.sql. */
+ *  in supabase/friend_streak_comparisons_schema.sql for why the tasks this
+ *  returns carry only recurrence data, never title/notes/etc. */
 export async function fetchFriendOfFriendStreaks(
   friendUserId: string,
 ): Promise<FriendOfFriendStreakData[]> {
@@ -464,7 +499,7 @@ export async function fetchFriendOfFriendStreaks(
     user_id: string;
     display_name: string;
     avatar_id: string | null;
-    tasks: FriendTaskRow[];
+    tasks: FriendStreakTaskRow[];
     completions: { task_id: string; date: string }[];
     freezes: { date: string }[];
   }[];
@@ -473,7 +508,7 @@ export async function fetchFriendOfFriendStreaks(
     userId: row.user_id,
     displayName: row.display_name,
     avatarId: parseAvatarId(row.avatar_id),
-    tasks: row.tasks.map(mapFriendTaskRow),
+    tasks: row.tasks.map(mapFriendStreakTaskRow),
     completions: new Set(row.completions.map((c) => `${c.task_id}:${c.date}`)),
     freezes: new Set(row.freezes.map((f) => f.date)),
   }));
