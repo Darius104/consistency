@@ -4,9 +4,10 @@ import { DEFAULT_AVATAR_ID, MAX_BIO_LENGTH, type AvatarId } from "../../utils/av
 import { AvatarBadge } from "../stats/AvatarBadge";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
-import { EditIcon } from "../ui/icons";
+import { EditIcon, ProfileIcon } from "../ui/icons";
 import { Skeleton } from "../ui/Skeleton";
 import { AvatarPickerModal } from "./AvatarPickerModal";
+import { SettingsCardHeader } from "./SettingsCardHeader";
 import "./ProfileSection.css";
 
 export function ProfileSection() {
@@ -85,6 +86,10 @@ export function ProfileSection() {
   if (loading) {
     return (
       <Card className="profile-card">
+        <div className="settings-card-header">
+          <Skeleton width={32} height={32} radius="50%" />
+          <Skeleton width="30%" height="0.85em" />
+        </div>
         <div className="profile-card__header">
           <Skeleton width={72} height={72} radius="50%" />
           <div className="profile-card__name-field">
@@ -105,6 +110,13 @@ export function ProfileSection() {
       {error && <div className="profile-section__error">{error}</div>}
 
       <Card className="profile-card">
+        <SettingsCardHeader
+          icon={<ProfileIcon size={16} />}
+          label="Your Profile"
+          hint="This is what friends see on your card."
+          color="#a78bfa"
+        />
+
         <div className="profile-card__header">
           <button
             type="button"

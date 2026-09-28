@@ -1,3 +1,16 @@
+/* Same divider technique as ProfileSection's bio field - a border-top +
+   padding-top on the block that follows, rather than a separate <hr>
+   element, so this reads as "part two" of the same Appearance card above
+   it instead of a visually distinct setting of its own. */
+.custom-theme {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
 .custom-theme__header {
   display: flex;
   align-items: center;
@@ -26,8 +39,8 @@
 .custom-theme__swatch {
   position: relative;
   flex: none;
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
   border-radius: var(--radius-md);
   border: 2px solid var(--border);
   display: flex;
@@ -67,4 +80,23 @@
   width: 12px;
   height: 12px;
   border-radius: 50%;
+}
+
+/* Same small edit-pencil-badge affordance as the avatar trigger above it in
+   ProfileSection - without this, nothing on the swatch itself signals
+   "click to change" the way every other editable thing in Settings does. */
+.custom-theme__swatch-edit {
+  position: absolute;
+  bottom: -4px;
+  right: -4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--bg);
+  border: 2px solid var(--surface);
+  pointer-events: none;
 }

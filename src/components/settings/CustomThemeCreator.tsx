@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
 import { generateCustomThemeColors, type RandomThemeColors } from "../../utils/randomTheme";
 import { Button } from "../ui/Button";
-import { Card } from "../ui/Card";
-import { CheckIcon } from "../ui/icons";
+import { CheckIcon, EditIcon } from "../ui/icons";
 import "./CustomThemeCreator.css";
 
 interface CustomThemeCreatorProps {
@@ -20,16 +19,21 @@ const DEFAULT_PICKER_COLOR = "#7c9eff";
  *  fixed swatches or rolling "random" - you pick one color, and it's mapped
  *  onto the exact same dark-mode shape every other theme uses (see
  *  generateCustomThemeColors), so whatever you pick still comes out legible
- *  and "in family" rather than a raw, ungoverned color scheme. */
+ *  and "in family" rather than a raw, ungoverned color scheme.
+ *
+ *  Renders as a plain block, not its own Card - it's the second half of the
+ *  same "pick a theme" decision as ThemeCarousel above it, so it lives
+ *  inside that same card (see SettingsModal's "profile" tab) instead of as
+ *  a visually separate setting. */
 export function CustomThemeCreator({ active, colors, onApply }: CustomThemeCreatorProps) {
   const [pickerColor, setPickerColor] = useState(colors?.accent ?? DEFAULT_PICKER_COLOR);
 
   const preview = useMemo(() => generateCustomThemeColors(pickerColor), [pickerColor]);
 
   return (
-    <Card className="custom-theme">
+    <div className="custom-theme">
       <div className="custom-theme__header">
-        <span className="settings__label">Create your own theme</span>
+        <span className="settings__label">Or build your own</span>
         {active && (
           <span className="custom-theme__active">
             <CheckIcon size={11} /> Active
@@ -50,12 +54,15 @@ export function CustomThemeCreator({ active, colors, onApply }: CustomThemeCreat
           <span className="custom-theme__swatch-surface" style={{ background: preview.surface }}>
             <span className="custom-theme__swatch-dot" style={{ background: preview.accent }} />
           </span>
+          <span className="custom-theme__swatch-edit" aria-hidden="true">
+            <EditIcon size={11} />
+          </span>
         </label>
 
         <Button variant="primary" onClick={() => onApply(pickerColor)}>
           Use this theme
         </Button>
       </div>
-    </Card>
+    </div>
   );
 }

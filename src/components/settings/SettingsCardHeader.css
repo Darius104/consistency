@@ -1,0 +1,22 @@
+.settings-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.settings-card-header__icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+.settings-card-header__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
