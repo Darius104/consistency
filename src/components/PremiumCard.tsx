@@ -100,21 +100,30 @@ export function PremiumUpsellCard({ gatedFeature, ctaLabel, onBuy }: PremiumUpse
   );
 }
 
-/** Same card shell, recolored green with a pop-in checkmark - shown once
- *  someone already has Premium, so checking Settings > Membership confirms
- *  it rather than just repeating the pitch they've already accepted. */
+/** Same card shell, recolored green - shown once someone already has
+ *  Premium, so checking Settings > Membership confirms it rather than just
+ *  repeating the pitch they've already accepted. A left-aligned header
+ *  (icon + title/subtitle + a single "Active" status pill) instead of
+ *  stacking a label, a giant checkmark, and a heading that all said the
+ *  same "you have Premium" thing three times in a row. */
 export function PremiumActiveCard() {
   return (
     <div className="premium-card premium-card--active">
-      <span className="premium-card__label premium-card__label--active">
-        <CrownIcon size={13} /> Premium
-      </span>
+      <div className="premium-card__active-header">
+        <span className="premium-card__active-icon">
+          <CrownIcon size={18} />
+        </span>
+        <div className="premium-card__active-heading">
+          <span className="premium-card__active-title">Premium Member</span>
+          <span className="premium-card__price-sub">Thanks for supporting Consistency.</span>
+        </div>
+        <span className="premium-card__active-status">
+          <CheckIcon size={11} />
+          Active
+        </span>
+      </div>
 
-      <span className="premium-card__active-check">
-        <CheckIcon size={24} />
-      </span>
-      <span className="premium-card__active-title">You have Premium</span>
-      <span className="premium-card__price-sub">Thanks for supporting Consistency.</span>
+      <div className="premium-card__active-divider" aria-hidden="true" />
 
       <ul className="premium-card__perks premium-card__perks--active">
         {PREMIUM_PERKS.map((perk) => (
