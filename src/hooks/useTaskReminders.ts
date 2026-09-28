@@ -101,6 +101,12 @@ export interface ReminderStatus {
    *  means scheduling itself is silently failing at the plugin/native layer
    *  - not just "scheduled but not firing at the right time". */
   confirmedCount: number;
+  /** True when this platform has no pending()/cancel() (desktop) and is
+   *  instead using the live 30s-poll fallback - attemptedCount/confirmedCount
+   *  are always 0 here since nothing is ever actually handed to the OS to
+   *  confirm, so callers need this to show a fallback-appropriate message
+   *  instead of a literal "0 reminders confirmed" that reads like a failure. */
+  usesLiveFallback: boolean;
 }
 
 /**
@@ -130,6 +136,7 @@ export function useTaskReminders(
     lastError: null,
     attemptedCount: 0,
     confirmedCount: 0,
+    usesLiveFallback: false,
   });
 
   // Only used by the desktop fallback below - kept fresh so the periodic
@@ -184,7 +191,13 @@ export function useTaskReminders(
             // clean up there in the first place.
           }
           if (!cancelled) {
-            setStatus({ permission: "disabled", lastError: null, attemptedCount: 0, confirmedCount: 0 });
+            setStatus({
+              permission: "disabled",
+              lastError: null,
+              attemptedCount: 0,
+              confirmedCount: 0,
+              usesLiveFallback: false,
+            });
           }
           return;
         }
@@ -192,7 +205,13 @@ export function useTaskReminders(
         const granted = await ensurePermission();
         if (cancelled) return;
         if (!granted) {
-          setStatus({ permission: "denied", lastError: null, attemptedCount: 0, confirmedCount: 0 });
+          setStatus({
+            permission: "denied",
+            lastError: null,
+            attemptedCount: 0,
+            confirmedCount: 0,
+            usesLiveFallback: false,
+          });
           return;
         }
 
@@ -207,7 +226,13 @@ export function useTaskReminders(
           void checkDueRightNow();
           fallbackInterval = window.setInterval(checkDueRightNow, 30_000);
           if (!cancelled) {
-            setStatus({ permission: "granted", lastError: null, attemptedCount: 0, confirmedCount: 0 });
+            setStatus({
+              permission: "granted",
+              lastError: null,
+              attemptedCount: 0,
+              confirmedCount: 0,
+              usesLiveFallback: true,
+            });
           }
           return;
         }
@@ -258,6 +283,7 @@ export function useTaskReminders(
             lastError: firstNotifyError,
             attemptedCount: entries.length,
             confirmedCount: confirmed.length,
+            usesLiveFallback: false,
           });
         }
       } catch (err) {
