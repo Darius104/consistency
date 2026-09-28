@@ -70,37 +70,28 @@
   color: var(--text-muted);
 }
 
+/* A wrapping grid of vertical cards, not a single-column list of thin
+   horizontal rows - a row crammed avatar+name+status+last-seen+two actions
+   onto one line, which got tight fast with anything longer than a short
+   name. Each friend now gets its own self-contained card, and the grid
+   scales to however many friends someone actually has instead of always
+   stacking into one long column. */
 .friends-manager__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-3);
+}
+
+.friends-manager__card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-}
-
-.friends-manager__row {
-  display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
+  gap: 6px;
+  text-align: center;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-3);
-}
-
-.friends-manager__identity {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.friends-manager__name {
-  font-size: var(--text-sm);
-  font-weight: 500;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-3);
 }
 
 .friends-manager__avatar-wrap {
@@ -111,10 +102,10 @@
 
 .friends-manager__status-dot {
   position: absolute;
-  bottom: -1px;
-  right: -1px;
-  width: 9px;
-  height: 9px;
+  bottom: 1px;
+  right: 1px;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
   background: var(--text-muted);
   border: 2px solid var(--surface);
@@ -125,28 +116,47 @@
   box-shadow: 0 0 4px rgba(70, 201, 143, 0.6);
 }
 
-.friends-manager__last-seen {
-  flex: none;
-  font-size: var(--text-xs);
-  color: var(--text-muted);
+.friends-manager__name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.friends-manager__row-actions {
+.friends-manager__status-text {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.friends-manager__card-actions {
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex: none;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+  margin-top: var(--space-2);
+}
+
+.friends-manager__card-actions .btn {
+  width: 100%;
+}
+
+.friends-manager__card-actions--confirm {
+  flex-direction: row;
 }
 
 .friends-manager__remove {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-2);
+  gap: 5px;
+  padding: var(--space-1);
   border-radius: var(--radius-sm);
   background: transparent;
   border: none;
+  font-size: var(--text-xs);
   color: var(--text-muted);
   transition: color 0.12s ease, background-color 0.12s ease;
 }

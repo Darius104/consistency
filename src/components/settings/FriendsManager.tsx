@@ -207,11 +207,10 @@ export function FriendsManager({
         {loading ? (
           <div className="friends-manager__list">
             {Array.from({ length: lastKnownCountRef.current }, (_, i) => (
-              <div className="friends-manager__row" key={i}>
-                <div className="friends-manager__identity">
-                  <Skeleton width={28} height={28} radius="50%" />
-                  <Skeleton width={90} height="0.85em" />
-                </div>
+              <div className="friends-manager__card" key={i}>
+                <Skeleton width={48} height={48} radius="50%" />
+                <Skeleton width={70} height="0.85em" />
+                <Skeleton width="100%" height={30} radius="var(--radius-sm)" />
               </div>
             ))}
           </div>
@@ -222,9 +221,9 @@ export function FriendsManager({
             {friends.map((friend) => {
               const isOnline = onlineFriendIds.has(friend.userId);
               return confirmingRemoveId === friend.userId ? (
-                <div className="friends-manager__row" key={friend.userId}>
+                <div className="friends-manager__card" key={friend.userId}>
                   <span className="friends-manager__name">Remove {friend.displayName}?</span>
-                  <div className="friends-manager__row-actions">
+                  <div className="friends-manager__card-actions friends-manager__card-actions--confirm">
                     <Button onClick={() => setConfirmingRemoveId(null)}>Cancel</Button>
                     <Button variant="danger" onClick={() => handleConfirmRemove(friend)}>
                       Remove
@@ -232,32 +231,32 @@ export function FriendsManager({
                   </div>
                 </div>
               ) : (
-                <div className="friends-manager__row" key={friend.userId}>
-                  <div className="friends-manager__identity">
-                    <span className="friends-manager__avatar-wrap">
-                      <AvatarBadge avatarId={friend.avatarId} size={28} />
-                      <span
-                        className={`friends-manager__status-dot ${isOnline ? "friends-manager__status-dot--online" : ""}`}
-                      />
-                    </span>
-                    <span className="friends-manager__name">{friend.displayName}</span>
-                    {!isOnline && friend.lastSeenAt && (
-                      <span className="friends-manager__last-seen">
-                        Last seen {formatRelativeTime(friend.lastSeenAt)}
-                      </span>
-                    )}
-                  </div>
-                  <div className="friends-manager__row-actions">
+                <div className="friends-manager__card" key={friend.userId}>
+                  <span className="friends-manager__avatar-wrap">
+                    <AvatarBadge avatarId={friend.avatarId} size={48} />
+                    <span
+                      className={`friends-manager__status-dot ${isOnline ? "friends-manager__status-dot--online" : ""}`}
+                    />
+                  </span>
+                  <span className="friends-manager__name">{friend.displayName}</span>
+                  <span className="friends-manager__status-text">
+                    {isOnline
+                      ? "Online now"
+                      : friend.lastSeenAt
+                        ? `Last seen ${formatRelativeTime(friend.lastSeenAt)}`
+                        : "Offline"}
+                  </span>
+                  <div className="friends-manager__card-actions">
                     <Button variant="primary" onClick={() => onViewFriend(friend)} disabled={!online}>
                       View calendar
                     </Button>
                     <button
                       type="button"
                       className="friends-manager__remove"
-                      aria-label={`Remove ${friend.displayName}`}
                       onClick={() => setConfirmingRemoveId(friend.userId)}
                     >
-                      <TrashIcon size={13} />
+                      <TrashIcon size={12} />
+                      Remove
                     </button>
                   </div>
                 </div>
