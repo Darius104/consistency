@@ -4,7 +4,7 @@ import type { FriendNote } from "../../db/friendNotes";
 import type { FriendStreakEntry } from "../../hooks/useFriendStreaks";
 import type { AvatarId } from "../../utils/avatars";
 import type { DayNote, Tag, Task, Template, TemplateTaskBlueprint } from "../../types";
-import { parseDateKey } from "../../utils/dates";
+import { parseDateKey, todayKey } from "../../utils/dates";
 import { WIDGET_LABELS, type PanelBlockId, type WidgetId } from "../../utils/panelOrder";
 import type { Quote } from "../../utils/quotes";
 import {
@@ -190,6 +190,7 @@ export function DayPanel({
     month: "short",
     day: "numeric",
   });
+  const isPastDay = selectedDate < todayKey();
 
   // Manual pointer-based dragging instead of the native HTML5 DnD API -
   // WKWebView's support for native drag/drop is unreliable, and this also
@@ -453,6 +454,11 @@ export function DayPanel({
           />
         </div>
       </div>
+      {isPastDay && (
+        <span className="day-panel__past-day-hint">
+          This day is locked - use a Streak Freeze to fix a missed one.
+        </span>
+      )}
 
       {arranging && (
         <div className="day-panel__arrange-bar">

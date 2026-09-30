@@ -85,3 +85,17 @@
 .checkbox-row__label {
   font-size: var(--text-sm);
 }
+
+/* A day that's already over - the box still shows whatever it was (checked
+   or not), just dimmed and inert, instead of looking exactly like every
+   other interactive checkbox in the app. */
+.checkbox-hit--disabled,
+.checkbox-row--disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.checkbox-hit--disabled:hover .checkbox,
+.checkbox-row--disabled:hover .checkbox {
+  border-color: var(--border-strong);
+}

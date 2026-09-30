@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useReorderDrag } from "../../hooks/useReorderDrag";
 import type { DayNote, Tag, Task, Template, TemplateTaskBlueprint } from "../../types";
+import { todayKey } from "../../utils/dates";
 import { EmptyState } from "../ui/EmptyState";
 import { CheckIcon } from "../ui/icons";
 import { NoteRow } from "./NoteRow";
@@ -104,6 +105,12 @@ export function TaskList({
   onDeleteNote,
   onReorderNotePositions,
 }: TaskListProps) {
+  // A day that's already over is read-only for completions/deletes (see
+  // handleToggle/handleRequestDeleteTask in App.tsx, which enforce this for
+  // real) - this just keeps the checkbox and delete button from offering
+  // an action that would silently no-op.
+  const isPastDay = selectedDate < todayKey();
+
   // Collapse state and "have we seen this group finish before" tracking are
   // both scoped to `${selectedDate}:${tagKey}` - a tag collapsing because you
   // finished it today must not make that same tag show collapsed (and hide
@@ -379,6 +386,7 @@ export function TaskList({
                       <TaskItem
                         task={task}
                         completed={completed}
+                        locked={isPastDay}
                         onToggle={() => onToggle(task)}
                         onView={() => onView(task)}
                         onDelete={() => onDelete(task)}

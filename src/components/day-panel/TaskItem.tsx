@@ -8,6 +8,11 @@ import "./TaskItem.css";
 interface TaskItemProps {
   task: Task;
   completed: boolean;
+  /** True once this row's day is already over - completions and deletes
+   *  are locked in at that point (see handleToggle/handleRequestDeleteTask
+   *  in App.tsx, which are the real enforcement; this just keeps the
+   *  controls from offering an action that would silently no-op). */
+  locked?: boolean;
   onToggle: () => void;
   onView: () => void;
   onDelete: () => void;
@@ -19,6 +24,7 @@ interface TaskItemProps {
 export function TaskItem({
   task,
   completed,
+  locked = false,
   onToggle,
   onView,
   onDelete,
@@ -50,7 +56,12 @@ export function TaskItem({
       <span className="task-item__handle" onPointerDown={onHandlePointerDown} aria-hidden="true">
         <GripIcon size={13} />
       </span>
-      <Checkbox checked={completed} onChange={onToggle} ariaLabel={`Mark ${task.title} complete`} />
+      <Checkbox
+        checked={completed}
+        onChange={onToggle}
+        disabled={locked}
+        ariaLabel={`Mark ${task.title} complete`}
+      />
       <div className="task-item__main">
         <span className="task-item__title">{task.title}</span>
         <div className="task-item__meta-row">
@@ -59,16 +70,18 @@ export function TaskItem({
         </div>
         {task.notes && <div className="task-item__notes">{task.notes}</div>}
       </div>
-      <button
-        className="task-item__delete"
-        aria-label="Delete task"
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
-      >
-        <TrashIcon size={14} />
-      </button>
+      {!locked && (
+        <button
+          className="task-item__delete"
+          aria-label="Delete task"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+        >
+          <TrashIcon size={14} />
+        </button>
+      )}
     </div>
   );
 }

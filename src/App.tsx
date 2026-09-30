@@ -521,6 +521,12 @@ export default function App() {
   }
 
   async function handleToggle(task: Task) {
+    // A past day's outcome is locked in once it's over - otherwise coming
+    // back the next day and checking off what you missed (or the sibling
+    // guard in handleRequestDeleteTask below, deleting it instead) would
+    // silently rewrite streak history without ever spending a real freeze.
+    // Streak Freezes remain the one sanctioned way to fix a missed day.
+    if (selectedDate < todayKey()) return;
     const key = `${task.id}:${selectedDate}`;
     const nextCompleted = !completions.has(key);
     setCompletions((prev) => {
@@ -575,6 +581,11 @@ export default function App() {
   }
 
   function handleRequestDeleteTask(task: Task) {
+    // Same reasoning as handleToggle's own guard above - deleting a task
+    // from a past day is the other half of the same loophole (an
+    // incomplete task that no longer exists can't count against a day's
+    // completion rate), so this is locked the same way.
+    if (selectedDate < todayKey()) return;
     if (isDesktopWidth()) {
       void handleDeleteTask(task);
       setDeletedTaskUndo(task);
@@ -880,7 +891,9 @@ export default function App() {
           onCreateTag={handleCreateTag}
           onSave={handleSaveTask}
           onDelete={
-            formState.task ? () => handleRequestDeleteTask(formState.task!) : undefined
+            formState.task && selectedDate >= todayKey()
+              ? () => handleRequestDeleteTask(formState.task!)
+              : undefined
           }
           onClose={() => setFormState({ open: false })}
         />

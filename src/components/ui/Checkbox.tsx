@@ -7,6 +7,7 @@ interface CheckboxProps {
   ariaLabel?: string;
   /** When set, renders the box + label as one clickable row instead of a bare box. */
   label?: ReactNode;
+  disabled?: boolean;
 }
 
 const CHECKMARK = (
@@ -22,7 +23,7 @@ const CHECKMARK = (
   </svg>
 );
 
-export function Checkbox({ checked, onChange, ariaLabel, label }: CheckboxProps) {
+export function Checkbox({ checked, onChange, ariaLabel, label, disabled = false }: CheckboxProps) {
   const box = (
     <span className={`checkbox ${checked ? "checkbox--checked" : ""}`}>
       <span className="checkbox__check">{CHECKMARK}</span>
@@ -31,6 +32,7 @@ export function Checkbox({ checked, onChange, ariaLabel, label }: CheckboxProps)
 
   function handleClick(e: React.MouseEvent) {
     e.stopPropagation();
+    if (disabled) return;
     onChange(!checked);
   }
 
@@ -43,8 +45,9 @@ export function Checkbox({ checked, onChange, ariaLabel, label }: CheckboxProps)
         type="button"
         role="checkbox"
         aria-checked={checked}
+        aria-disabled={disabled}
         aria-label={ariaLabel}
-        className="checkbox-row"
+        className={`checkbox-row ${disabled ? "checkbox-row--disabled" : ""}`}
         onClick={handleClick}
       >
         {box}
@@ -58,8 +61,9 @@ export function Checkbox({ checked, onChange, ariaLabel, label }: CheckboxProps)
       type="button"
       role="checkbox"
       aria-checked={checked}
+      aria-disabled={disabled}
       aria-label={ariaLabel}
-      className="checkbox-hit"
+      className={`checkbox-hit ${disabled ? "checkbox-hit--disabled" : ""}`}
       onClick={handleClick}
     >
       {box}
