@@ -24,23 +24,15 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  padding: 3px 9px;
-  border-radius: 999px;
   color: var(--text-secondary);
-  background: var(--surface);
-  border: 1px solid var(--border);
 }
 
 .cal-header__tier--premium {
   color: var(--priority-medium);
-  background: rgba(217, 164, 65, 0.14);
-  border-color: rgba(217, 164, 65, 0.35);
 }
 
 .cal-header__tier--admin {
   color: var(--accent);
-  background: var(--accent-soft);
-  border-color: rgba(var(--accent-rgb), 0.35);
 }
 
 .cal-header__nav {
