@@ -339,13 +339,24 @@ export function SettingsModal({
                     label="Notify me when a scheduled task's time arrives"
                   />
                   <span className="settings__hint">
-                    Needs notification permission - once granted, these arrive even if
-                    the app isn't open.
+                    Needs notification permission - each one arrives at that task's own
+                    time, not right away when you turn this on, and even if the app isn't
+                    open.
                   </span>
                   {remindersEnabled && reminderStatus.permission === "denied" && (
-                    <div className="settings-status-banner settings-status-banner--warning">
-                      Notifications permission was denied - enable it for this app in
-                      your device's system Settings.
+                    <div className="settings-status-banner settings-status-banner--warning settings-status-banner--with-action">
+                      <span>
+                        Notifications permission was denied - macOS only asks once, so
+                        turning this on again won't re-prompt. Enable it for this app in
+                        System Settings instead.
+                      </span>
+                      <Button
+                        onClick={() =>
+                          void openUrl("x-apple.systempreferences:com.apple.preference.notifications")
+                        }
+                      >
+                        Open System Settings
+                      </Button>
                     </div>
                   )}
                   {remindersEnabled && reminderStatus.lastError && (

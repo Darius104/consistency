@@ -121,6 +121,23 @@
   border-color: var(--border);
 }
 
+/* A banner that also needs to hand the user a real shortcut, not just tell
+   them where to go - macOS only ever shows its own permission prompt once
+   per app, so after a denial the only way back in is System Settings
+   itself, and pointing at that pane directly beats a plain sentence
+   telling someone to go find it on their own. */
+.settings-status-banner--with-action {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: space-between;
+}
+
+.settings-status-banner--with-action .btn {
+  flex: none;
+}
+
 .settings__row {
   display: flex;
   align-items: center;
