@@ -124,13 +124,11 @@
   background: transparent;
   border: none;
   color: var(--text-muted);
-  opacity: 0;
-  transition: opacity 0.12s ease, color 0.12s ease, background-color 0.12s ease,
-    transform 120ms var(--ease-out);
+  transition: color 0.12s ease, background-color 0.12s ease, transform 120ms var(--ease-out);
 }
 
-.task-group:hover .task-group__save-template {
-  opacity: 1;
+.task-group__save-template svg {
+  transition: fill 220ms var(--ease-out);
 }
 
 .task-group__save-template:hover {
@@ -139,7 +137,6 @@
 }
 
 .task-group__save-template--saved {
-  opacity: 1;
   color: var(--priority-medium);
 }
 
@@ -147,13 +144,26 @@
   transform: scale(0.9);
 }
 
-.task-group__save-template--pop {
-  animation: task-group-save-pop 420ms var(--ease-out);
+.task-group__save-template--pop svg {
+  animation: task-group-save-pop 480ms var(--ease-out);
 }
 
 @keyframes task-group-save-pop {
+  0% {
+    scale: 1;
+    rotate: 0deg;
+  }
   35% {
-    scale: 1.35;
+    scale: 1.4;
+    rotate: -12deg;
+  }
+  60% {
+    scale: 0.92;
+    rotate: 6deg;
+  }
+  100% {
+    scale: 1;
+    rotate: 0deg;
   }
 }
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { PointerEvent, ReactNode, SyntheticEvent } from "react";
-import { BookmarkIcon, CheckIcon, ChevronRightIcon, GripIcon } from "../ui/icons";
+import { BookmarkIcon, ChevronRightIcon, GripIcon } from "../ui/icons";
 import "./TaskGroup.css";
 
 interface TaskGroupProps {
@@ -88,17 +88,11 @@ export function TaskGroup({
             onClick={(e) => {
               e.stopPropagation();
               onSaveAsTemplate();
-              if (!hasTemplate) {
-                setJustClicked(true);
-                setTimeout(() => setJustClicked(false), 900);
-              }
+              setJustClicked(true);
+              setTimeout(() => setJustClicked(false), 480);
             }}
           >
-            {justClicked ? (
-              <CheckIcon size={13} />
-            ) : (
-              <BookmarkIcon size={13} fill={hasTemplate ? "currentColor" : "none"} />
-            )}
+            <BookmarkIcon size={13} fill={hasTemplate ? "currentColor" : "none"} />
           </button>
         )}
       </div>
