@@ -9,7 +9,7 @@ import {
 } from "@tauri-apps/plugin-notification";
 import type { Task } from "../types";
 import { todayKey } from "../utils/dates";
-import { tasksScheduledOn, upcomingReminders } from "../utils/recurrence";
+import { occurrenceDateTime, tasksScheduledOn, upcomingReminders } from "../utils/recurrence";
 
 // How far ahead reminders get scheduled with the OS - re-run in full every
 // time tasks/completions change, so this only needs to cover a comfortable
@@ -18,12 +18,27 @@ import { tasksScheduledOn, upcomingReminders } from "../utils/recurrence";
 // silently drift out of sync with what's actually scheduled.
 export const REMINDER_LOOKAHEAD_DAYS = 14;
 
+// The desktop live-poll fallback (see checkDueRightNow below) used to
+// require the task's time to equal the *exact current minute* - if a
+// background/unfocused window got its setInterval throttled (WebKit does
+// this routinely for non-frontmost windows), or the Mac briefly slept
+// through the tick, that exact minute was gone forever and the reminder
+// silently never fired, with no way to tell it had been missed. Matching
+// against this trailing window instead means a late-arriving tick still
+// catches anything that became due within the last few minutes. Only
+// relevant now on platforms that fall all the way through to this (see
+// isNativeMacOS below) - real macOS installs no longer need it at all.
+const LIVE_POLL_GRACE_MS = 5 * 60 * 1000;
+
 /** Deterministic (not random) 31-bit positive id from a task+date pair -
  *  Options.id must be a 32-bit int, too small to hold a task's uuid, so this
  *  is a plain hash rather than trying to encode/decode the uuid itself.
  *  FNV-1a keeps this simple and collision-resistant enough at this app's
  *  scale - nothing needs to invert it back to a task/date since there's no
- *  notification action to resolve any more. */
+ *  notification action to resolve any more. Only used by the mobile/
+ *  live-poll paths below - the native macOS path (see native_notifications.rs)
+ *  uses "<taskId>:<date>" directly, since UNNotificationRequest identifiers
+ *  are strings natively and don't need to fit in a 32-bit int. */
 function reminderNotificationId(taskId: string, date: string): number {
   const str = `${taskId}:${date}`;
   let hash = 0x811c9dc5;
@@ -101,30 +116,35 @@ export interface ReminderStatus {
    *  means scheduling itself is silently failing at the plugin/native layer
    *  - not just "scheduled but not firing at the right time". */
   confirmedCount: number;
-  /** True when this platform has no pending()/cancel() (desktop) and is
-   *  instead using the live 30s-poll fallback - attemptedCount/confirmedCount
-   *  are always 0 here since nothing is ever actually handed to the OS to
-   *  confirm, so callers need this to show a fallback-appropriate message
-   *  instead of a literal "0 reminders confirmed" that reads like a failure. */
+  /** True when this platform has no real OS-level scheduling at all (not
+   *  macOS, and no pending()/cancel() from tauri-plugin-notification either)
+   *  and is instead using the live 30s-poll fallback - attemptedCount/
+   *  confirmedCount are always 0 here since nothing is ever actually handed
+   *  to the OS to confirm, so callers need this to show a
+   *  fallback-appropriate message instead of a literal "0 reminders
+   *  confirmed" that reads like a failure. */
   usesLiveFallback: boolean;
 }
 
 /**
- * Real OS-scheduled reminders (replacing what used to be a 30s poll that
- * only ever fired while the app happened to be open) - one per upcoming
- * task occurrence with a `time` set, over the next REMINDER_LOOKAHEAD_DAYS
- * days, cancelled and rescheduled from scratch whenever tasks/completions/
- * enabled change.
+ * Real OS-scheduled reminders - one per upcoming task occurrence with a
+ * `time` set, over the next REMINDER_LOOKAHEAD_DAYS days, cancelled and
+ * rescheduled from scratch whenever tasks/completions/enabled change.
  *
- * `pending()`/`cancel()` only exist on mobile (they route straight to the
- * native Swift/Kotlin plugin code, bypassing Rust's command registration
- * entirely - desktop's Rust plugin only ever registers `notify`,
- * `requestPermission`, and `isPermissionGranted`). That's used here as the
- * capability probe: where `pending()` isn't available, this falls back to
- * a live poll - the same "check every 30s, fire if it's this task's moment
- * right now" approach this hook used before today's rework - since
- * desktop's `notify()` only ever fires immediately regardless of any
- * `schedule` passed to it, rather than actually scheduling ahead.
+ * Three platform paths, tried in order:
+ * 1. macOS: real scheduling via UNUserNotificationCenter, invoked directly
+ *    (see native_notifications.rs) - tauri-plugin-notification's own
+ *    desktop backend silently ignores any `schedule` passed to it and just
+ *    fires immediately, so this bypasses it entirely on this one platform.
+ * 2. Mobile (iOS/Android): the plugin's own real scheduling, via
+ *    `pending()`/`cancel()` - these only exist on mobile (they route
+ *    straight to the native Swift/Kotlin plugin code, bypassing Rust's
+ *    command registration entirely).
+ * 3. Anything else (Windows/Linux desktop): the live poll this hook used
+ *    before real scheduling existed at all - `notify()` only ever fires
+ *    immediately there regardless of any `schedule` passed to it, so the
+ *    best this can do is check every 30s and fire the moment a task's own
+ *    time arrives, only for as long as the app stays open.
  */
 export function useTaskReminders(
   tasks: Task[],
@@ -139,7 +159,7 @@ export function useTaskReminders(
     usesLiveFallback: false,
   });
 
-  // Only used by the desktop fallback below - kept fresh so the periodic
+  // Only used by the live-poll fallback below - kept fresh so the periodic
   // check always sees current data without needing to be in its own effect
   // dependency array (which would mean tearing down/recreating the interval
   // on every single task edit).
@@ -156,8 +176,14 @@ export function useTaskReminders(
     async function checkDueRightNow() {
       const today = todayKey();
       const now = new Date();
-      const nowHHMM = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-      const due = tasksScheduledOn(tasksRef.current, today).filter((t) => t.time === nowHHMM);
+      const due = tasksScheduledOn(tasksRef.current, today).filter((t) => {
+        if (!t.time) return false;
+        const [hour, minute] = t.time.split(":").map(Number);
+        const dueAt = new Date(now);
+        dueAt.setHours(hour, minute, 0, 0);
+        const msSinceDue = now.getTime() - dueAt.getTime();
+        return msSinceDue >= 0 && msSinceDue <= LIVE_POLL_GRACE_MS;
+      });
       for (const task of due) {
         const key = `${task.id}:${today}`;
         if (notifiedTodayRef.current.has(key)) continue;
@@ -182,13 +208,22 @@ export function useTaskReminders(
     // becomes visible (see ReminderStatus/ReminderList in Settings).
     async function reschedule() {
       try {
+        const isNativeMacOS = await invoke<boolean>("native_notifications_available").catch(
+          () => false,
+        );
+
         if (!enabled) {
-          try {
-            const owned = await pending();
-            if (owned.length > 0) await cancel(owned.map((n) => n.id));
-          } catch {
-            // Desktop has no pending()/cancel() - nothing OS-scheduled to
-            // clean up there in the first place.
+          if (isNativeMacOS) {
+            const ids = await invoke<string[]>("native_pending_notification_ids");
+            if (ids.length > 0) await invoke("native_cancel_notifications", { ids });
+          } else {
+            try {
+              const owned = await pending();
+              if (owned.length > 0) await cancel(owned.map((n) => n.id));
+            } catch {
+              // Desktop (non-macOS) has no pending()/cancel() - nothing
+              // OS-scheduled to clean up there in the first place.
+            }
           }
           if (!cancelled) {
             setStatus({
@@ -196,6 +231,72 @@ export function useTaskReminders(
               lastError: null,
               attemptedCount: 0,
               confirmedCount: 0,
+              usesLiveFallback: false,
+            });
+          }
+          return;
+        }
+
+        if (isNativeMacOS) {
+          const granted = await invoke<boolean>("native_request_permission");
+          if (cancelled) return;
+          if (!granted) {
+            setStatus({
+              permission: "denied",
+              lastError: null,
+              attemptedCount: 0,
+              confirmedCount: 0,
+              usesLiveFallback: false,
+            });
+            return;
+          }
+
+          // Same "cancel everything ours, then lay down the fresh batch"
+          // approach as the mobile path below - all pending native
+          // notifications are ours, since this hook is the only thing that
+          // ever schedules one.
+          const existingIds = await invoke<string[]>("native_pending_notification_ids");
+          if (cancelled) return;
+          if (existingIds.length > 0) {
+            await invoke("native_cancel_notifications", { ids: existingIds });
+          }
+          if (cancelled) return;
+
+          const today = todayKey();
+          const entries = upcomingReminders(tasks, completions, today, REMINDER_LOOKAHEAD_DAYS);
+          let attempted = 0;
+          let firstError: string | null = null;
+          for (const { taskId, date } of entries) {
+            const task = tasks.find((t) => t.id === taskId);
+            if (!task || !task.time) continue;
+            const secondsFromNow = (occurrenceDateTime(date, task.time).getTime() - Date.now()) / 1000;
+            if (secondsFromNow <= 0) continue;
+            attempted++;
+            try {
+              await invoke("native_schedule_notification", {
+                id: `${taskId}:${date}`,
+                title: task.title,
+                body: task.notes || "It's time for this task.",
+                secondsFromNow,
+              });
+            } catch (err) {
+              firstError ??= err instanceof Error ? err.message : String(err);
+            }
+          }
+          if (cancelled) return;
+
+          // Same reasoning as the mobile path's own post-schedule check
+          // below - scheduling is fire-and-forget on the native side too,
+          // so this is the only way to confirm it actually registered.
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          if (cancelled) return;
+          const confirmedIds = await invoke<string[]>("native_pending_notification_ids");
+          if (!cancelled) {
+            setStatus({
+              permission: "granted",
+              lastError: firstError,
+              attemptedCount: attempted,
+              confirmedCount: confirmedIds.length,
               usesLiveFallback: false,
             });
           }

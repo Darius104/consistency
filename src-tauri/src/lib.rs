@@ -1,5 +1,7 @@
 use tauri_plugin_sql::{Migration, MigrationKind};
 
+mod native_notifications;
+
 // iOS/WebKit has no web Vibration API (navigator.vibrate is unimplemented
 // there, unlike Android Chrome) - the pull-to-refresh gesture's "you can let
 // go now" cue instead goes through this native command, straight to
@@ -130,7 +132,14 @@ pub fn run() {
             }
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![haptic_impact])
+        .invoke_handler(tauri::generate_handler![
+            haptic_impact,
+            native_notifications::native_notifications_available,
+            native_notifications::native_request_permission,
+            native_notifications::native_schedule_notification,
+            native_notifications::native_cancel_notifications,
+            native_notifications::native_pending_notification_ids,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

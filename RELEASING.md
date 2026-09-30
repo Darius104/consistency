@@ -10,6 +10,21 @@ means no future release can be verified as authentic by apps that already
 have the current public key baked in, so there's no way to "reset" it
 without breaking updates for everyone already on a signed version.
 
+**Code signing (separate from the updater key above):** `bundle.macOS.
+signingIdentity` in `tauri.conf.json` pins the build to a real, locally-
+installed "Apple Development" certificate (`security find-identity -v -p
+codesigning`) instead of Tauri's default ad-hoc signature. This isn't
+optional cosmetics - real, OS-scheduled notifications (see
+`src-tauri/src/native_notifications.rs`) go through `UNUserNotification
+Center`, which flatly refuses an ad-hoc-signed app with `UNErrorDomain`
+error 1 (`notificationsNotAllowed`); a free personal-team Apple Development
+certificate (no paid Developer Program membership needed) satisfies it
+fine. This certificate expires (~1 year for a free personal team) and is
+tied to this specific Mac's keychain - if a future build fails to sign, or
+notifications start silently failing again, run `security find-identity
+-v -p codesigning` for the current identity string and update this config
+value to match.
+
 ## Steps
 
 1. Bump the version number in **both** `src-tauri/tauri.conf.json`
