@@ -561,6 +561,15 @@ export default function App() {
     if (formState.open && formState.task) {
       await updateTask(formState.task.id, data);
     } else {
+      // Same past-day lock as handleToggle/handleRequestDeleteTask - a new
+      // task added to a day that's already over could never actually be
+      // completed, which is really just the same loophole from the other
+      // direction (an incomplete task nothing can ever mark done still
+      // shouldn't get to sit there rewriting what that day looked like).
+      if (selectedDate < todayKey()) {
+        setFormState({ open: false });
+        return;
+      }
       await createTask(data);
     }
     setFormState({ open: false });
@@ -659,6 +668,10 @@ export default function App() {
   }
 
   async function handleApplyTemplate(templateId: string, taskIndices: number[]) {
+    // Same past-day lock as handleSaveTask's own create guard - applying a
+    // template stamps a whole batch of new incomplete tasks onto the
+    // selected day at once, the exact same gap just multiplied.
+    if (selectedDate < todayKey()) return;
     await applyTemplate(templateId, selectedDate, taskIndices);
     await refreshAll();
   }

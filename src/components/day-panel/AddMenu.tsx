@@ -18,6 +18,11 @@ interface AddMenuProps {
   onAddTask: () => void;
   onApplyTemplate: (templateId: string, taskIndices: number[]) => void;
   onAddNote: () => void;
+  /** True once the viewed day is already over - adding a task (or applying
+   *  a template, which adds several at once) to a day that's already
+   *  passed would create an incomplete task nothing can ever mark done,
+   *  the same streak-integrity gap as editing one that's already there. */
+  disabled?: boolean;
 }
 
 type Step = "main" | "templates" | "review";
@@ -30,7 +35,13 @@ type Step = "main" | "templates" | "review";
 // (review) - stamping a template always used to add every one of its
 // starter tasks; this lets you uncheck the ones you don't want today
 // before adding just the rest.
-export function AddMenu({ templates, onAddTask, onApplyTemplate, onAddNote }: AddMenuProps) {
+export function AddMenu({
+  templates,
+  onAddTask,
+  onApplyTemplate,
+  onAddNote,
+  disabled = false,
+}: AddMenuProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("main");
   const [reviewingTemplate, setReviewingTemplate] = useState<Template | null>(null);
@@ -115,6 +126,7 @@ export function AddMenu({ templates, onAddTask, onApplyTemplate, onAddNote }: Ad
       <Button
         variant="primary"
         onClick={() => setOpen((v) => !v)}
+        disabled={disabled}
         aria-haspopup="true"
         aria-expanded={open}
       >

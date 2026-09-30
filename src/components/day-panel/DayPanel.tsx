@@ -451,6 +451,7 @@ export function DayPanel({
             onAddTask={onAddTask}
             onApplyTemplate={onApplyTemplate}
             onAddNote={onAddNote}
+            disabled={isPastDay}
           />
         </div>
       </div>
