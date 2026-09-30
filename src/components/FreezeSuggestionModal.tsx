@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import { Flame } from "./stats/Flame";
 import { Button } from "./ui/Button";
 import { Modal } from "./ui/Modal";
@@ -13,13 +12,6 @@ interface FreezeSuggestionModalProps {
   onClose: () => void;
 }
 
-// Same Flame used in the streak widget, driven continuously from full power
-// down to exactly 0 (not just "low") over a few seconds via
-// requestAnimationFrame - Flame.css only fades the fire fully out and shows
-// pure smoke once power hits 0, so anything above that would still leave a
-// flicker of fire visible at the end, undercutting "your streak is gone."
-const BURN_DOWN_MS = 3200;
-
 function formatDate(dateKey: string): string {
   return parseDateKey(dateKey).toLocaleDateString(undefined, {
     weekday: "long",
@@ -29,9 +21,11 @@ function formatDate(dateKey: string): string {
 }
 
 /**
- * Shown once per missed day (see freezeSuggestionDate in App.tsx) in place
- * of a quiet banner - the dying flame is meant to actually communicate
- * urgency, not just inform.
+ * Shown once per missed day (see freezeSuggestionDate in App.tsx). The
+ * flame sits in a small badge already out (power 0), the same way every
+ * other special-purpose modal in Settings (Donate's heart, Membership's
+ * crown) uses a modest icon to identify what this is about - the message
+ * itself carries the urgency, not an oversized centerpiece graphic.
  */
 export function FreezeSuggestionModal({
   date,
@@ -40,27 +34,14 @@ export function FreezeSuggestionModal({
   onGoPremium,
   onClose,
 }: FreezeSuggestionModalProps) {
-  const [power, setPower] = useState(1);
-
-  useEffect(() => {
-    let raf: number;
-    const start = performance.now();
-    function tick(now: number) {
-      const t = Math.min(1, (now - start) / BURN_DOWN_MS);
-      setPower(1 - t);
-      if (t < 1) raf = requestAnimationFrame(tick);
-    }
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, []);
-
   return (
     <Modal title="Don't lose your streak" onClose={onClose}>
       <div className="freeze-modal">
-        <div className="freeze-modal__flame">
-          <Flame power={power} />
+        <div className="freeze-modal__badge">
+          <Flame power={0} />
         </div>
-        <p className="freeze-modal__message">You missed {formatDate(date)} - your streak is fading.</p>
+        <span className="freeze-modal__eyebrow">Streak at risk</span>
+        <p className="freeze-modal__message">You missed {formatDate(date)}.</p>
         <p className="freeze-modal__sub">
           {isPremium
             ? "Use a freeze now to protect it before it's gone."
@@ -68,7 +49,11 @@ export function FreezeSuggestionModal({
         </p>
         <div className="freeze-modal__actions">
           <Button onClick={onClose}>Maybe later</Button>
-          <Button variant="primary" onClick={isPremium ? onFreeze : onGoPremium}>
+          <Button
+            variant="primary"
+            className="freeze-modal__freeze-btn"
+            onClick={isPremium ? onFreeze : onGoPremium}
+          >
             {isPremium ? "Freeze it" : "Go Premium"}
           </Button>
         </div>
