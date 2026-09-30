@@ -18,9 +18,9 @@ interface TaskGroupProps {
   suppressClick?: (e: SyntheticEvent) => boolean;
   onSaveAsTemplate?: () => void;
   hasTemplate?: boolean;
-  /** Milliseconds left until the end-of-day cutoff, only once that's close
-   *  enough to matter (see TaskList's URGENCY_WINDOW_MS) - null/undefined
-   *  hides the banner entirely, including on days this doesn't apply to. */
+  /** Milliseconds left until midnight, only once that's close enough to
+   *  matter (see TaskList's URGENCY_WINDOW_MS) - null/undefined hides the
+   *  banner entirely, including on days this doesn't apply to. */
   urgentMsLeft?: number | null;
 }
 

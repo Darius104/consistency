@@ -1,9 +1,8 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useNow } from "../../hooks/useNow";
 import { useReorderDrag } from "../../hooks/useReorderDrag";
-import { END_OF_DAY_REMINDER_TIME } from "../../hooks/useTaskReminders";
 import type { DayNote, Tag, Task, Template, TemplateTaskBlueprint } from "../../types";
-import { todayKey } from "../../utils/dates";
+import { addDays, todayKey } from "../../utils/dates";
 import { occurrenceDateTime } from "../../utils/recurrence";
 import { EmptyState } from "../ui/EmptyState";
 import { CheckIcon } from "../ui/icons";
@@ -13,9 +12,11 @@ import { TaskItem } from "./TaskItem";
 import "./TaskList.css";
 
 const NO_TAG_KEY = "none";
-// Matches the reminder's own 9 PM cutoff (see useTaskReminders) - the
-// in-app countdown only starts showing once it's actually close, rather
-// than nagging all day about a deadline that's still hours away.
+// The real deadline is midnight, when the day actually ends - not the 9 PM
+// reminder time (see useTaskReminders' own, separate END_OF_DAY_REMINDER_TIME),
+// which is just a heads-up sent partway through this same window. Counting
+// down to 21:00 itself would hit 0 and vanish right as the reminder fires,
+// even though there'd still be 3 hours left to actually act on it.
 const URGENCY_WINDOW_MS = 3 * 60 * 60 * 1000;
 const AUTO_COLLAPSE_DELAY_MS = 250;
 
@@ -122,12 +123,12 @@ export function TaskList({
   // started counting down yet, and a past day is already locked regardless.
   // 30s is plenty granular for a countdown that only ever displays minutes.
   const now = useNow(30_000);
-  const msUntilEndOfDay =
+  const msUntilMidnight =
     selectedDate === todayKey()
-      ? occurrenceDateTime(selectedDate, END_OF_DAY_REMINDER_TIME).getTime() - now.getTime()
+      ? occurrenceDateTime(addDays(selectedDate, 1), "00:00").getTime() - now.getTime()
       : null;
   const showUrgency =
-    msUntilEndOfDay !== null && msUntilEndOfDay > 0 && msUntilEndOfDay <= URGENCY_WINDOW_MS;
+    msUntilMidnight !== null && msUntilMidnight > 0 && msUntilMidnight <= URGENCY_WINDOW_MS;
 
   // Collapse state and "have we seen this group finish before" tracking are
   // both scoped to `${selectedDate}:${tagKey}` - a tag collapsing because you
@@ -398,7 +399,7 @@ export function TaskList({
                   );
                 })()}
                 urgentMsLeft={
-                  showUrgency && groupOccurrences.some((o) => !o.completed) ? msUntilEndOfDay : null
+                  showUrgency && groupOccurrences.some((o) => !o.completed) ? msUntilMidnight : null
                 }
               >
                 {groupOccurrences.map(({ task, completed }) => (
