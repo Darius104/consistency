@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   cancel,
   isPermissionGranted,
@@ -10,6 +11,7 @@ import {
 import type { Task } from "../types";
 import { todayKey } from "../utils/dates";
 import { occurrenceDateTime, tasksScheduledOn, upcomingReminders } from "../utils/recurrence";
+import { computeTodayStatus } from "../utils/stats";
 
 // How far ahead reminders get scheduled with the OS - re-run in full every
 // time tasks/completions change, so this only needs to cover a comfortable
@@ -29,6 +31,21 @@ export const REMINDER_LOOKAHEAD_DAYS = 14;
 // relevant now on platforms that fall all the way through to this (see
 // isNativeMacOS below) - real macOS installs no longer need it at all.
 const LIVE_POLL_GRACE_MS = 5 * 60 * 1000;
+
+// One extra, non-task-specific reminder a day: a nudge that today still has
+// unfinished tasks, timed to land while there's still enough evening left to
+// act on it. Reusing computeTodayStatus (the same source the streak card
+// itself reads) means "nothing scheduled", "already done" and "already
+// frozen" all correctly suppress it without duplicating that logic here.
+export const END_OF_DAY_REMINDER_TIME = "21:00";
+
+function endOfDayNudgeContent(remaining: number): { title: string; body: string } {
+  const noun = remaining === 1 ? "task" : "tasks";
+  return {
+    title: "Day's almost over",
+    body: `${remaining} ${noun} left today to keep the streak alive.`,
+  };
+}
 
 /** Deterministic (not random) 31-bit positive id from a task+date pair -
  *  Options.id must be a 32-bit int, too small to hold a task's uuid, so this
@@ -128,8 +145,13 @@ export interface ReminderStatus {
 
 /**
  * Real OS-scheduled reminders - one per upcoming task occurrence with a
- * `time` set, over the next REMINDER_LOOKAHEAD_DAYS days, cancelled and
- * rescheduled from scratch whenever tasks/completions/enabled change.
+ * `time` set, over the next REMINDER_LOOKAHEAD_DAYS days, plus one
+ * additional end-of-day nudge for *today only* (see END_OF_DAY_REMINDER_TIME)
+ * when today still has incomplete tasks - all cancelled and rescheduled from
+ * scratch whenever tasks/completions/freezes/enabled change. The nudge can
+ * only ever cover today, not the lookahead window, since whether a future
+ * day ends up incomplete isn't knowable ahead of time the way a task's own
+ * scheduled occurrences are.
  *
  * Three platform paths, tried in order:
  * 1. macOS: real scheduling via UNUserNotificationCenter, invoked directly
@@ -149,6 +171,7 @@ export interface ReminderStatus {
 export function useTaskReminders(
   tasks: Task[],
   completions: Set<string>,
+  freezes: Set<string>,
   enabled: boolean,
 ): ReminderStatus {
   const [status, setStatus] = useState<ReminderStatus>({
@@ -167,7 +190,14 @@ export function useTaskReminders(
   tasksRef.current = tasks;
   const completionsRef = useRef(completions);
   completionsRef.current = completions;
+  const freezesRef = useRef(freezes);
+  freezesRef.current = freezes;
   const notifiedTodayRef = useRef<Set<string>>(new Set());
+  // Only the live-poll fallback needs this - the OS-scheduled paths below
+  // naturally stop re-sending once the target time is in the past (see
+  // eodEligible's own secondsFromNow > 0 check), but a 30s poll would
+  // otherwise fire again on every tick for the rest of the day.
+  const eodNotifiedDateRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -203,6 +233,31 @@ export function useTaskReminders(
       }
     }
 
+    async function checkEndOfDayNudge() {
+      const today = todayKey();
+      if (eodNotifiedDateRef.current === today) return;
+      if (new Date() < occurrenceDateTime(today, END_OF_DAY_REMINDER_TIME)) return;
+      const status = computeTodayStatus(
+        tasksRef.current,
+        completionsRef.current,
+        freezesRef.current,
+        today,
+      );
+      if (!status.hasTasks || status.allDone || status.frozen) return;
+      eodNotifiedDateRef.current = today;
+      try {
+        const content = endOfDayNudgeContent(status.remaining);
+        await notify({
+          id: reminderNotificationId("eod", today),
+          title: content.title,
+          body: content.body,
+          sound: "default",
+        });
+      } catch {
+        // Best-effort, same as checkDueRightNow above.
+      }
+    }
+
     // This whole pipeline (permission and scheduling) fails completely
     // silently otherwise - wrapping it is the only way a real failure ever
     // becomes visible (see ReminderStatus/ReminderList in Settings).
@@ -211,6 +266,23 @@ export function useTaskReminders(
         const isNativeMacOS = await invoke<boolean>("native_notifications_available").catch(
           () => false,
         );
+
+        // Computed once up front and shared by both OS-scheduled branches
+        // below - re-derived from scratch on every pass (same as the
+        // per-task entries), so a task getting completed/added/deleted
+        // immediately cancels or reschedules this along with everything
+        // else, and it naturally stops re-arming for today once the target
+        // time itself is already in the past.
+        const eodToday = todayKey();
+        const eodStatusNow = computeTodayStatus(tasks, completions, freezes, eodToday);
+        const eodSecondsFromNow =
+          (occurrenceDateTime(eodToday, END_OF_DAY_REMINDER_TIME).getTime() - Date.now()) / 1000;
+        const eodEligible =
+          eodStatusNow.hasTasks &&
+          !eodStatusNow.allDone &&
+          !eodStatusNow.frozen &&
+          eodSecondsFromNow > 0;
+        const eodContent = endOfDayNudgeContent(eodStatusNow.remaining);
 
         if (!enabled) {
           if (isNativeMacOS) {
@@ -283,6 +355,19 @@ export function useTaskReminders(
               firstError ??= err instanceof Error ? err.message : String(err);
             }
           }
+          if (eodEligible) {
+            attempted++;
+            try {
+              await invoke("native_schedule_notification", {
+                id: `eod:${eodToday}`,
+                title: eodContent.title,
+                body: eodContent.body,
+                secondsFromNow: eodSecondsFromNow,
+              });
+            } catch (err) {
+              firstError ??= err instanceof Error ? err.message : String(err);
+            }
+          }
           if (cancelled) return;
 
           // Same reasoning as the mobile path's own post-schedule check
@@ -325,7 +410,11 @@ export function useTaskReminders(
           // same as this hook's very first (pre-rework) version, and only
           // for as long as the app stays open.
           void checkDueRightNow();
-          fallbackInterval = window.setInterval(checkDueRightNow, 30_000);
+          void checkEndOfDayNudge();
+          fallbackInterval = window.setInterval(() => {
+            void checkDueRightNow();
+            void checkEndOfDayNudge();
+          }, 30_000);
           if (!cancelled) {
             setStatus({
               permission: "granted",
@@ -369,6 +458,19 @@ export function useTaskReminders(
             firstNotifyError ??= err instanceof Error ? err.message : String(err);
           }
         }
+        if (eodEligible) {
+          try {
+            await notify({
+              id: reminderNotificationId("eod", eodToday),
+              title: eodContent.title,
+              body: eodContent.body,
+              sound: "default",
+              schedule: scheduleForOccurrence(eodToday, END_OF_DAY_REMINDER_TIME),
+            });
+          } catch (err) {
+            firstNotifyError ??= err instanceof Error ? err.message : String(err);
+          }
+        }
 
         // Give the native side a moment to actually register each request
         // (sendNotification returns before that's necessarily done), then
@@ -382,7 +484,7 @@ export function useTaskReminders(
           setStatus({
             permission: "granted",
             lastError: firstNotifyError,
-            attemptedCount: entries.length,
+            attemptedCount: entries.length + (eodEligible ? 1 : 0),
             confirmedCount: confirmed.length,
             usesLiveFallback: false,
           });
@@ -395,11 +497,24 @@ export function useTaskReminders(
     }
 
     void reschedule();
+
+    // Permission can only change from outside the app (System Settings),
+    // which this hook has no way to be pushed a notification about - so
+    // instead, re-check the moment the user comes back to the app at all,
+    // the same "did something external change" signal macOS apps
+    // conventionally use. Covers both directions: a denied banner clearing
+    // itself once notifications get allowed, and a granted status catching
+    // a revoke that happened while the app was in the background.
+    const unlistenFocus = getCurrentWindow().onFocusChanged(({ payload: focused }) => {
+      if (focused) void reschedule();
+    });
+
     return () => {
       cancelled = true;
       if (fallbackInterval !== null) window.clearInterval(fallbackInterval);
+      void unlistenFocus.then((unlisten) => unlisten());
     };
-  }, [tasks, completions, enabled]);
+  }, [tasks, completions, freezes, enabled]);
 
   return status;
 }

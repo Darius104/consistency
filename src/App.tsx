@@ -250,7 +250,7 @@ export default function App() {
     }
   }, [theme, randomColors, customColors, viewingFriend]);
 
-  const reminderStatus = useTaskReminders(tasks, completions, remindersEnabled);
+  const reminderStatus = useTaskReminders(tasks, completions, freezes, remindersEnabled);
   // Also enabled while Settings is open (regardless of tab) so the Widgets
   // gallery's live preview has real data the moment someone switches to it,
   // even before they've turned the widget on.

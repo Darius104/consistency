@@ -4568,7 +4568,7 @@ dependencies = [
 
 [[package]]
 name = "tauri-app"
-version = "0.1.40"
+version = "0.1.42"
 dependencies = [
  "block2",
  "objc",

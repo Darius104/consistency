@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { PointerEvent, ReactNode, SyntheticEvent } from "react";
-import { BookmarkIcon, ChevronRightIcon, GripIcon } from "../ui/icons";
+import { formatCountdown } from "../../utils/dates";
+import { BookmarkIcon, ChevronRightIcon, ClockIcon, GripIcon } from "../ui/icons";
 import "./TaskGroup.css";
 
 interface TaskGroupProps {
@@ -17,6 +18,10 @@ interface TaskGroupProps {
   suppressClick?: (e: SyntheticEvent) => boolean;
   onSaveAsTemplate?: () => void;
   hasTemplate?: boolean;
+  /** Milliseconds left until the end-of-day cutoff, only once that's close
+   *  enough to matter (see TaskList's URGENCY_WINDOW_MS) - null/undefined
+   *  hides the banner entirely, including on days this doesn't apply to. */
+  urgentMsLeft?: number | null;
 }
 
 export function TaskGroup({
@@ -33,14 +38,22 @@ export function TaskGroup({
   suppressClick,
   onSaveAsTemplate,
   hasTemplate,
+  urgentMsLeft,
 }: TaskGroupProps) {
   const [justClicked, setJustClicked] = useState(false);
   const isComplete = totalCount > 0 && doneCount === totalCount;
+  const isUrgent = urgentMsLeft != null;
 
   return (
     <div
-      className={`task-group ${isComplete ? "task-group--complete" : ""} ${dragging ? "task-group--dragging" : ""}`}
+      className={`task-group ${isComplete ? "task-group--complete" : ""} ${dragging ? "task-group--dragging" : ""} ${isUrgent ? "task-group--urgent" : ""}`}
     >
+      {urgentMsLeft != null && (
+        <div className="task-group__urgency">
+          <ClockIcon size={12} className="task-group__urgency-icon" />
+          {formatCountdown(urgentMsLeft)} to keep your streak
+        </div>
+      )}
       <div
         className="task-group__header"
         role="button"

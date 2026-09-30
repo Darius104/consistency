@@ -341,7 +341,8 @@ export function SettingsModal({
                   <span className="settings__hint">
                     Needs notification permission - each one arrives at that task's own
                     time, not right away when you turn this on, and even if the app isn't
-                    open.
+                    open. Also sends one extra nudge at 9 PM if anything's still left for
+                    today.
                   </span>
                   {remindersEnabled && reminderStatus.permission === "denied" && (
                     <div className="settings-status-banner settings-status-banner--warning settings-status-banner--with-action">
