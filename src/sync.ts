@@ -9,6 +9,7 @@ import {
   type TagRow,
   type TaskRow,
   type TemplateTaskRow,
+  type TradingResultRow,
 } from "./db/localCache";
 
 // The network-facing half of the offline cache/outbox layer. queries.ts
@@ -36,6 +37,7 @@ const CONFLICT_TARGET: Record<string, string> = {
   settings: "user_id,key",
   streak_freezes: "user_id,date",
   task_completions: "task_id,date",
+  trading_results: "user_id,date",
 };
 
 async function pushDelete(op: PendingOp): Promise<void> {
@@ -51,6 +53,11 @@ async function pushDelete(op: PendingOp): Promise<void> {
   }
   if (op.table_name === "streak_freezes") {
     const { error } = await supabase.from("streak_freezes").delete().eq("date", op.row_id);
+    if (error) throw new Error(error.message);
+    return;
+  }
+  if (op.table_name === "trading_results") {
+    const { error } = await supabase.from("trading_results").delete().eq("date", op.row_id);
     if (error) throw new Error(error.message);
     return;
   }
@@ -247,23 +254,33 @@ async function reconcileTemplateTasks(rows: TemplateTaskRow[]): Promise<Template
 
 /** Overwrites the local cache with fresh data from Supabase - last-write-wins. */
 export async function pullFromServer(): Promise<void> {
-  const [tags, tasks, completions, freezes, templates, templateTasks, notes, settingsRows] =
-    await Promise.all([
-      fetchAllRemote<TagRow>("tags", "id, name, color, sort_order"),
-      fetchAllRemote<TaskRow>("tasks", TASK_COLUMNS),
-      fetchAllRemote<{ task_id: string; date: string }>("task_completions", "task_id, date"),
-      fetchAllRemote<{ date: string }>("streak_freezes", "date"),
-      fetchAllRemote<{ id: string; name: string; tag_id: string | null }>(
-        "templates",
-        "id, name, tag_id",
-      ),
-      fetchAllRemote<TemplateTaskRow>(
-        "template_tasks",
-        "id, template_id, title, notes, time, priority, sort_order",
-      ),
-      fetchAllRemote<NoteRow>("notes", "id, date, content, sort_order, after_group_key"),
-      fetchAllRemote<{ key: string; value: string }>("settings", "key, value"),
-    ]);
+  const [
+    tags,
+    tasks,
+    completions,
+    freezes,
+    templates,
+    templateTasks,
+    notes,
+    settingsRows,
+    tradingResults,
+  ] = await Promise.all([
+    fetchAllRemote<TagRow>("tags", "id, name, color, sort_order"),
+    fetchAllRemote<TaskRow>("tasks", TASK_COLUMNS),
+    fetchAllRemote<{ task_id: string; date: string }>("task_completions", "task_id, date"),
+    fetchAllRemote<{ date: string }>("streak_freezes", "date"),
+    fetchAllRemote<{ id: string; name: string; tag_id: string | null }>(
+      "templates",
+      "id, name, tag_id",
+    ),
+    fetchAllRemote<TemplateTaskRow>(
+      "template_tasks",
+      "id, template_id, title, notes, time, priority, sort_order",
+    ),
+    fetchAllRemote<NoteRow>("notes", "id, date, content, sort_order, after_group_key"),
+    fetchAllRemote<{ key: string; value: string }>("settings", "key, value"),
+    fetchAllRemote<TradingResultRow>("trading_results", "date, value, unit"),
+  ]);
 
   // Each table is upserted-then-pruned (see replaceTable's own comment for
   // why this isn't wrapped in a transaction) - a failure partway through
@@ -307,6 +324,7 @@ export async function pullFromServer(): Promise<void> {
     ["id"],
   );
   await replaceTable("settings", ["key", "value"], settingsRows, ["key"]);
+  await replaceTable("trading_results", ["date", "value", "unit"], tradingResults, ["date"]);
 }
 
 type SyncListener = () => void;

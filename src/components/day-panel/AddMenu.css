@@ -11,6 +11,7 @@
   max-width: 260px;
   max-height: 260px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -50,7 +51,20 @@
 
 .add-menu__option-icon {
   flex: none;
-  color: var(--text-muted);
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-secondary);
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.add-menu__option:hover .add-menu__option-icon {
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .add-menu__option-name {
@@ -76,9 +90,15 @@
 .add-menu__option--back {
   color: var(--text-secondary);
   font-weight: 500;
-  margin-bottom: 2px;
-  border-bottom: 1px solid var(--border);
+}
+
+/* The divider lives here, not on the button itself - so the hover
+   highlight (scoped to just the button's own box) never touches the line,
+   instead of looking fused to it. */
+.add-menu__back-row {
   padding-bottom: var(--space-2);
+  margin-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border);
 }
 
 /* Wider than the plain option-list steps - a checklist of task titles needs
@@ -88,14 +108,54 @@
   max-width: 320px;
 }
 
+.add-menu__step {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: add-menu-step-in 140ms var(--ease-out);
+}
+
+@keyframes add-menu-step-in {
+  from {
+    opacity: 0;
+    transform: translateX(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.add-menu__review-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+  margin-bottom: 2px;
+}
+
 .add-menu__review-title {
   font-size: var(--text-xs);
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 0 var(--space-2);
-  margin-bottom: 2px;
+}
+
+.add-menu__review-select-all {
+  flex: none;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--accent);
+  transition: opacity 0.12s ease;
+}
+
+.add-menu__review-select-all:hover {
+  opacity: 0.75;
 }
 
 .add-menu__review-list {
@@ -104,6 +164,7 @@
   gap: 2px;
   max-height: 180px;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .add-menu__review-list .checkbox-row {

@@ -1,0 +1,9 @@
+.appearance-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.appearance-picker__save {
+  align-self: flex-end;
+}

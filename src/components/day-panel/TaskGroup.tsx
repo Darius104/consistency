@@ -1,7 +1,6 @@
-import { useState } from "react";
 import type { PointerEvent, ReactNode, SyntheticEvent } from "react";
 import { formatCountdown } from "../../utils/dates";
-import { BookmarkIcon, ChevronRightIcon, ClockIcon, GripIcon } from "../ui/icons";
+import { ChevronRightIcon, ClockIcon, GripIcon } from "../ui/icons";
 import "./TaskGroup.css";
 
 interface TaskGroupProps {
@@ -16,8 +15,6 @@ interface TaskGroupProps {
   dragging?: boolean;
   onHandlePointerDown?: (e: PointerEvent) => void;
   suppressClick?: (e: SyntheticEvent) => boolean;
-  onSaveAsTemplate?: () => void;
-  hasTemplate?: boolean;
   /** Milliseconds left until midnight, only once that's close enough to
    *  matter (see TaskList's URGENCY_WINDOW_MS) - null/undefined hides the
    *  banner entirely, including on days this doesn't apply to. */
@@ -36,11 +33,8 @@ export function TaskGroup({
   dragging,
   onHandlePointerDown,
   suppressClick,
-  onSaveAsTemplate,
-  hasTemplate,
   urgentMsLeft,
 }: TaskGroupProps) {
-  const [justClicked, setJustClicked] = useState(false);
   const isComplete = totalCount > 0 && doneCount === totalCount;
   const isUrgent = urgentMsLeft != null;
 
@@ -88,26 +82,6 @@ export function TaskGroup({
         <span className="task-group__count">
           {doneCount}/{totalCount}
         </span>
-        {onSaveAsTemplate && (
-          <button
-            type="button"
-            className={`task-group__save-template ${hasTemplate ? "task-group__save-template--saved" : ""} ${
-              justClicked ? "task-group__save-template--pop" : ""
-            }`}
-            aria-label={
-              hasTemplate ? `Remove ${label} template` : `Save ${label} as a template`
-            }
-            title={hasTemplate ? "Saved as template - click to remove" : "Save as template"}
-            onClick={(e) => {
-              e.stopPropagation();
-              onSaveAsTemplate();
-              setJustClicked(true);
-              setTimeout(() => setJustClicked(false), 480);
-            }}
-          >
-            <BookmarkIcon size={13} fill={hasTemplate ? "currentColor" : "none"} />
-          </button>
-        )}
       </div>
       <div
         className={`task-group__items-wrapper ${collapsed ? "task-group__items-wrapper--collapsed" : ""}`}

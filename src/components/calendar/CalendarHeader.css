@@ -1,7 +1,7 @@
 .cal-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: var(--space-3);
   margin-bottom: var(--space-4);
 }
 
@@ -10,6 +10,17 @@
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
+}
+
+/* Friends (left) and the button cluster (right) share this one line, below
+   the title - .cal-header__nav's own margin-left: auto is what actually
+   pushes it to the far right, so it still ends up there even when there's
+   nothing on the left (no friends added, or viewing a friend's read-only
+   calendar where this whole row is just the nav). */
+.cal-header__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .cal-header__title {
@@ -39,6 +50,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  margin-left: auto;
 }
 
 /* Prev/Today/Next as one visually cohesive segmented control (one border,

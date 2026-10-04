@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AuthScreen } from "./auth/AuthScreen";
 import { useSession } from "./auth/useSession";
 import { CalendarView } from "./components/calendar/CalendarView";
@@ -19,6 +19,7 @@ import { PremiumPaywallModal } from "./components/PremiumPaywallModal";
 import { TaskDeletedToast } from "./components/TaskDeletedToast";
 import { WriteErrorToast } from "./components/WriteErrorToast";
 import { FriendCalendarView } from "./components/friends/FriendCalendarView";
+import { TemplatesModal } from "./components/settings/TemplatesModal";
 import { SettingsModal } from "./components/settings/SettingsModal";
 import { TaskForm } from "./components/task-form/TaskForm";
 import { ConfirmModal } from "./components/ui/ConfirmModal";
@@ -33,18 +34,20 @@ import {
   deleteTag,
   deleteTask,
   deleteTemplate,
+  deleteTradingResult,
   getAllCompletions,
   getAllNotes,
   getAllTasks,
+  getAllTradingResults,
   getSetting,
   getStreakFreezes,
   getTags,
   getTemplates,
-  getTemplateTasks,
   removeStreakFreeze,
   restoreTask,
   setCompletion,
   setSetting,
+  setTradingResult,
   updateNote,
   updateNotePositions,
   updateTag,
@@ -52,7 +55,17 @@ import {
   updateTask,
   updateTaskOrder,
 } from "./db/queries";
-import type { DayNote, NewTask, Tag, Task, Template, TemplateTaskBlueprint, ThemeId } from "./types";
+import type {
+  DayNote,
+  NewTask,
+  Tag,
+  Task,
+  Template,
+  TemplateTaskBlueprint,
+  ThemeId,
+  TradingResult,
+  TradingResultUnit,
+} from "./types";
 import { addDays, startOfWeek, todayKey } from "./utils/dates";
 import { tasksScheduledOn } from "./utils/recurrence";
 import {
@@ -67,7 +80,6 @@ import {
 import { DEFAULT_THEME } from "./utils/themes";
 import {
   generateCustomThemeColors,
-  generateRandomThemeColors,
   RANDOM_THEME_CSS_VARS,
   type RandomThemeColors,
 } from "./utils/randomTheme";
@@ -115,6 +127,8 @@ const HIDDEN_WIDGETS_SETTING_KEY = "hiddenWidgets";
 const KNOWN_WIDGET_IDS_SETTING_KEY = "knownWidgetIds";
 const PHRASE_VIEW_SETTING_KEY = "lastPhraseViewDate";
 const FREEZE_SUGGESTION_DISMISSED_KEY = "freezeSuggestionDismissedDate";
+const TRADING_RESULT_UNIT_SETTING_KEY = "tradingResultUnit";
+const DEFAULT_TRADING_RESULT_UNIT: TradingResultUnit = "r";
 
 interface StoredThemeState {
   theme: ThemeId;
@@ -130,22 +144,27 @@ export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
-  // Keyed by template id - loaded whenever `templates` changes so the day
-  // panel can tell "this tag has a template" apart from "today's
-  // tasks for this tag actually still match it" (see TaskList.tsx's
-  // hasTemplate computation).
-  const [templateTaskBlueprints, setTemplateTaskBlueprints] = useState<
-    Record<string, TemplateTaskBlueprint[]>
-  >({});
   const [completions, setCompletions] = useState<Set<string>>(new Set());
   const [freezes, setFreezes] = useState<Set<string>>(new Set());
   const [notes, setNotes] = useState<DayNote[]>([]);
+  const [tradingResults, setTradingResults] = useState<Record<string, TradingResult>>({});
+  const [tradingResultUnit, setTradingResultUnit] = useState<TradingResultUnit>(
+    DEFAULT_TRADING_RESULT_UNIT,
+  );
   const [selectedDate, setSelectedDate] = useState(todayKey());
   // Only meaningful on phone-sized screens (see the max-width:700px query in
   // CalendarView.css/App.css) - lets the day panel take over the whole
   // screen instead of always sharing it with the compact calendar above.
   const [dayPanelExpanded, setDayPanelExpanded] = useState(false);
   const [theme, setTheme] = useState<ThemeId>(DEFAULT_THEME);
+  // Guards handleChangeTheme/handleSetCustomTheme against rapid repeated
+  // calls (switching themes quickly) completing out of order - each
+  // persist/sync write takes a moment, and two overlapping calls can
+  // resolve in a different order than they were started in, which without
+  // this would let an older, now-stale call's write land *after* a newer
+  // one's and silently overwrite it - visible as the theme flashing back
+  // to a previous pick a moment after you've already moved on from it.
+  const themeRequestRef = useRef(0);
   const [randomColors, setRandomColors] = useState<RandomThemeColors | null>(null);
   // The profile page's "create your own theme" builder's last saved pick -
   // kept separate from randomColors so switching random <-> custom back and
@@ -157,6 +176,12 @@ export default function App() {
   const [arranging, setArranging] = useState(false);
   const [loading, setLoading] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Which Settings section to land on next time it opens - reset to
+  // "profile" on the ordinary gear-icon path, overridden to "friends" by
+  // the "+ Friends" shortcut in the calendar header so that one jumps
+  // straight there instead of always opening to the top.
+  const [settingsSection, setSettingsSection] = useState("profile");
+  const [createTemplateOpen, setCreateTemplateOpen] = useState(false);
   const [phraseModalOpen, setPhraseModalOpen] = useState(false);
   const [lastPhraseViewDate, setLastPhraseViewDate] = useState<string | null>(null);
   const [freezeSuggestionDismissedDate, setFreezeSuggestionDismissedDate] = useState<
@@ -211,21 +236,6 @@ export default function App() {
   // - not just in response to a user action in this window.
   useEffect(() => onSyncComplete(() => void refreshAll()), []);
 
-  useEffect(() => {
-    let cancelled = false;
-    Promise.all(templates.map((t) => getTemplateTasks(t.id).then((tasks) => [t.id, tasks] as const)))
-      .then((entries) => {
-        if (!cancelled) setTemplateTaskBlueprints(Object.fromEntries(entries));
-      })
-      .catch(() => {
-        // Best-effort - a stale/missing entry here just means hasTemplate
-        // falls back to "no template" for that tag, not a crash.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [templates]);
-
   // Skipped while viewing a friend's calendar - FriendCalendarView takes over
   // applying (and restoring) the document's theme for that duration instead,
   // since it needs to show the friend's colors, not your own.
@@ -235,20 +245,19 @@ export default function App() {
   }, [theme, viewingFriend]);
 
   // The eight hand-picked themes are static [data-theme] blocks in
-  // tokens.css; "random" and "custom" have no such block, so their colors
-  // are applied directly as inline custom properties instead - and cleared
-  // again the moment a real theme is picked, so its static block takes
-  // back over.
+  // tokens.css; "custom" has no such block, so its colors are applied
+  // directly as inline custom properties instead - and cleared again the
+  // moment a real theme is picked, so its static block takes back over.
   useEffect(() => {
     if (viewingFriend) return;
     const root = document.documentElement.style;
-    const active = theme === "random" ? randomColors : theme === "custom" ? customColors : null;
+    const active = theme === "custom" ? customColors : null;
     for (const key of Object.keys(RANDOM_THEME_CSS_VARS) as (keyof RandomThemeColors)[]) {
       const cssVar = RANDOM_THEME_CSS_VARS[key];
       if (active) root.setProperty(cssVar, active[key]);
       else root.removeProperty(cssVar);
     }
-  }, [theme, randomColors, customColors, viewingFriend]);
+  }, [theme, customColors, viewingFriend]);
 
   const reminderStatus = useTaskReminders(tasks, completions, freezes, remindersEnabled);
   // Also enabled while Settings is open (regardless of tab) so the Widgets
@@ -303,11 +312,13 @@ export default function App() {
       completionRows,
       freezeRows,
       noteRows,
+      tradingResultRows,
       savedThemeState,
       legacyTheme,
       legacyRandomColors,
       legacyCustomColors,
       savedReminders,
+      savedTradingResultUnit,
       savedPanelOrder,
       savedHiddenWidgets,
       savedKnownWidgetIds,
@@ -320,11 +331,13 @@ export default function App() {
       getAllCompletions(),
       getStreakFreezes(),
       getAllNotes(),
+      getAllTradingResults(),
       getSetting(THEME_STATE_SETTING_KEY),
       getSetting(THEME_SETTING_KEY),
       getSetting(RANDOM_THEME_SETTING_KEY),
       getSetting(CUSTOM_THEME_SETTING_KEY),
       getSetting(REMINDERS_SETTING_KEY),
+      getSetting(TRADING_RESULT_UNIT_SETTING_KEY),
       getSetting(PANEL_ORDER_SETTING_KEY),
       getSetting(HIDDEN_WIDGETS_SETTING_KEY),
       getSetting(KNOWN_WIDGET_IDS_SETTING_KEY),
@@ -351,6 +364,10 @@ export default function App() {
     setCompletions(completionRows);
     setFreezes(freezeRows);
     setNotes(noteRows);
+    setTradingResults(Object.fromEntries(tradingResultRows.map((r) => [r.date, r])));
+    setTradingResultUnit(
+      (savedTradingResultUnit as TradingResultUnit | null) ?? DEFAULT_TRADING_RESULT_UNIT,
+    );
 
     let resolvedTheme: ThemeId;
     let resolvedRandomColors: RandomThemeColors | null;
@@ -410,12 +427,7 @@ export default function App() {
     // Covers accounts whose theme was already set before profiles/friends
     // existed - not just future changes via handleChangeTheme/
     // handleSetCustomTheme below.
-    const resolvedOverrideColors =
-      resolvedTheme === "random"
-        ? resolvedRandomColors
-        : resolvedTheme === "custom"
-          ? resolvedCustomColors
-          : null;
+    const resolvedOverrideColors = resolvedTheme === "custom" ? resolvedCustomColors : null;
     void syncMyThemeToProfile(resolvedTheme, resolvedOverrideColors).catch(() => {});
   }
 
@@ -451,40 +463,55 @@ export default function App() {
     await setSetting(FREEZE_SUGGESTION_DISMISSED_KEY, date);
   }
 
-  async function handleChangeTheme(next: ThemeId) {
-    // Re-rolls every time "random" is picked, even if it's already active -
-    // that's the whole point of it being random rather than just one more
-    // fixed swatch.
-    //
-    // Both state updates happen together, before any await, and are
-    // persisted with ONE setSetting call (see THEME_STATE_SETTING_KEY) -
-    // not two. Two separate writes each kick off their own sync
-    // (db/queries.ts's kickSync()), and a pull triggered by the first
-    // write's realtime echo could land before the second write's push
-    // finished, resolving to theme="random" paired with the *previous*
-    // roll's randomColors - which refreshAll() would then apply, visible as
-    // a flash back to the old colors before the second write's sync caught
-    // up a moment later and corrected it.
-    const nextRandomColors = next === "random" ? generateRandomThemeColors() : randomColors;
-    setTheme(next);
-    if (next === "random") setRandomColors(nextRandomColors);
+  async function handleSetTradingResult(value: number | null, unit: TradingResultUnit) {
+    const date = selectedDate;
+    setTradingResults((prev) => {
+      if (value === null) {
+        const { [date]: _removed, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [date]: { date, value, unit } };
+    });
+    if (value === null) {
+      await deleteTradingResult(date);
+      return;
+    }
+    await setTradingResult(date, value, unit);
+    // Remembers the unit just picked as next time's starting point in the
+    // modal (see TradingResultModal) - never relabels anything already
+    // logged, just saves a click if you tend to log the same unit.
+    if (unit !== tradingResultUnit) {
+      setTradingResultUnit(unit);
+      await setSetting(TRADING_RESULT_UNIT_SETTING_KEY, unit);
+    }
+  }
 
-    await persistThemeState({ theme: next, randomColors: nextRandomColors, customColors });
-    await syncMyThemeToProfile(
-      next,
-      next === "random" ? nextRandomColors : next === "custom" ? customColors : null,
-    );
+  async function handleChangeTheme(next: ThemeId) {
+    const requestId = ++themeRequestRef.current;
+    setTheme(next);
+
+    // A stale call (superseded by a newer theme change that's since
+    // started) skips its own writes entirely rather than letting them race
+    // a newer call's writes to land - see themeRequestRef's own comment.
+    if (themeRequestRef.current !== requestId) return;
+    await persistThemeState({ theme: next, randomColors, customColors });
+    if (themeRequestRef.current !== requestId) return;
+    await syncMyThemeToProfile(next, next === "custom" ? customColors : null);
   }
 
   /** Profile page's "create your own theme" builder - same legible shape as
-   *  every other theme, built from a hue someone chose by hand instead of
-   *  a dice roll or a fixed swatch. */
-  async function handleSetCustomTheme(hexColor: string) {
-    const colors = generateCustomThemeColors(hexColor);
+   *  every other theme, built from a hue someone chose by hand (via a hue
+   *  slider, not a native color picker - see CustomThemeCreator) instead of
+   *  a fixed swatch. */
+  async function handleSetCustomTheme(hue: number) {
+    const requestId = ++themeRequestRef.current;
+    const colors = generateCustomThemeColors(hue);
     setTheme("custom");
     setCustomColors(colors);
 
+    if (themeRequestRef.current !== requestId) return;
     await persistThemeState({ theme: "custom", randomColors, customColors: colors });
+    if (themeRequestRef.current !== requestId) return;
     await syncMyThemeToProfile("custom", colors);
   }
 
@@ -827,16 +854,25 @@ export default function App() {
         tasks={tasks}
         completions={completions}
         freezes={freezes}
+        tradingResults={tradingResults}
         selectedDate={selectedDate}
         onSelectDate={setSelectedDate}
         tier={membership.effectiveTier ?? undefined}
-        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenSettings={() => {
+          setSettingsSection("profile");
+          setSettingsOpen(true);
+        }}
+        onOpenCreateTemplate={() => setCreateTemplateOpen(true)}
         onOpenPhrase={handleOpenPhrase}
         phraseUnseen={phraseUnseen}
         onSyncNow={syncNow}
         syncing={syncing}
         onViewFriend={setViewingFriend}
         onlineFriendIds={onlineFriendIds}
+        onAddFriend={() => {
+          setSettingsSection("friends");
+          setSettingsOpen(true);
+        }}
         settingsBadgeCount={supportBadgeCount}
       />
       {/* Mobile-only divider between the calendar and the day panel below it -
@@ -873,10 +909,7 @@ export default function App() {
         onDelete={handleRequestDeleteTask}
         onReorderTasks={handleReorderTasks}
         onReorderTags={handleReorderTags}
-        onSaveAsTemplate={handleSaveAsTemplate}
-        onRemoveTemplate={handleDeleteTemplate}
         templates={templates}
-        templateTaskBlueprints={templateTaskBlueprints}
         onApplyTemplate={handleApplyTemplate}
         onAddTask={() => setFormState({ open: true })}
         notes={dayNotes}
@@ -886,6 +919,9 @@ export default function App() {
         onReorderNotePositions={handleReorderNotePositions}
         expanded={dayPanelExpanded}
         onToggleExpanded={() => setDayPanelExpanded((v) => !v)}
+        tradingResult={tradingResults[selectedDate] ?? null}
+        tradingResultUnit={tradingResultUnit}
+        onSetTradingResult={(value, unit) => void handleSetTradingResult(value, unit)}
       />
 
       {noteFormState.open && (
@@ -912,8 +948,21 @@ export default function App() {
         />
       )}
 
+      {createTemplateOpen && (
+        <TemplatesModal
+          tags={tags}
+          templates={templates}
+          onClose={() => setCreateTemplateOpen(false)}
+          onCreateTag={handleCreateTag}
+          onUpdateTag={handleUpdateTag}
+          onDeleteTag={handleDeleteTag}
+          onSaveTemplate={handleSaveAsTemplate}
+          onDeleteTemplate={handleDeleteTemplate}
+        />
+      )}
       {settingsOpen && (
         <SettingsModal
+          initialSectionId={settingsSection}
           theme={theme}
           onChangeTheme={handleChangeTheme}
           customThemeColors={customColors}
@@ -925,13 +974,6 @@ export default function App() {
           tasks={tasks}
           completions={completions}
           tags={tags}
-          onCreateTag={handleCreateTag}
-          onUpdateTag={handleUpdateTag}
-          onDeleteTag={handleDeleteTag}
-          onReorderTags={handleReorderTags}
-          templates={templates}
-          onSaveAsTemplate={handleSaveAsTemplate}
-          onDeleteTemplate={handleDeleteTemplate}
           frozenDays={allFrozenDays}
           freezeCandidates={freezeCandidates}
           freezesRemaining={freezesRemainingThisMonth}

@@ -188,10 +188,10 @@ export function EditIcon({ size = 16, ...props }: IconProps) {
   );
 }
 
-export function QuoteIcon({ size = 16, ...props }: IconProps) {
+export function SparklesIcon({ size = 16, ...props }: IconProps) {
   return (
     <svg {...base(size, props)}>
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3z" />
     </svg>
   );
 }

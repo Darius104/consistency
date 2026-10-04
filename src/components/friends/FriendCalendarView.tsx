@@ -172,8 +172,7 @@ export function FriendCalendarView({ friend, onBack }: FriendCalendarViewProps) 
     }
 
     root.setAttribute("data-theme", data.theme);
-    const active =
-      data.theme === "random" || data.theme === "custom" ? data.randomColors : null;
+    const active = data.theme === "custom" ? data.randomColors : null;
     for (const key of Object.keys(RANDOM_THEME_CSS_VARS) as (keyof RandomThemeColors)[]) {
       const cssVar = RANDOM_THEME_CSS_VARS[key];
       if (active) root.style.setProperty(cssVar, active[key]);
@@ -248,6 +247,9 @@ export function FriendCalendarView({ friend, onBack }: FriendCalendarViewProps) 
             tasks={data.tasks}
             completions={data.completions}
             freezes={data.freezes}
+            // Never fetched for a friend's calendar - a trading result is
+            // personal financial data, not something a friend should see.
+            tradingResults={{}}
             selectedDate={selectedDate}
             onSelectDate={setSelectedDate}
           />

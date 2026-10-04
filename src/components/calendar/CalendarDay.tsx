@@ -1,4 +1,6 @@
 import type { CSSProperties } from "react";
+import type { TradingResult } from "../../types";
+import { formatTradingResult } from "../../utils/trading";
 import { FrostIcon } from "../ui/icons";
 import "./CalendarDay.css";
 
@@ -11,6 +13,10 @@ interface CalendarDayProps {
   hasTasks: boolean;
   completionRate: number | null; // null = nothing scheduled
   isFrozen: boolean;
+  /** This day's logged trading result (see TradingResultBadge) - null if
+   *  nothing was logged. Always shown in its own stored unit, never
+   *  reinterpreted under the current global display preference. */
+  tradingResult: TradingResult | null;
   onSelect: (dateKey: string) => void;
 }
 
@@ -23,6 +29,7 @@ export function CalendarDay({
   hasTasks,
   completionRate,
   isFrozen,
+  tradingResult,
   onSelect,
 }: CalendarDayProps) {
   const isFullyCompleted = completionRate === 1;
@@ -66,6 +73,19 @@ export function CalendarDay({
           </span>
         )}
       </span>
+      {tradingResult !== null && (
+        <span
+          className={`cal-day__result-center ${
+            tradingResult.value > 0
+              ? "cal-day__result-center--positive"
+              : tradingResult.value < 0
+                ? "cal-day__result-center--negative"
+                : ""
+          }`}
+        >
+          {formatTradingResult(tradingResult.value, tradingResult.unit)}
+        </span>
+      )}
       {hasTasks && <span className="cal-day__indicator" />}
     </button>
   );

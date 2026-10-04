@@ -19,10 +19,6 @@ export const THEMES: ThemeMeta[] = [
   { id: "blossom", name: "Blossom", bg: "#16111a", accent: "#f472b6" },
   { id: "lavender", name: "Lavender", bg: "#14131c", accent: "#b794f6" },
   { id: "crimson", name: "Crimson", bg: "#170b0c", accent: "#ef4565" },
-  { id: "amber", name: "Amber", bg: "#16110a", accent: "#f0b429" },
-  // Swatch preview is special-cased in ThemeSwatch - bg/accent here are
-  // unused placeholders, real colors are rolled fresh each time it's picked.
-  { id: "random", name: "Random", bg: "#000000", accent: "#ffffff" },
 ];
 
 export const DEFAULT_THEME: ThemeId = "midnight";

@@ -8,6 +8,8 @@ import type {
   Task,
   Template,
   TemplateTaskBlueprint,
+  TradingResult,
+  TradingResultUnit,
 } from "../types";
 import {
   cacheAddStreakFreeze,
@@ -15,6 +17,7 @@ import {
   cacheDeleteTag,
   cacheDeleteTask,
   cacheDeleteTemplate,
+  cacheDeleteTradingResult,
   cacheFindTemplateByTagId,
   cacheGetAllSettings,
   cacheGetCompletions,
@@ -25,6 +28,7 @@ import {
   cacheGetTasks,
   cacheGetTemplateTasks,
   cacheGetTemplates,
+  cacheGetTradingResults,
   cacheNextNoteSortOrder,
   cacheNextTagSortOrder,
   cacheNextTaskSortOrder,
@@ -36,6 +40,7 @@ import {
   cacheUpsertTag,
   cacheUpsertTask,
   cacheUpsertTemplate,
+  cacheUpsertTradingResult,
   discardPendingOpsFor,
   enqueueOp,
   type NoteRow,
@@ -337,6 +342,29 @@ export async function removeStreakFreeze(date: string): Promise<void> {
   kickSync();
 }
 
+// ---------- Trading results ----------
+
+export async function getAllTradingResults(): Promise<TradingResult[]> {
+  const rows = await cacheGetTradingResults();
+  return rows.map((r) => ({ date: r.date, value: r.value, unit: r.unit as TradingResultUnit }));
+}
+
+export async function setTradingResult(
+  date: string,
+  value: number,
+  unit: TradingResultUnit,
+): Promise<void> {
+  await cacheUpsertTradingResult({ date, value, unit });
+  await enqueueOp({ table: "trading_results", op: "upsert", rowId: date, payload: { date, value, unit } });
+  kickSync();
+}
+
+export async function deleteTradingResult(date: string): Promise<void> {
+  await cacheDeleteTradingResult(date);
+  await discardPendingOpsFor("trading_results", date);
+  await enqueueOp({ table: "trading_results", op: "delete", rowId: date });
+  kickSync();
+}
 
 // ---------- Export (replaces the old SQLite VACUUM INTO backup) ----------
 

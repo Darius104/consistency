@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Friend, MembershipTier } from "../../db/friends";
-import type { Task } from "../../types";
+import type { Task, TradingResult } from "../../types";
 import {
   buildMonthGrid,
   isSameMonth,
@@ -45,17 +45,20 @@ interface CalendarViewProps {
   tasks: Task[];
   completions: Set<string>;
   freezes: Set<string>;
+  tradingResults: Record<string, TradingResult>;
   selectedDate: string;
   onSelectDate: (dateKey: string) => void;
   /** Omitted while viewing a friend's read-only calendar - see CalendarHeader. */
   tier?: MembershipTier;
   onOpenSettings?: () => void;
+  onOpenCreateTemplate?: () => void;
   onOpenPhrase?: () => void;
   phraseUnseen?: boolean;
   onSyncNow?: () => void;
   syncing?: boolean;
   onViewFriend?: (friend: Friend) => void;
   onlineFriendIds?: Set<string>;
+  onAddFriend?: () => void;
   settingsBadgeCount?: number;
 }
 
@@ -63,10 +66,12 @@ export function CalendarView({
   tasks,
   completions,
   freezes,
+  tradingResults,
   selectedDate,
   onSelectDate,
   tier,
   onOpenSettings,
+  onOpenCreateTemplate,
   onOpenPhrase,
   phraseUnseen,
   onSyncNow,
@@ -74,6 +79,7 @@ export function CalendarView({
   onViewFriend,
   settingsBadgeCount,
   onlineFriendIds,
+  onAddFriend,
 }: CalendarViewProps) {
   const today = todayKey();
   const [cursor, setCursor] = useState(() => {
@@ -208,10 +214,12 @@ export function CalendarView({
           onNext={() => shiftMonth(1)}
           onToday={goToday}
           onOpenSettings={onOpenSettings}
+          onOpenCreateTemplate={onOpenCreateTemplate}
           onOpenPhrase={onOpenPhrase}
           phraseUnseen={phraseUnseen}
           onViewFriend={onViewFriend}
           onlineFriendIds={onlineFriendIds}
+          onAddFriend={onAddFriend}
           settingsBadgeCount={settingsBadgeCount}
         />
         <div className="cal-view__weekdays">
@@ -233,6 +241,7 @@ export function CalendarView({
               hasTasks={tasksScheduledOn(tasks, dateKey).length > 0}
               completionRate={dayCompletionRate(tasks, completions, dateKey)}
               isFrozen={freezes.has(dateKey)}
+              tradingResult={tradingResults[dateKey] ?? null}
               onSelect={onSelectDate}
             />
           ))}

@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import type { FriendNote } from "../../db/friendNotes";
 import type { FriendStreakEntry } from "../../hooks/useFriendStreaks";
 import type { AvatarId } from "../../utils/avatars";
-import type { DayNote, Tag, Task, Template, TemplateTaskBlueprint } from "../../types";
+import type { DayNote, Tag, Task, Template, TradingResult, TradingResultUnit } from "../../types";
 import { parseDateKey, todayKey } from "../../utils/dates";
 import { WIDGET_LABELS, type PanelBlockId, type WidgetId } from "../../utils/panelOrder";
 import type { Quote } from "../../utils/quotes";
@@ -25,6 +25,8 @@ import { WeeklyCompletion } from "../stats/WeeklyCompletion";
 import { AddMenu } from "./AddMenu";
 import { FriendNoteWidget } from "./FriendNoteWidget";
 import { TaskList } from "./TaskList";
+import { TradingResultBadge } from "./TradingResultBadge";
+import { TradingResultModal } from "./TradingResultModal";
 import "./DayPanel.css";
 
 // How close the pointer needs to get to the scrollable container's top/
@@ -89,10 +91,7 @@ interface DayPanelProps {
   onDelete: (task: Task) => void;
   onReorderTasks: (taskIds: string[]) => void;
   onReorderTags: (tagIds: string[]) => void;
-  onSaveAsTemplate: (tag: Tag, tasks: TemplateTaskBlueprint[]) => void;
-  onRemoveTemplate: (templateId: string) => void;
   templates: Template[];
-  templateTaskBlueprints: Record<string, TemplateTaskBlueprint[]>;
   onApplyTemplate: (templateId: string, taskIndices: number[]) => void;
   onAddTask: () => void;
   notes: DayNote[];
@@ -106,6 +105,12 @@ interface DayPanelProps {
    * sharing it with the compact calendar above. Ignored on wider screens. */
   expanded: boolean;
   onToggleExpanded: () => void;
+  tradingResult: TradingResult | null;
+  /** Remembered last-used unit - just the modal's starting pick for a
+   *  brand-new entry (see TradingResultModal); an already-logged day
+   *  always starts from its own stored unit instead. */
+  tradingResultUnit: TradingResultUnit;
+  onSetTradingResult: (value: number | null, unit: TradingResultUnit) => void;
 }
 
 export function DayPanel({
@@ -137,10 +142,7 @@ export function DayPanel({
   onDelete,
   onReorderTasks,
   onReorderTags,
-  onSaveAsTemplate,
-  onRemoveTemplate,
   templates,
-  templateTaskBlueprints,
   onApplyTemplate,
   onAddTask,
   notes,
@@ -150,7 +152,11 @@ export function DayPanel({
   onReorderNotePositions,
   expanded,
   onToggleExpanded,
+  tradingResult,
+  tradingResultUnit,
+  onSetTradingResult,
 }: DayPanelProps) {
+  const [tradingModalOpen, setTradingModalOpen] = useState(false);
   const [draggedId, setDraggedId] = useState<PanelBlockId | null>(null);
   // Which widget's "Remove widget / Arrange widgets" sheet is open, if any -
   // replaces what used to be a single-purpose "Arrange panel?" confirm
@@ -412,10 +418,6 @@ export function DayPanel({
         onDelete={onDelete}
         onReorderTasks={onReorderTasks}
         onReorderTags={onReorderTags}
-        onSaveAsTemplate={onSaveAsTemplate}
-        onRemoveTemplate={onRemoveTemplate}
-        templates={templates}
-        templateTaskBlueprints={templateTaskBlueprints}
         notes={notes}
         onEditNote={onEditNote}
         onDeleteNote={onDeleteNote}
@@ -446,6 +448,10 @@ export function DayPanel({
       <div className="day-panel__header">
         <h2 className="day-panel__date">{label}</h2>
         <div className="day-panel__header-actions">
+          <TradingResultBadge
+            value={tradingResult?.value ?? null}
+            onClick={() => setTradingModalOpen(true)}
+          />
           <AddMenu
             templates={templates}
             onAddTask={onAddTask}
@@ -459,6 +465,17 @@ export function DayPanel({
         <span className="day-panel__past-day-hint">
           This day is locked - use a Streak Freeze to fix a missed one.
         </span>
+      )}
+      {tradingModalOpen && (
+        <TradingResultModal
+          value={tradingResult?.value ?? null}
+          unit={tradingResult?.unit ?? tradingResultUnit}
+          onSave={(value, unit) => {
+            onSetTradingResult(value, unit);
+            setTradingModalOpen(false);
+          }}
+          onClose={() => setTradingModalOpen(false)}
+        />
       )}
 
       {arranging && (

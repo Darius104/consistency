@@ -140,6 +140,29 @@
   animation: cal-day-check-in 260ms var(--ease-out);
 }
 
+/* Centered over the whole cell, not tucked into the corner badge cluster -
+   this is the actual number (not just a dot), so it gets to be the visual
+   focal point the heat tint already makes room for. */
+.cal-day__result-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-secondary);
+  pointer-events: none;
+  animation: cal-day-check-in 260ms var(--ease-out);
+}
+
+.cal-day__result-center--positive {
+  color: var(--trading-profit);
+}
+
+.cal-day__result-center--negative {
+  color: var(--trading-loss);
+}
+
 .cal-day__indicator {
   margin-top: auto;
   width: 5px;

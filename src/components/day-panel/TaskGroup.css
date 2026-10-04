@@ -170,59 +170,6 @@
   font-weight: 600;
 }
 
-.task-group__save-template {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  padding: 3px;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  transition: color 0.12s ease, background-color 0.12s ease, transform 120ms var(--ease-out);
-}
-
-.task-group__save-template svg {
-  transition: fill 220ms var(--ease-out);
-}
-
-.task-group__save-template:hover {
-  color: var(--accent);
-  background: var(--surface-hover);
-}
-
-.task-group__save-template--saved {
-  color: var(--priority-medium);
-}
-
-.task-group__save-template:active {
-  transform: scale(0.9);
-}
-
-.task-group__save-template--pop svg {
-  animation: task-group-save-pop 480ms var(--ease-out);
-}
-
-@keyframes task-group-save-pop {
-  0% {
-    scale: 1;
-    rotate: 0deg;
-  }
-  35% {
-    scale: 1.4;
-    rotate: -12deg;
-  }
-  60% {
-    scale: 0.92;
-    rotate: 6deg;
-  }
-  100% {
-    scale: 1;
-    rotate: 0deg;
-  }
-}
-
 /* Grid-rows trick: animating 1fr -> 0fr smoothly collapses the row without
    ever knowing the content's actual height, no JS measurement needed. The
    gap to the header lives here (not on .task-group's flex gap) so it can

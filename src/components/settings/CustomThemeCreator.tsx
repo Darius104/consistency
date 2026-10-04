@@ -1,67 +1,55 @@
-import { useMemo, useState } from "react";
-import { generateCustomThemeColors, type RandomThemeColors } from "../../utils/randomTheme";
-import { Button } from "../ui/Button";
-import { CheckIcon, EditIcon } from "../ui/icons";
+import { useMemo } from "react";
+import { generateCustomThemeColors } from "../../utils/randomTheme";
 import "./CustomThemeCreator.css";
 
 interface CustomThemeCreatorProps {
-  /** True when "custom" is the currently applied theme. */
-  active: boolean;
-  /** Your last saved custom pick, if any - used to prefill the picker so
-   *  reopening this shows what you already built, not a blank default. */
-  colors: RandomThemeColors | null;
-  onApply: (hexColor: string) => void;
+  hue: number;
+  onHueChange: (hue: number) => void;
 }
 
-const DEFAULT_PICKER_COLOR = "#7c9eff";
+// The gradient the slider's track is painted with is built from this app's
+// own OKLCH shape (see randomTheme.ts), not a generic rainbow - it needs to
+// actually match what picking each point on the track produces, which a
+// plain CSS hue-rotate gradient wouldn't (OKLCH's "same lightness" doesn't
+// land at the same spot as HSL's).
+const GRADIENT_STOPS = Array.from({ length: 13 }, (_, i) => generateCustomThemeColors(i * 30).accent);
 
-/** Lets you build your own theme instead of only choosing from the eight
- *  fixed swatches or rolling "random" - you pick one color, and it's mapped
- *  onto the exact same dark-mode shape every other theme uses (see
- *  generateCustomThemeColors), so whatever you pick still comes out legible
- *  and "in family" rather than a raw, ungoverned color scheme.
+/** Lets you build your own theme instead of only choosing from the seven
+ *  fixed swatches - drag the hue slider, and it's mapped onto the exact
+ *  same dark-mode shape every other theme uses (see
+ *  generateCustomThemeColors), so wherever you land always comes out
+ *  legible and "in family" rather than a raw, ungoverned color scheme.
  *
- *  Renders as a plain block, not its own Card - it's the second half of the
- *  same "pick a theme" decision as ThemeCarousel above it, so it lives
- *  inside that same card (see SettingsModal's "profile" tab) instead of as
- *  a visually separate setting. */
-export function CustomThemeCreator({ active, colors, onApply }: CustomThemeCreatorProps) {
-  const [pickerColor, setPickerColor] = useState(colors?.accent ?? DEFAULT_PICKER_COLOR);
-
-  const preview = useMemo(() => generateCustomThemeColors(pickerColor), [pickerColor]);
+ *  A plain controlled component - the hue it's showing and the one Save
+ *  button that actually commits it both live in AppearancePicker, the
+ *  parent both this and ThemeCarousel sit inside (see its own comment for
+ *  why: picking from either one is just "staging a choice" now, not an
+ *  instant, separately-triggered write). */
+export function CustomThemeCreator({ hue, onHueChange }: CustomThemeCreatorProps) {
+  const preview = useMemo(() => generateCustomThemeColors(hue), [hue]);
 
   return (
     <div className="custom-theme">
-      <div className="custom-theme__header">
-        <span className="settings__label">Or build your own</span>
-        {active && (
-          <span className="custom-theme__active">
-            <CheckIcon size={11} /> Active
-          </span>
-        )}
-      </div>
-      <span className="settings__hint">Pick a color and it becomes your theme's accent.</span>
+      <span className="settings__label">Or build your own</span>
+      <span className="settings__hint">Drag to pick a hue - it becomes your theme's accent.</span>
 
       <div className="custom-theme__row">
-        <label className="custom-theme__swatch" style={{ background: preview.bg }}>
-          <input
-            type="color"
-            className="custom-theme__input"
-            value={pickerColor}
-            onChange={(e) => setPickerColor(e.target.value)}
-            aria-label="Pick a theme color"
-          />
+        <div className="custom-theme__swatch">
           <span className="custom-theme__swatch-surface" style={{ background: preview.surface }}>
             <span className="custom-theme__swatch-dot" style={{ background: preview.accent }} />
           </span>
-          <span className="custom-theme__swatch-edit" aria-hidden="true">
-            <EditIcon size={11} />
-          </span>
-        </label>
+        </div>
 
-        <Button variant="primary" onClick={() => onApply(pickerColor)}>
-          Use this theme
-        </Button>
+        <input
+          type="range"
+          className="custom-theme__hue-slider"
+          min={0}
+          max={360}
+          value={hue}
+          onChange={(e) => onHueChange(Number(e.target.value))}
+          style={{ background: `linear-gradient(to right, ${GRADIENT_STOPS.join(", ")})` }}
+          aria-label="Theme hue"
+        />
       </div>
     </div>
   );

@@ -101,6 +101,18 @@ fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/0011_scheduled_reminders.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 12,
+            description: "add_trading_results",
+            sql: include_str!("../migrations/0012_trading_results.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 13,
+            description: "add_trading_result_unit",
+            sql: include_str!("../migrations/0013_trading_result_unit.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }
 

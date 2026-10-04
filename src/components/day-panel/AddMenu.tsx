@@ -99,9 +99,9 @@ export function AddMenu({
     getTemplateTasks(template.id).then((result) => {
       if (reviewRequestRef.current !== requestId) return;
       setReviewTasks(result);
-      // Everything starts checked - unchecking is the opt-out, matching
-      // what applying a template always used to do (add all of them).
-      setSelectedIndices(new Set(result.map((_, i) => i)));
+      // Everything starts unchecked - picking is the opt-in, so adding a
+      // template never dumps tasks you didn't ask for onto the day.
+      setSelectedIndices(new Set());
       setReviewTasksLoading(false);
     });
   }
@@ -113,6 +113,12 @@ export function AddMenu({
       else next.add(index);
       return next;
     });
+  }
+
+  function toggleSelectAll() {
+    setSelectedIndices((prev) =>
+      prev.size === reviewTasks.length ? new Set() : new Set(reviewTasks.map((_, i) => i)),
+    );
   }
 
   function confirmReview() {
@@ -135,16 +141,25 @@ export function AddMenu({
       {open && (
         <div className={`add-menu__popup ${step === "review" ? "add-menu__popup--wide" : ""}`}>
           {step === "review" && reviewingTemplate ? (
-            <>
-              <button
-                type="button"
-                className="add-menu__option add-menu__option--back"
-                onClick={() => setStep("templates")}
-              >
-                <ChevronLeftIcon size={13} />
-                Back
-              </button>
-              <span className="add-menu__review-title">{reviewingTemplate.name}</span>
+            <div className="add-menu__step" key="review">
+              <div className="add-menu__back-row">
+                <button
+                  type="button"
+                  className="add-menu__option add-menu__option--back"
+                  onClick={() => setStep("templates")}
+                >
+                  <ChevronLeftIcon size={13} />
+                  Back
+                </button>
+              </div>
+              <div className="add-menu__review-header">
+                <span className="add-menu__review-title">{reviewingTemplate.name}</span>
+                {!reviewTasksLoading && reviewTasks.length > 0 && (
+                  <button type="button" className="add-menu__review-select-all" onClick={toggleSelectAll}>
+                    {selectedIndices.size === reviewTasks.length ? "Clear" : "Select all"}
+                  </button>
+                )}
+              </div>
               {reviewTasksLoading ? (
                 <div className="add-menu__review-list">
                   {[0, 1, 2].map((i) => (
@@ -170,20 +185,23 @@ export function AddMenu({
                 onClick={confirmReview}
                 disabled={reviewTasksLoading || selectedIndices.size === 0}
               >
-                Add {selectedIndices.size > 0 ? selectedIndices.size : ""}{" "}
-                {selectedIndices.size === 1 ? "task" : "tasks"}
+                {selectedIndices.size > 0
+                  ? `Add ${selectedIndices.size} ${selectedIndices.size === 1 ? "task" : "tasks"}`
+                  : "Select tasks to add"}
               </Button>
-            </>
+            </div>
           ) : step === "templates" ? (
-            <>
-              <button
-                type="button"
-                className="add-menu__option add-menu__option--back"
-                onClick={() => setStep("main")}
-              >
-                <ChevronLeftIcon size={13} />
-                Back
-              </button>
+            <div className="add-menu__step" key="templates">
+              <div className="add-menu__back-row">
+                <button
+                  type="button"
+                  className="add-menu__option add-menu__option--back"
+                  onClick={() => setStep("main")}
+                >
+                  <ChevronLeftIcon size={13} />
+                  Back
+                </button>
+              </div>
               {templates.map((t) => (
                 <button
                   key={t.id}
@@ -191,15 +209,19 @@ export function AddMenu({
                   className="add-menu__option"
                   onClick={() => openTemplateReview(t)}
                 >
+                  <span className="add-menu__option-icon">
+                    <BookmarkIcon size={13} />
+                  </span>
                   <span className="add-menu__option-name">{t.name}</span>
                   <span className="add-menu__option-meta">
                     {t.taskCount} {t.taskCount === 1 ? "task" : "tasks"}
                   </span>
+                  <ChevronRightIcon size={13} className="add-menu__option-chevron" />
                 </button>
               ))}
-            </>
+            </div>
           ) : (
-            <>
+            <div className="add-menu__step" key="main">
               <button
                 type="button"
                 className="add-menu__option"
@@ -208,7 +230,9 @@ export function AddMenu({
                   close();
                 }}
               >
-                <CheckIcon size={14} className="add-menu__option-icon" />
+                <span className="add-menu__option-icon">
+                  <CheckIcon size={14} />
+                </span>
                 <span className="add-menu__option-name">Add task</span>
               </button>
               {templates.length > 0 && (
@@ -217,7 +241,9 @@ export function AddMenu({
                   className="add-menu__option"
                   onClick={() => setStep("templates")}
                 >
-                  <BookmarkIcon size={14} className="add-menu__option-icon" />
+                  <span className="add-menu__option-icon">
+                    <BookmarkIcon size={14} />
+                  </span>
                   <span className="add-menu__option-name">Use a template</span>
                   <ChevronRightIcon size={13} className="add-menu__option-chevron" />
                 </button>
@@ -230,10 +256,12 @@ export function AddMenu({
                   close();
                 }}
               >
-                <NoteIcon size={14} className="add-menu__option-icon" />
+                <span className="add-menu__option-icon">
+                  <NoteIcon size={14} />
+                </span>
                 <span className="add-menu__option-name">Add note</span>
               </button>
-            </>
+            </div>
           )}
         </div>
       )}

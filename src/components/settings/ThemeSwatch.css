@@ -44,19 +44,6 @@
   border-radius: 50%;
 }
 
-.theme-swatch__shuffle {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.theme-swatch__shuffle svg {
-  color: #fff;
-  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
-}
-
 .theme-swatch__name {
   font-size: var(--text-xs);
   color: var(--text-secondary);

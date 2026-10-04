@@ -8,8 +8,6 @@ export type ThemeId =
   | "blossom"
   | "lavender"
   | "crimson"
-  | "amber"
-  | "random"
   | "custom";
 
 export type RecurrenceType = "none" | "daily" | "weekly";
@@ -82,4 +80,17 @@ export interface DayNote {
   // group) this note is anchored after in the day's list - null means
   // "before all groups" (the default for a freshly created note).
   afterGroupKey: string | null;
+}
+
+export type TradingResultUnit = "r" | "percent" | "usd";
+
+// One signed number logged per day (e.g. a trading day's result), together
+// with the unit it was logged in - a "+4" logged as a percent isn't the
+// same number as "+4" logged as dollars, so this is captured per-entry and
+// never reinterpreted later under whatever the global display preference
+// (see utils/trading.ts) happens to be set to when you look at it.
+export interface TradingResult {
+  date: string; // "YYYY-MM-DD"
+  value: number;
+  unit: TradingResultUnit;
 }

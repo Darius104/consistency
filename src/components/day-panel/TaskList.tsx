@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useNow } from "../../hooks/useNow";
 import { useReorderDrag } from "../../hooks/useReorderDrag";
-import type { DayNote, Tag, Task, Template, TemplateTaskBlueprint } from "../../types";
+import type { DayNote, Tag, Task } from "../../types";
 import { addDays, todayKey } from "../../utils/dates";
 import { occurrenceDateTime } from "../../utils/recurrence";
 import { EmptyState } from "../ui/EmptyState";
@@ -51,10 +51,6 @@ interface TaskListProps {
   onDelete: (task: Task) => void;
   onReorderTasks: (taskIds: string[]) => void;
   onReorderTags: (tagIds: string[]) => void;
-  onSaveAsTemplate: (tag: Tag, tasks: TemplateTaskBlueprint[]) => void;
-  onRemoveTemplate: (templateId: string) => void;
-  templates: Template[];
-  templateTaskBlueprints: Record<string, TemplateTaskBlueprint[]>;
   notes: DayNote[];
   onEditNote: (note: DayNote) => void;
   onDeleteNote: (id: string) => void;
@@ -69,32 +65,6 @@ function sortOccurrences(occurrences: Occurrence[]): Occurrence[] {
   );
 }
 
-/** Whether today's actual tasks for a tag are exactly the template's
- *  saved starter tasks - order-independent, but every task must have a
- *  one-to-one match (same title/notes/time/priority) with no leftovers on
- *  either side. Used to tell "a template exists" apart from "today still
- *  matches it", since adding or removing a task after saving is exactly
- *  the case that should un-light the bookmark (see TaskGroup's hasTemplate). */
-function occurrencesMatchTemplate(
-  occurrences: Occurrence[],
-  blueprint: TemplateTaskBlueprint[],
-): boolean {
-  if (occurrences.length !== blueprint.length) return false;
-  const remaining = [...blueprint];
-  for (const { task } of occurrences) {
-    const idx = remaining.findIndex(
-      (b) =>
-        b.title === task.title &&
-        b.notes === task.notes &&
-        b.time === task.time &&
-        b.priority === task.priority,
-    );
-    if (idx === -1) return false;
-    remaining.splice(idx, 1);
-  }
-  return true;
-}
-
 export function TaskList({
   selectedDate,
   occurrences,
@@ -104,10 +74,6 @@ export function TaskList({
   onDelete,
   onReorderTasks,
   onReorderTags,
-  onSaveAsTemplate,
-  onRemoveTemplate,
-  templates,
-  templateTaskBlueprints,
   notes,
   onEditNote,
   onDeleteNote,
@@ -357,47 +323,6 @@ export function TaskList({
                     : undefined
                 }
                 suppressClick={layoutDrag.suppressClick}
-                onSaveAsTemplate={
-                  tag
-                    ? () => {
-                        const existing = templates.find((t) => t.tagId === tag.id);
-                        const matches =
-                          existing &&
-                          occurrencesMatchTemplate(
-                            groupOccurrences,
-                            templateTaskBlueprints[existing.id] ?? [],
-                          );
-                        if (existing && matches) {
-                          onRemoveTemplate(existing.id);
-                        } else {
-                          // Either no template exists yet, or one does but
-                          // today's tasks have drifted from it - either way
-                          // this (over)writes it to match today exactly.
-                          // createTemplateFromTasks upserts by tagId, so an
-                          // existing template is updated in place, not
-                          // duplicated.
-                          onSaveAsTemplate(
-                            tag,
-                            groupOccurrences.map(({ task }) => ({
-                              title: task.title,
-                              notes: task.notes,
-                              time: task.time,
-                              priority: task.priority,
-                            })),
-                          );
-                        }
-                      }
-                    : undefined
-                }
-                hasTemplate={(() => {
-                  if (!tag) return false;
-                  const existing = templates.find((t) => t.tagId === tag.id);
-                  if (!existing) return false;
-                  return occurrencesMatchTemplate(
-                    groupOccurrences,
-                    templateTaskBlueprints[existing.id] ?? [],
-                  );
-                })()}
                 urgentMsLeft={
                   showUrgency && groupOccurrences.some((o) => !o.completed) ? msUntilMidnight : null
                 }

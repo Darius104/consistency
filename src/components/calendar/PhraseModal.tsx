@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import { QUOTE_CATEGORY_COLOR_VAR, QUOTE_CATEGORY_LABEL, type Quote } from "../../utils/quotes";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
-import { QuoteIcon } from "../ui/icons";
+import { SparklesIcon } from "../ui/icons";
 import "./PhraseModal.css";
 
 interface PhraseModalProps {
@@ -18,7 +18,7 @@ export function PhraseModal({ quote, onClose }: PhraseModalProps) {
       <div className="phrase-modal" style={{ "--phrase-color": `var(${colorVar})` } as CSSProperties}>
         <div className="phrase-modal__hero">
           <div className="phrase-modal__icon">
-            <QuoteIcon size={13} />
+            <SparklesIcon size={13} />
           </div>
           <span className="phrase-modal__eyebrow">{QUOTE_CATEGORY_LABEL[quote.category]}</span>
         </div>

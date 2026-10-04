@@ -5,7 +5,7 @@ import type { Friend } from "../../db/friends";
 import type { MembershipState } from "../../hooks/useMembership";
 import type { ReminderStatus } from "../../hooks/useTaskReminders";
 import type { FriendStreakEntry } from "../../hooks/useFriendStreaks";
-import type { Tag, Task, Template, TemplateTaskBlueprint, ThemeId } from "../../types";
+import type { Tag, Task, ThemeId } from "../../types";
 import type { AvatarId } from "../../utils/avatars";
 import type { RandomThemeColors } from "../../utils/randomTheme";
 import { FREE_WIDGET_LIMIT, WIDGET_IDS, WIDGET_LABELS, type WidgetId } from "../../utils/panelOrder";
@@ -17,7 +17,6 @@ import {
   type TodayStatus,
   type WeeklyCompletion as WeeklyCompletionData,
 } from "../../utils/stats";
-import { THEMES } from "../../utils/themes";
 import { TemplateBreakdown } from "../stats/TemplateBreakdown";
 import { FreezeSummary } from "../stats/FreezeSummary";
 import { FriendStreakCompare } from "../stats/FriendStreakCompare";
@@ -38,18 +37,16 @@ import {
   HeartIcon,
   HelpIcon,
   ProfileIcon,
-  ShuffleIcon,
-  TagIcon,
+  EditIcon,
   UserIcon,
   UsersIcon,
 } from "../ui/icons";
 import { AdminPreviewSection } from "./AdminPreviewSection";
 import { AppUpdateSection } from "./AppUpdateSection";
 import { BackupSection } from "./BackupSection";
-import { CustomThemeCreator } from "./CustomThemeCreator";
+import { AppearancePicker } from "./AppearancePicker";
 import { DeleteAccountModal } from "./DeleteAccountModal";
 import { DonateSection } from "./DonateSection";
-import { TemplateManager } from "./TemplateManager";
 import { FriendsManager } from "./FriendsManager";
 import { MembershipSection } from "./MembershipSection";
 import { ProfileSection } from "./ProfileSection";
@@ -58,14 +55,18 @@ import { SettingsCardHeader } from "./SettingsCardHeader";
 import { SettingsNav, type SettingsSection } from "./SettingsNav";
 import { StreakFreezeManager } from "./StreakFreezeManager";
 import { SupportSection } from "./SupportSection";
-import { ThemeCarousel } from "./ThemeCarousel";
 import "./SettingsModal.css";
 
 interface SettingsModalProps {
+  /** Which section to land on when this opens - defaults to the first
+   *  section (Profile) if omitted. Lets a shortcut elsewhere in the app
+   *  (e.g. the calendar header's "+ Friends" button) jump straight to a
+   *  specific section instead of always opening to the top. */
+  initialSectionId?: string;
   theme: ThemeId;
   onChangeTheme: (theme: ThemeId) => void;
   customThemeColors: RandomThemeColors | null;
-  onSetCustomTheme: (hexColor: string) => void;
+  onSetCustomTheme: (hue: number) => void;
   remindersEnabled: boolean;
   onChangeRemindersEnabled: (enabled: boolean) => void;
   reminderStatus: ReminderStatus;
@@ -73,13 +74,6 @@ interface SettingsModalProps {
   tasks: Task[];
   completions: Set<string>;
   tags: Tag[];
-  onCreateTag: (name: string, color: string) => Promise<Tag>;
-  onUpdateTag: (id: string, name: string, color: string) => void;
-  onDeleteTag: (id: string) => void;
-  onReorderTags: (tagIds: string[]) => void;
-  templates: Template[];
-  onSaveAsTemplate: (tag: Tag, tasks: TemplateTaskBlueprint[]) => void;
-  onDeleteTemplate: (id: string) => void;
   frozenDays: string[];
   freezeCandidates: FreezeCandidate[];
   freezesRemaining: number;
@@ -116,7 +110,6 @@ const PRIVACY_URL = "https://darius104.github.io/consistency/privacy.html";
 const BASE_SECTIONS: SettingsSection[] = [
   { id: "profile", label: "Profile", icon: ProfileIcon },
   { id: "widgets", label: "Widgets", icon: GridIcon },
-  { id: "templates", label: "Templates", icon: TagIcon },
   { id: "freezes", label: "Streak Freezes", icon: FrostIcon },
   { id: "reminders", label: "Reminders", icon: BellIcon },
   { id: "friends", label: "Friends", icon: UsersIcon },
@@ -133,6 +126,7 @@ const ADMIN_SECTION: SettingsSection = {
 };
 
 export function SettingsModal({
+  initialSectionId,
   theme,
   onChangeTheme,
   customThemeColors,
@@ -144,13 +138,6 @@ export function SettingsModal({
   tasks,
   completions,
   tags,
-  onCreateTag,
-  onUpdateTag,
-  onDeleteTag,
-  onReorderTags,
-  templates,
-  onSaveAsTemplate,
-  onDeleteTemplate,
   frozenDays,
   freezeCandidates,
   freezesRemaining,
@@ -184,7 +171,7 @@ export function SettingsModal({
     ...BASE_SECTIONS.map((s) => (s.id === "support" ? { ...s, badge: supportBadgeCount } : s)),
     ...(membership.actualTier === "admin" ? [ADMIN_SECTION] : []),
   ];
-  const [activeId, setActiveId] = useState(SECTIONS[0].id);
+  const [activeId, setActiveId] = useState(initialSectionId ?? SECTIONS[0].id);
   // Only meaningful on phone-sized modal widths, where the nav list and the
   // section detail can't both fit - mirrors the same list/detail pattern
   // used for the calendar vs. day panel on mobile.
@@ -246,16 +233,16 @@ export function SettingsModal({
               <>
                 <Card>
                   <SettingsCardHeader
-                    icon={<ShuffleIcon size={16} />}
+                    icon={<EditIcon size={16} />}
                     label="Appearance"
                     hint="Pick a theme, or build your own from any color."
                     color="#2dd4bf"
                   />
-                  <ThemeCarousel themes={THEMES} selected={theme} onSelect={onChangeTheme} />
-                  <CustomThemeCreator
-                    active={theme === "custom"}
-                    colors={customThemeColors}
-                    onApply={onSetCustomTheme}
+                  <AppearancePicker
+                    activeTheme={theme}
+                    customColors={customThemeColors}
+                    onChangeTheme={onChangeTheme}
+                    onSetCustomTheme={onSetCustomTheme}
                   />
                 </Card>
                 <ProfileSection />
@@ -305,19 +292,6 @@ export function SettingsModal({
                   })}
                 </div>
               </Card>
-            )}
-
-            {activeId === "templates" && (
-              <TemplateManager
-                tags={tags}
-                templates={templates}
-                onCreateTag={onCreateTag}
-                onUpdateTag={onUpdateTag}
-                onDeleteTag={onDeleteTag}
-                onReorderTags={onReorderTags}
-                onSaveTemplate={onSaveAsTemplate}
-                onDeleteTemplate={onDeleteTemplate}
-              />
             )}
 
             {activeId === "freezes" && (

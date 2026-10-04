@@ -50,6 +50,12 @@ export interface NoteRow {
   after_group_key: string | null;
 }
 
+export interface TradingResultRow {
+  date: string;
+  value: number;
+  unit: string;
+}
+
 export type PendingOpKind = "insert" | "update" | "delete" | "upsert";
 
 export interface PendingOp {
@@ -253,6 +259,27 @@ export async function cacheAddStreakFreeze(date: string): Promise<void> {
 export async function cacheRemoveStreakFreeze(date: string): Promise<void> {
   const db = await getDb();
   await db.execute("DELETE FROM streak_freezes WHERE date = $1", [date]);
+}
+
+// ---------- Trading results ----------
+
+export async function cacheGetTradingResults(): Promise<TradingResultRow[]> {
+  const db = await getDb();
+  return db.select<TradingResultRow[]>("SELECT date, value, unit FROM trading_results");
+}
+
+export async function cacheUpsertTradingResult(row: TradingResultRow): Promise<void> {
+  const db = await getDb();
+  await db.execute(
+    `INSERT INTO trading_results (date, value, unit) VALUES ($1,$2,$3)
+     ON CONFLICT(date) DO UPDATE SET value=excluded.value, unit=excluded.unit`,
+    [row.date, row.value, row.unit],
+  );
+}
+
+export async function cacheDeleteTradingResult(date: string): Promise<void> {
+  const db = await getDb();
+  await db.execute("DELETE FROM trading_results WHERE date = $1", [date]);
 }
 
 // ---------- Settings ----------
