@@ -111,6 +111,8 @@ interface DayPanelProps {
    *  always starts from its own stored unit instead. */
   tradingResultUnit: TradingResultUnit;
   onSetTradingResult: (value: number | null, unit: TradingResultUnit) => void;
+  /** See AddMenu's openRequest - the phone tab bar's "+" button. */
+  addMenuOpenRequest?: number;
 }
 
 export function DayPanel({
@@ -155,6 +157,7 @@ export function DayPanel({
   tradingResult,
   tradingResultUnit,
   onSetTradingResult,
+  addMenuOpenRequest,
 }: DayPanelProps) {
   const [tradingModalOpen, setTradingModalOpen] = useState(false);
   const [draggedId, setDraggedId] = useState<PanelBlockId | null>(null);
@@ -458,6 +461,7 @@ export function DayPanel({
             onApplyTemplate={onApplyTemplate}
             onAddNote={onAddNote}
             disabled={isPastDay}
+            openRequest={addMenuOpenRequest}
           />
         </div>
       </div>

@@ -63,6 +63,7 @@ export interface FriendCalendarData {
    *  these settings has the same null-from-the-database shape you would. */
   panelOrder: PanelBlockId[];
   hiddenWidgets: WidgetId[];
+  lastSeenAt: string | null;
 }
 
 async function currentUserId(): Promise<string> {
@@ -385,7 +386,7 @@ export async function fetchFriendCalendarData(friendUserId: string): Promise<Fri
     supabase.rpc("get_friend_calendar_data", { p_friend_id: friendUserId }),
     supabase
       .from("profiles")
-      .select("display_name, theme, random_theme_colors, bio, avatar_id")
+      .select("display_name, theme, random_theme_colors, bio, avatar_id, last_seen_at")
       .eq("user_id", friendUserId)
       .single(),
   ]);
@@ -398,6 +399,7 @@ export async function fetchFriendCalendarData(friendUserId: string): Promise<Fri
     random_theme_colors: RandomThemeColors | null;
     bio: string | null;
     avatar_id: string | null;
+    last_seen_at: string | null;
   };
 
   const raw = data as {
@@ -433,6 +435,7 @@ export async function fetchFriendCalendarData(friendUserId: string): Promise<Fri
     avatarId: parseAvatarId(profile.avatar_id),
     panelOrder: parsePanelOrder(raw.panel_order),
     hiddenWidgets: parseHiddenWidgets(raw.hidden_widgets),
+    lastSeenAt: profile.last_seen_at,
   };
 }
 

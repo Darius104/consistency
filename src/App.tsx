@@ -14,6 +14,7 @@ import { useOnlineStatus } from "./hooks/useOnlineStatus";
 import { useRealtimeSync } from "./hooks/useRealtimeSync";
 import { usePresence } from "./hooks/usePresence";
 import { FreezeSuggestionModal } from "./components/FreezeSuggestionModal";
+import { MobileTabBar, type MobileTab } from "./components/MobileTabBar";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { PremiumPaywallModal } from "./components/PremiumPaywallModal";
 import { TaskDeletedToast } from "./components/TaskDeletedToast";
@@ -153,9 +154,11 @@ export default function App() {
   );
   const [selectedDate, setSelectedDate] = useState(todayKey());
   // Only meaningful on phone-sized screens (see the max-width:700px query in
-  // CalendarView.css/App.css) - lets the day panel take over the whole
-  // screen instead of always sharing it with the compact calendar above.
-  const [dayPanelExpanded, setDayPanelExpanded] = useState(false);
+  // CalendarView.css/App.css) - which of the bottom tab bar's two real
+  // views fills the screen: the month grid, or the selected day's panel.
+  const [mobileTab, setMobileTab] = useState<MobileTab>("calendar");
+  // See AddMenu's openRequest - bumped by the tab bar's "+" button.
+  const [addMenuOpenRequest, setAddMenuOpenRequest] = useState(0);
   const [theme, setTheme] = useState<ThemeId>(DEFAULT_THEME);
   // Guards handleChangeTheme/handleSetCustomTheme against rapid repeated
   // calls (switching themes quickly) completing out of order - each
@@ -779,7 +782,13 @@ export default function App() {
   }
 
   if (viewingFriend) {
-    return <FriendCalendarView friend={viewingFriend} onBack={() => setViewingFriend(null)} />;
+    return (
+      <FriendCalendarView
+        friend={viewingFriend}
+        isOnline={onlineFriendIds.has(viewingFriend.userId)}
+        onBack={() => setViewingFriend(null)}
+      />
+    );
   }
 
   const occurrences = tasksScheduledOn(tasks, selectedDate).map((task) => ({
@@ -824,7 +833,7 @@ export default function App() {
   );
 
   return (
-    <div className={`app ${dayPanelExpanded ? "app--day-expanded" : ""}`}>
+    <div className={`app ${mobileTab === "today" ? "app--day-expanded" : "app--calendar-tab"}`}>
       <OfflineBanner online={online} syncing={syncing} />
       <WriteErrorToast />
       {deletedTaskUndo && (
@@ -855,8 +864,13 @@ export default function App() {
         completions={completions}
         freezes={freezes}
         tradingResults={tradingResults}
+        tags={tags}
         selectedDate={selectedDate}
-        onSelectDate={setSelectedDate}
+        onSelectDate={(date) => {
+          setSelectedDate(date);
+          // On a phone the grid fills the screen, so picking a day opens it.
+          if (!isDesktopWidth()) setMobileTab("today");
+        }}
         tier={membership.effectiveTier ?? undefined}
         onOpenSettings={() => {
           setSettingsSection("profile");
@@ -875,11 +889,6 @@ export default function App() {
         }}
         settingsBadgeCount={supportBadgeCount}
       />
-      {/* Mobile-only divider between the calendar and the day panel below it -
-          a separate element, not the day panel's own border, since that edge
-          is where the day panel's scroll-fade mask fades to transparent (see
-          DayPanel.css) and would fade a border drawn there away too. */}
-      <div className="mobile-divider" aria-hidden="true" />
       <DayPanel
         selectedDate={selectedDate}
         occurrences={occurrences}
@@ -917,11 +926,36 @@ export default function App() {
         onEditNote={(note) => setNoteFormState({ open: true, note })}
         onDeleteNote={handleRequestDeleteNote}
         onReorderNotePositions={handleReorderNotePositions}
-        expanded={dayPanelExpanded}
-        onToggleExpanded={() => setDayPanelExpanded((v) => !v)}
+        expanded={mobileTab === "today"}
+        onToggleExpanded={() => setMobileTab((t) => (t === "today" ? "calendar" : "today"))}
         tradingResult={tradingResults[selectedDate] ?? null}
         tradingResultUnit={tradingResultUnit}
         onSetTradingResult={(value, unit) => void handleSetTradingResult(value, unit)}
+        addMenuOpenRequest={addMenuOpenRequest}
+      />
+      <MobileTabBar
+        activeTab={mobileTab}
+        onSelectTab={(tab) => {
+          if (tab === "today") setSelectedDate(todayKey());
+          setMobileTab(tab);
+        }}
+        onAdd={() => {
+          // A past day can't take new tasks (see AddMenu's disabled), so
+          // "+" lands on today instead of opening a menu that can't add.
+          if (selectedDate < todayKey()) setSelectedDate(todayKey());
+          setMobileTab("today");
+          setAddMenuOpenRequest((n) => n + 1);
+        }}
+        onOpenFriends={() => {
+          setSettingsSection("friends");
+          setSettingsOpen(true);
+        }}
+        onOpenProfile={() => {
+          setSettingsSection("profile");
+          setSettingsOpen(true);
+        }}
+        avatarId={friendStreaks.yourAvatarId}
+        profileBadgeCount={supportBadgeCount}
       />
 
       {noteFormState.open && (

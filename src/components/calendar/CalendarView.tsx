@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { Friend, MembershipTier } from "../../db/friends";
-import type { Task, TradingResult } from "../../types";
+import type { Tag, Task, TradingResult } from "../../types";
 import {
   buildMonthGrid,
   isSameMonth,
@@ -13,7 +13,7 @@ import {
 import { dayCompletionRate } from "../../utils/stats";
 import { tasksScheduledOn } from "../../utils/recurrence";
 import { RefreshIcon } from "../ui/icons";
-import { CalendarDay } from "./CalendarDay";
+import { CalendarDay, type DayChip } from "./CalendarDay";
 import { CalendarHeader } from "./CalendarHeader";
 import "./CalendarView.css";
 
@@ -46,6 +46,8 @@ interface CalendarViewProps {
   completions: Set<string>;
   freezes: Set<string>;
   tradingResults: Record<string, TradingResult>;
+  /** Colors the phone-only task chips in each day cell (see CalendarDay). */
+  tags: Tag[];
   selectedDate: string;
   onSelectDate: (dateKey: string) => void;
   /** Omitted while viewing a friend's read-only calendar - see CalendarHeader. */
@@ -67,6 +69,7 @@ export function CalendarView({
   completions,
   freezes,
   tradingResults,
+  tags,
   selectedDate,
   onSelectDate,
   tier,
@@ -170,6 +173,16 @@ export function CalendarView({
   }
 
   const { weeks, monthLabel } = buildMonthGrid(cursor.year, cursor.monthIndex);
+  const tagColorById = new Map(tags.map((t) => [t.id, t.color]));
+
+  function chipsFor(scheduled: Task[], dateKey: string): DayChip[] {
+    return scheduled.map((t) => ({
+      id: t.id,
+      title: t.title,
+      color: (t.tagId && tagColorById.get(t.tagId)) || null,
+      done: completions.has(`${t.id}:${dateKey}`),
+    }));
+  }
 
   function shiftMonth(delta: number) {
     setCursor(({ year, monthIndex }) => {
@@ -230,21 +243,25 @@ export function CalendarView({
           ))}
         </div>
         <div className="cal-view__grid">
-          {weeks.flat().map((dateKey) => (
-            <CalendarDay
-              key={dateKey}
-              dateKey={dateKey}
-              dayNumber={parseDateKey(dateKey).getDate()}
-              isCurrentMonth={isSameMonth(dateKey, cursor.year, cursor.monthIndex)}
-              isToday={dateKey === today}
-              isSelected={dateKey === selectedDate}
-              hasTasks={tasksScheduledOn(tasks, dateKey).length > 0}
-              completionRate={dayCompletionRate(tasks, completions, dateKey)}
-              isFrozen={freezes.has(dateKey)}
-              tradingResult={tradingResults[dateKey] ?? null}
-              onSelect={onSelectDate}
-            />
-          ))}
+          {weeks.flat().map((dateKey) => {
+            const scheduled = tasksScheduledOn(tasks, dateKey);
+            return (
+              <CalendarDay
+                key={dateKey}
+                dateKey={dateKey}
+                dayNumber={parseDateKey(dateKey).getDate()}
+                isCurrentMonth={isSameMonth(dateKey, cursor.year, cursor.monthIndex)}
+                isToday={dateKey === today}
+                isSelected={dateKey === selectedDate}
+                hasTasks={scheduled.length > 0}
+                completionRate={dayCompletionRate(tasks, completions, dateKey)}
+                isFrozen={freezes.has(dateKey)}
+                tradingResult={tradingResults[dateKey] ?? null}
+                chips={chipsFor(scheduled, dateKey)}
+                onSelect={onSelectDate}
+              />
+            );
+          })}
         </div>
       </div>
     </div>

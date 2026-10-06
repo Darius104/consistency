@@ -4,6 +4,16 @@ import { formatTradingResult } from "../../utils/trading";
 import { FrostIcon } from "../ui/icons";
 import "./CalendarDay.css";
 
+export interface DayChip {
+  id: string;
+  title: string;
+  /** The task's tag color - null for an untagged task. */
+  color: string | null;
+  done: boolean;
+}
+
+const MAX_CHIPS = 3;
+
 interface CalendarDayProps {
   dateKey: string;
   dayNumber: number;
@@ -17,6 +27,9 @@ interface CalendarDayProps {
    *  nothing was logged. Always shown in its own stored unit, never
    *  reinterpreted under the current global display preference. */
   tradingResult: TradingResult | null;
+  /** That day's tasks, rendered as chips on phone widths only (see
+   *  CalendarDay.css) - desktop cells stay a plain dot. */
+  chips: DayChip[];
   onSelect: (dateKey: string) => void;
 }
 
@@ -30,6 +43,7 @@ export function CalendarDay({
   completionRate,
   isFrozen,
   tradingResult,
+  chips,
   onSelect,
 }: CalendarDayProps) {
   const isFullyCompleted = completionRate === 1;
@@ -87,6 +101,22 @@ export function CalendarDay({
         </span>
       )}
       {hasTasks && <span className="cal-day__indicator" />}
+      {chips.length > 0 && (
+        <span className="cal-day__chips">
+          {chips.slice(0, MAX_CHIPS).map((chip) => (
+            <span
+              key={chip.id}
+              className={`cal-day__chip ${chip.done ? "cal-day__chip--done" : ""}`}
+              style={chip.color ? ({ "--chip-color": chip.color } as CSSProperties) : undefined}
+            >
+              {chip.title}
+            </span>
+          ))}
+          {chips.length > MAX_CHIPS && (
+            <span className="cal-day__chip-more">+{chips.length - MAX_CHIPS}</span>
+          )}
+        </span>
+      )}
     </button>
   );
 }

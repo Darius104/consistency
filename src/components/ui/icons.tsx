@@ -213,6 +213,34 @@ export function TagIcon({ size = 16, ...props }: IconProps) {
   );
 }
 
+export function CalendarIcon({ size = 16, ...props }: IconProps) {
+  return (
+    <svg {...base(size, props)}>
+      <rect x="3" y="4.5" width="18" height="16.5" rx="2.5" />
+      <path d="M3 9.5h18M8 2.5v4M16 2.5v4" />
+    </svg>
+  );
+}
+
+export function TodayIcon({ size = 16, ...props }: IconProps) {
+  return (
+    <svg {...base(size, props)}>
+      <rect x="4" y="4" width="16" height="17" rx="2.5" />
+      <path d="M9 2.5h6v3H9z" />
+      <path d="m8.5 13 2.5 2.5 4.5-5" />
+    </svg>
+  );
+}
+
+export function PlusSquareIcon({ size = 16, ...props }: IconProps) {
+  return (
+    <svg {...base(size, props)}>
+      <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
+      <path d="M12 8v8M8 12h8" />
+    </svg>
+  );
+}
+
 export function BellIcon({ size = 16, ...props }: IconProps) {
   return (
     <svg {...base(size, props)}>

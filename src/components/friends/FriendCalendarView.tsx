@@ -37,6 +37,7 @@ import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
 import { CheckIcon, ChevronDownIcon, ChevronLeftIcon, ChevronUpIcon, NoteIcon } from "../ui/icons";
 import { Skeleton } from "../ui/Skeleton";
+import { FriendPresenceStatus } from "./FriendPresenceStatus";
 import { FriendTaskRow } from "./FriendTaskRow";
 import { SendNoteModal } from "./SendNoteModal";
 import "./FriendCalendarView.css";
@@ -60,6 +61,8 @@ const REPLICABLE_WIDGET_IDS: PanelBlockId[] = [
 
 interface FriendCalendarViewProps {
   friend: Friend;
+  /** Live, from Realtime Presence (see usePresence) - updates while open. */
+  isOnline: boolean;
   onBack: () => void;
 }
 
@@ -100,7 +103,7 @@ function groupByTag(occurrences: Occurrence[], tags: Tag[]): Group[] {
     });
 }
 
-export function FriendCalendarView({ friend, onBack }: FriendCalendarViewProps) {
+export function FriendCalendarView({ friend, isOnline, onBack }: FriendCalendarViewProps) {
   const [data, setData] = useState<FriendCalendarData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -250,6 +253,7 @@ export function FriendCalendarView({ friend, onBack }: FriendCalendarViewProps) 
             // Never fetched for a friend's calendar - a trading result is
             // personal financial data, not something a friend should see.
             tradingResults={{}}
+            tags={data.tags}
             selectedDate={selectedDate}
             onSelectDate={setSelectedDate}
           />
@@ -257,6 +261,7 @@ export function FriendCalendarView({ friend, onBack }: FriendCalendarViewProps) 
           <div className="friend-view__day">
             <FriendDayContent
               data={data}
+              isOnline={isOnline}
               selectedDate={selectedDate}
               collapsed={collapsed}
               onToggleGroup={toggleGroup}
@@ -282,6 +287,7 @@ export function FriendCalendarView({ friend, onBack }: FriendCalendarViewProps) 
 
 function FriendDayContent({
   data,
+  isOnline,
   selectedDate,
   collapsed,
   onToggleGroup,
@@ -291,6 +297,7 @@ function FriendDayContent({
   friendStreaksLoading,
 }: {
   data: FriendCalendarData;
+  isOnline: boolean;
   selectedDate: string;
   collapsed: Set<string>;
   onToggleGroup: (key: string) => void;
@@ -400,10 +407,17 @@ function FriendDayContent({
           {expanded ? <ChevronDownIcon size={16} /> : <ChevronUpIcon size={16} />}
         </button>
       </div>
-      <div className="friend-view__profile">
-        <AvatarBadge avatarId={data.avatarId} size={48} />
+      <div className={`friend-view__profile ${data.bio ? "friend-view__profile--with-bio" : ""}`}>
+        <span className="friend-view__avatar-wrap">
+          <AvatarBadge avatarId={data.avatarId} size={48} />
+          <span
+            className={`friend-view__status-dot ${isOnline ? "friend-view__status-dot--online" : ""}`}
+            aria-hidden="true"
+          />
+        </span>
         <div className="friend-view__profile-text">
           <span className="friend-view__profile-name">{data.displayName}</span>
+          <FriendPresenceStatus isOnline={isOnline} lastSeenAt={data.lastSeenAt} />
           {data.bio && <span className="friend-view__profile-bio">{data.bio}</span>}
         </div>
       </div>

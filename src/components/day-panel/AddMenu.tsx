@@ -23,6 +23,10 @@ interface AddMenuProps {
    *  passed would create an incomplete task nothing can ever mark done,
    *  the same streak-integrity gap as editing one that's already there. */
   disabled?: boolean;
+  /** Bumped by the phone tab bar's "+" button to open this menu from
+   *  outside - a counter rather than a boolean so the same request can be
+   *  made again after the menu's been closed. */
+  openRequest?: number;
 }
 
 type Step = "main" | "templates" | "review";
@@ -41,8 +45,13 @@ export function AddMenu({
   onApplyTemplate,
   onAddNote,
   disabled = false,
+  openRequest = 0,
 }: AddMenuProps) {
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (openRequest > 0 && !disabled) setOpen(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openRequest]);
   const [step, setStep] = useState<Step>("main");
   const [reviewingTemplate, setReviewingTemplate] = useState<Template | null>(null);
   const [reviewTasks, setReviewTasks] = useState<TemplateTaskBlueprint[]>([]);

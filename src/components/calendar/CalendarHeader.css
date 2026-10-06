@@ -177,3 +177,10 @@
   border-top: 1px solid var(--border);
   rotate: 45deg;
 }
+
+/* The phone tab bar's Profile tab replaces this (see MobileTabBar). */
+@media (max-width: 700px) {
+  .cal-header .cal-header__settings {
+    display: none;
+  }
+}

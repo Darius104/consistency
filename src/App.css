@@ -6,32 +6,25 @@
   animation: app-fade-in 240ms var(--ease-out);
 }
 
-.mobile-divider {
-  display: none;
-}
-
 /* Phone-sized screens: the calendar and day panel can't fit side by side,
-   so they stack into a fixed-height calendar up top (see CalendarView.css)
-   with the streak/tasks panel below it, updating in place as you tap a
-   date. The calendar itself never scrolls out of view - only the panel
-   below it scrolls (see DayPanel.css), so .app itself doesn't scroll at
-   all. Desktop/tablet layouts are untouched. */
+   so the bottom tab bar switches between them, each filling the screen
+   (.app itself never scrolls - the day panel scrolls on its own, see
+   DayPanel.css). Desktop/tablet layouts are untouched. */
 @media (max-width: 700px) {
   .app {
     flex-direction: column;
     overflow: hidden;
   }
 
-  .mobile-divider {
-    display: block;
-    flex: none;
-    height: 1px;
-    background: var(--border);
+  /* Bottom tab bar (see MobileTabBar): the Calendar tab gives the month
+     grid the whole screen, the Today tab gives it to the day panel (the
+     calendar collapses via .app--day-expanded, see CalendarView.css). */
+  .app--calendar-tab > .day-panel {
+    display: none;
   }
 
-  /* Calendar's collapsed away entirely (see CalendarView.css) - nothing
-     left for this line to divide from. */
-  .app--day-expanded .mobile-divider {
+  /* The tab bar replaces the day panel's own collapse/expand handle. */
+  .app > .day-panel .day-panel__expand-toggle-wrap {
     display: none;
   }
 }

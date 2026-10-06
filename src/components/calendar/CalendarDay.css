@@ -170,3 +170,78 @@
   border-radius: 50%;
   background: var(--accent);
 }
+
+/* Task chips (Howbout-style) - phone widths only. On desktop the cells are
+   smaller relative to their text and a plain dot reads better (tried and
+   rejected there), so chips stay hidden above 700px. */
+.cal-day__chips {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .cal-day {
+    padding: 4px 2px;
+    align-items: stretch;
+    gap: 3px;
+  }
+
+  .cal-day__number {
+    align-self: center;
+    font-size: var(--text-xs);
+  }
+
+  .cal-day__indicator {
+    display: none;
+  }
+
+  .cal-day__badges {
+    top: 2px;
+    right: 2px;
+  }
+
+  .cal-day__chips {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .cal-day__chip {
+    --chip-color: var(--text-muted);
+    display: block;
+    min-width: 0;
+    padding: 1px 3px;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--chip-color) 34%, var(--surface));
+    color: var(--text);
+    font-size: 9px;
+    font-weight: 600;
+    line-height: 1.35;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .cal-day__chip--done {
+    opacity: 0.45;
+    text-decoration: line-through;
+  }
+
+  .cal-day__chip-more {
+    padding: 0 3px;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-align: left;
+  }
+
+  /* Centered over the cell it would sit on top of the chips - anchored to
+     the bottom edge instead, below them. */
+  .cal-day__result-center {
+    top: auto;
+    bottom: 3px;
+    translate: -50% 0;
+    font-size: 11px;
+  }
+}

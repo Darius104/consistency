@@ -109,6 +109,7 @@
     flex: none;
     height: 58dvh;
     min-height: 380px;
+    padding: var(--space-3) var(--space-2);
     transition: height 260ms var(--ease-out), min-height 260ms var(--ease-out),
       padding 260ms var(--ease-out);
   }
@@ -123,5 +124,29 @@
     min-height: 0;
     padding: 0;
     overflow: hidden;
+  }
+}
+
+/* Phone Calendar tab (see MobileTabBar / App.tsx's mobileTab) - the month
+   grid gets the whole screen instead of sharing it with the day panel,
+   with tighter gaps so the task chips get as much width as possible. */
+@media (max-width: 700px) {
+  .app--calendar-tab .cal-view {
+    flex: 1;
+    height: auto;
+    min-height: 0;
+  }
+
+  .cal-view__grid,
+  .cal-view__weekdays {
+    gap: 2px;
+  }
+
+  /* Matches .cal-view's tighter phone padding above, same as the desktop
+     rule matches the desktop padding. */
+  .cal-view__pull-indicator {
+    top: var(--space-3);
+    left: var(--space-2);
+    right: var(--space-2);
   }
 }

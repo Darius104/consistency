@@ -101,7 +101,7 @@ export function CalendarHeader({
             </Button>
           </div>
           {onOpenSettings && (
-            <Button className="btn--icon" onClick={onOpenSettings} aria-label="Settings">
+            <Button className="btn--icon cal-header__settings" onClick={onOpenSettings} aria-label="Settings">
               <SettingsIcon size={15} />
               {!!settingsBadgeCount && (
                 <span className="cal-header__count-badge">

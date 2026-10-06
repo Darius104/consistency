@@ -101,6 +101,38 @@
   gap: var(--space-3);
 }
 
+/* A multi-line bio makes the text block much taller than the avatar -
+   centered, the avatar would drift down level with the bio instead of
+   staying beside the name. */
+.friend-view__profile--with-bio {
+  align-items: flex-start;
+}
+
+/* Same avatar status dot as the Friends settings card (see
+   .friends-manager__status-dot), ringed in this panel's own background so
+   it reads as cut into the avatar's corner. */
+.friend-view__avatar-wrap {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+}
+
+.friend-view__status-dot {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-muted);
+  border: 2px solid var(--bg-elevated);
+}
+
+.friend-view__status-dot--online {
+  background: var(--success);
+  box-shadow: 0 0 4px rgba(70, 201, 143, 0.6);
+}
+
 .friend-view__profile-text {
   display: flex;
   flex-direction: column;
