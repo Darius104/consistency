@@ -201,3 +201,25 @@
     display: none;
   }
 }
+
+/* Desktop (mouse): the hover highlight is a soft rounded pill with a
+   little room around the checkbox and text, not a square band hugging
+   them. The rows reach a few px into the group card's own padding (see
+   TaskGroup.css) and pad back by the same, so text stays where it was. */
+@media (hover: hover) and (pointer: fine) {
+  .task-item {
+    padding-inline: var(--space-2);
+    border-radius: var(--radius-md);
+  }
+
+  /* Swipe-to-delete is touch only - and its red button would peek out
+     behind the rounded corners. */
+  .task-swipe__delete {
+    display: none;
+  }
+
+  .task-item--dragging {
+    margin-inline: -4px;
+    padding-inline: calc(var(--space-2) + 4px);
+  }
+}

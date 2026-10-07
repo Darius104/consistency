@@ -230,3 +230,19 @@
 .task-group__items > * + * {
   border-top: 1px solid var(--border);
 }
+
+/* See TaskItem.css: room for the rounded hover highlight. */
+@media (hover: hover) and (pointer: fine) {
+  .task-group__items {
+    margin-inline: calc(-1 * var(--space-2));
+  }
+
+  /* Dividers stay inset to the text, not the wider highlight area. */
+  .task-group__items > * + * {
+    border-top-color: transparent;
+    background-image: linear-gradient(var(--border), var(--border));
+    background-size: calc(100% - 2 * var(--space-2)) 1px;
+    background-position: center top;
+    background-repeat: no-repeat;
+  }
+}
