@@ -509,15 +509,8 @@
     display: none;
   }
 
-  /* "34 day streak" on one baseline next to the flame. */
-  .streak-hero__text {
-    flex-direction: row;
-    align-items: baseline;
-    gap: var(--space-2);
-  }
-
+  /* Number with "day streak" stacked under it, to the right of the flame. */
   .streak-hero__unit {
-    margin-top: 0;
     font-size: var(--text-sm);
   }
 
