@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+  // A "Forgot password?" email link that lands here (Supabase falls back to
+  // this Site URL when the reset page's address isn't on its allow list)
+  // still finishes on the reset page, carrying the link's one-time token.
+  if (/type=recovery|error_description/.test(location.hash)) {
+    location.replace("reset-password.html" + location.hash);
+  }
+</script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Consistency — Download</title>
