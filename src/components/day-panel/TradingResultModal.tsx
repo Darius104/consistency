@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { TradingResultUnit } from "../../types";
-import { addDays, parseDateKey, todayKey } from "../../utils/dates";
+import { formatDayName } from "../../utils/dates";
 import {
   TRADING_RESULT_UNIT_OPTIONS,
   parseTradingResultInput,
@@ -37,16 +37,6 @@ interface TradingResultModalProps {
   onClose: () => void;
 }
 
-function dayName(dateKey: string): string {
-  const today = todayKey();
-  if (dateKey === today) return "Today";
-  if (dateKey === addDays(today, -1)) return "Yesterday";
-  return parseDateKey(dateKey).toLocaleDateString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 export function TradingResultModal({
   value,
@@ -95,7 +85,7 @@ export function TradingResultModal({
   const hasAmount = draft.trim() !== "";
 
   return (
-    <Modal title={`Result · ${dayName(dateKey)}`} onClose={onClose}>
+    <Modal title={`Result · ${formatDayName(dateKey)}`} onClose={onClose}>
       <div className={`trading-result-modal trading-result-modal--${side}`}>
         <div
           className="trading-result-modal__side"

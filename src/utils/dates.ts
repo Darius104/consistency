@@ -80,11 +80,25 @@ export function isSameMonth(key: string, year: number, monthIndex: number): bool
 
 export const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-/** "2h 14m left" / "9m left" - rounds up to the next minute rather than
- *  down, so this never reads "0m left" while time still remains. */
+/** "2h 14m" / "9m" - rounds up to the next minute rather than
+ *  down, so this never reads "0m" while time still remains. */
 export function formatCountdown(ms: number): string {
   const totalMinutes = Math.max(0, Math.ceil(ms / 60_000));
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  return hours > 0 ? `${hours}h ${minutes}m left` : `${minutes}m left`;
+  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+}
+
+/** "Today" / "Tomorrow" / "Yesterday", otherwise a short date like
+ *  "Thu, Oct 9" - for naming which day something applies to. */
+export function formatDayName(dateKey: string): string {
+  const today = todayKey();
+  if (dateKey === today) return "Today";
+  if (dateKey === addDays(today, 1)) return "Tomorrow";
+  if (dateKey === addDays(today, -1)) return "Yesterday";
+  return parseDateKey(dateKey).toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
 }

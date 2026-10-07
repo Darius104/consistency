@@ -4,29 +4,6 @@
   gap: var(--space-5);
 }
 
-/* The one number that actually matters on this page ("how many do I have
-   left") - previously buried in a plain sentence the same size and weight
-   as every other line of text, easy to skim right past. */
-.freeze-manager__remaining {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--border);
-}
-
-.freeze-manager__remaining-count {
-  font-size: 32px;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--frost);
-}
-
-.freeze-manager__remaining-text {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-}
-
 .freeze-manager__confirm {
   display: flex;
   align-items: center;
@@ -47,124 +24,80 @@
   }
 }
 
-.freeze-manager__group {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.freeze-manager__list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  max-height: 320px;
-  overflow-y: auto;
-}
-
-.freeze-manager__row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 6px 10px;
-}
-
-/* An already-frozen day reads as "protected" - the same icy tint as the
-   confirmation banner, so it's visually obvious this day is safe rather
-   than looking like just another plain row. */
-.freeze-manager__row--frozen {
-  background: var(--frost-soft);
-  border-color: rgba(var(--frost-rgb), 0.4);
-}
-
-.freeze-manager__row--candidate {
-  padding: var(--space-3);
-}
-
-.freeze-manager__candidate-info {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.freeze-manager__candidate-header {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-}
-
-.freeze-manager__progress {
-  height: 6px;
-  border-radius: 999px;
-  background: var(--border);
-  overflow: hidden;
-}
-
-.freeze-manager__progress-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: var(--frost);
-}
-
-.freeze-manager__date {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-sm);
-  color: var(--text);
-}
-
 .freeze-manager__rate {
   font-size: var(--text-xs);
   color: var(--text-muted);
 }
 
-/* .btn.freeze-manager__freeze-btn (not just .freeze-manager__freeze-btn)
-   for specificity over .btn--primary's own fixed background - ties the
-   one actionable element on this page to the same frost color as
-   everything else here, instead of the app's unrelated theme accent. */
-.btn.freeze-manager__freeze-btn {
-  flex: none;
-  background: var(--frost);
-  color: #062430;
-}
+/* --- Grouped layout --- */
 
-.btn.freeze-manager__freeze-btn:hover:not(:disabled) {
-  filter: brightness(1.08);
-}
-
-.freeze-manager__unfreeze {
-  display: inline-flex;
+.freeze-manager__hero {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 6px;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  border: none;
+  gap: 4px;
+  padding: var(--space-4) var(--space-3);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--frost) 10%, var(--surface));
+  text-align: center;
+}
+
+.freeze-manager__hero-icon {
+  display: inline-flex;
+  color: var(--frost);
+}
+
+.freeze-manager__hero-count {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.freeze-manager__hero-count span {
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.freeze-manager__hero-text {
+  font-size: var(--text-xs);
   color: var(--text-muted);
-  transition: color 0.12s ease, background-color 0.12s ease,
-    transform 120ms var(--ease-out);
 }
 
-.freeze-manager__unfreeze:hover {
+.freeze-manager .freeze-manager__rate {
+  margin-left: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.freeze-manager__freeze {
+  flex: none;
+  height: 30px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--frost) 18%, transparent);
+  color: var(--frost);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.freeze-manager__freeze:disabled {
+  opacity: 0.4;
+}
+
+.freeze-manager__frost {
+  flex: none;
+  color: var(--frost);
+}
+
+.freeze-manager__remove {
+  flex: none;
+  border: none;
+  background: none;
+  padding: var(--space-1) 0;
   color: var(--danger);
-  background: var(--surface-hover);
-}
-
-.freeze-manager__unfreeze:active {
-  transform: scale(0.88);
-}
-
-.freeze-manager__row {
-  opacity: 1;
-  transition: opacity 140ms var(--ease-out);
-
-  @starting-style {
-    opacity: 0;
-  }
+  font-size: var(--text-sm);
+  font-weight: 500;
 }

@@ -18,6 +18,52 @@ const PRIVACY_URL = "https://darius104.github.io/consistency/privacy.html";
 // the button would just be a broken dead end for anyone who clicks it.
 const GOOGLE_SIGN_IN_ENABLED = false;
 
+// The "Forgot password?" email links here - a small page on the app's own
+// site (docs/reset-password.html) where the new password is set. A web
+// page rather than a link back into the app, so it works the same from any
+// device's mail app (the iPhone app has no custom link scheme registered).
+// Must also be listed in Supabase > Auth > URL Configuration > Redirect URLs.
+const RESET_PASSWORD_URL =
+  "https://darius104.github.io/consistency/reset-password.html";
+
+// "forgot" asks for the email; "reset" then takes the 6-digit code from
+// that email plus the new password, all inside the app (a code can't be
+// used up by a mail app pre-opening links the way a one-time link can).
+type Mode = "signin" | "signup" | "forgot" | "reset";
+
+/** Supabase's own error text is written for developers ("Invalid login
+ *  credentials") - say it the way a person would. */
+function friendlyError(err: unknown): string {
+  const raw = err instanceof Error ? err.message : String(err);
+  const msg = raw.toLowerCase();
+  if (msg.includes("invalid login credentials"))
+    return "Wrong email or password.";
+  if (
+    msg.includes("token has expired") ||
+    msg.includes("otp") ||
+    msg.includes("invalid or has expired")
+  )
+    return "That code is wrong or has expired - check the newest email, or send a new code.";
+  if (msg.includes("should be different from the old password"))
+    return "Pick a password different from your old one.";
+  if (msg.includes("email not confirmed"))
+    return "Confirm your email first - open the link we sent you, then sign in.";
+  if (
+    msg.includes("already registered") ||
+    msg.includes("already been registered")
+  )
+    return "An account with this email already exists - sign in instead.";
+  if (msg.includes("password should be at least"))
+    return "Use at least 6 characters for your password.";
+  if (msg.includes("unable to validate email") || msg.includes("invalid email"))
+    return "That doesn't look like a valid email address.";
+  if (msg.includes("rate limit") || msg.includes("too many"))
+    return "Too many attempts - wait a minute and try again.";
+  if (msg.includes("failed to fetch") || msg.includes("network"))
+    return "Couldn't connect - check your internet and try again.";
+  return raw || "Something went wrong - try again.";
+}
+
 function GoogleIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 18 18" aria-hidden="true">
@@ -42,7 +88,11 @@ function GoogleIcon() {
 }
 
 export function AuthScreen() {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<Mode>("signin");
+  const [resetCode, setResetCode] = useState("");
+  // A success message in place of the form's error line - "check your email"
+  // after signing up (when confirmation is on) or asking for a reset link.
+  const [notice, setNotice] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -72,7 +122,9 @@ export function AuthScreen() {
           if (error) throw error;
         } catch (err) {
           if (!cancelled) {
-            setError(err instanceof Error ? err.message : "Google sign-in failed.");
+            setError(
+              err instanceof Error ? err.message : "Google sign-in failed.",
+            );
           }
         } finally {
           if (!cancelled) setGoogleBusy(false);
@@ -102,16 +154,19 @@ export function AuthScreen() {
       const url = await startGoogleSignIn();
       await openUrl(url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't start Google sign-in.");
+      setError(
+        err instanceof Error ? err.message : "Couldn't start Google sign-in.",
+      );
     } finally {
       setGoogleBusy(false);
     }
   }
 
-  function switchMode(next: "signin" | "signup") {
+  function switchMode(next: Mode) {
     if (next === mode) return;
     setMode(next);
     setError(null);
+    setNotice(null);
     // Neither of these should carry over between modes - confirmPassword has
     // nothing to confirm outside signup, and re-showing "agreed" on a signup
     // attempt you didn't actually just make would be misleading.
@@ -119,9 +174,63 @@ export function AuthScreen() {
     setAgreedToTerms(false);
   }
 
+  async function sendResetCode() {
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: RESET_PASSWORD_URL,
+    });
+    if (error) throw error;
+    setPassword("");
+    setConfirmPassword("");
+    setResetCode("");
+    setMode("reset");
+    setNotice(
+      `We emailed you at ${email.trim()}. Enter the code from it below with your new password - or, if the email only has a link, tap that instead.`,
+    );
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+    setNotice(null);
+
+    if (mode === "forgot") {
+      setBusy(true);
+      try {
+        await sendResetCode();
+      } catch (err) {
+        setError(friendlyError(err));
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
+    if (mode === "reset") {
+      if (password !== confirmPassword) {
+        setError("Passwords don't match.");
+        return;
+      }
+      setBusy(true);
+      try {
+        // The code signs you in (a one-time recovery session); the new
+        // password is then set on that session - and you stay signed in.
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          email: email.trim(),
+          token: resetCode.trim(),
+          type: "recovery",
+        });
+        if (verifyError) throw verifyError;
+        const { error: updateError } = await supabase.auth.updateUser({
+          password,
+        });
+        if (updateError) throw updateError;
+      } catch (err) {
+        setError(friendlyError(err));
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
 
     if (mode === "signup") {
       if (password !== confirmPassword) {
@@ -129,7 +238,9 @@ export function AuthScreen() {
         return;
       }
       if (!agreedToTerms) {
-        setError("You need to agree to the Terms and Conditions to create an account.");
+        setError(
+          "You need to agree to the Terms and Conditions to create an account.",
+        );
         return;
       }
     }
@@ -137,15 +248,27 @@ export function AuthScreen() {
     setBusy(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({ email, password });
+        const { data, error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
-        await recordTermsAcceptance();
+        if (data.session) {
+          await recordTermsAcceptance();
+        } else {
+          // Email confirmation is on - no session until they tap the link,
+          // so without this it looked like nothing happened.
+          setNotice(
+            `We sent a confirmation link to ${email}. Tap it, then sign in here.`,
+          );
+          setMode("signin");
+        }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
         if (error) throw error;
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong.");
+      setError(friendlyError(err));
     } finally {
       setBusy(false);
     }
@@ -154,36 +277,52 @@ export function AuthScreen() {
   return (
     <div className="auth-screen">
       <div className="auth-screen__glow" aria-hidden="true" />
-      <form className={`auth-screen__form auth-screen__form--${mode}`} onSubmit={handleSubmit}>
+      <form
+        className={`auth-screen__form auth-screen__form--${mode}`}
+        onSubmit={handleSubmit}
+      >
         <img className="auth-screen__icon" src="/app-icon.png" alt="" />
         <h1 className="auth-screen__title">Consistency</h1>
+        <p className="auth-screen__tagline">Small habits, every day.</p>
 
-        <div className="auth-screen__tabs" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === "signin"}
-            className={`auth-screen__tab ${mode === "signin" ? "auth-screen__tab--active" : ""}`}
-            onClick={() => switchMode("signin")}
-          >
-            Sign in
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === "signup"}
-            className={`auth-screen__tab ${mode === "signup" ? "auth-screen__tab--active" : ""}`}
-            onClick={() => switchMode("signup")}
-          >
-            Create account
-          </button>
-        </div>
+        {mode === "forgot" || mode === "reset" ? (
+          <p className="auth-screen__subtitle">
+            {mode === "forgot"
+              ? "Enter your email and we'll send you a code to set a new password."
+              : "Reset your password"}
+          </p>
+        ) : (
+          <>
+            <div className="auth-screen__tabs" role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === "signin"}
+                className={`auth-screen__tab ${mode === "signin" ? "auth-screen__tab--active" : ""}`}
+                onClick={() => switchMode("signin")}
+              >
+                Sign in
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === "signup"}
+                className={`auth-screen__tab ${mode === "signup" ? "auth-screen__tab--active" : ""}`}
+                onClick={() => switchMode("signup")}
+              >
+                Create account
+              </button>
+            </div>
 
-        <p className="auth-screen__subtitle">
-          {mode === "signup" ? "Set up your account to get started" : "Welcome back"}
-        </p>
+            <p className="auth-screen__subtitle">
+              {mode === "signup"
+                ? "Set up your account to get started"
+                : "Welcome back"}
+            </p>
+          </>
+        )}
 
-        {GOOGLE_SIGN_IN_ENABLED && (
+        {GOOGLE_SIGN_IN_ENABLED && mode !== "forgot" && mode !== "reset" && (
           <>
             <button
               type="button"
@@ -201,46 +340,93 @@ export function AuthScreen() {
           </>
         )}
 
-        <label className="auth-screen__field">
-          <span className="auth-screen__label">Email</span>
-          <input
-            className="auth-screen__input"
-            type="email"
-            name="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-            spellCheck={false}
-            required
-          />
-        </label>
-        <label className="auth-screen__field">
-          <span className="auth-screen__label">Password</span>
-          <div className="auth-screen__password-wrap">
+        {mode === "reset" && (
+          <label className="auth-screen__field">
+            <span className="auth-screen__label">Code from the email</span>
+            <input
+              className="auth-screen__input auth-screen__code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              name="code"
+              value={resetCode}
+              onChange={(e) =>
+                setResetCode(e.target.value.replace(/\D/g, "").slice(0, 10))
+              }
+              placeholder="123456"
+              required
+              autoFocus
+            />
+          </label>
+        )}
+
+        {mode !== "reset" && (
+          <label className="auth-screen__field">
+            <span className="auth-screen__label">Email</span>
             <input
               className="auth-screen__input"
-              type={showPassword ? "text" : "password"}
-              name="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete={mode === "signup" ? "new-password" : "current-password"}
-              minLength={6}
+              type="email"
+              name="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              spellCheck={false}
               required
             />
-            <button
-              type="button"
-              className="auth-screen__password-toggle"
-              aria-label={showPassword ? "Hide password" : "Show password"}
-              onClick={() => setShowPassword((v) => !v)}
-            >
-              {showPassword ? <EyeOffIcon size={15} /> : <EyeIcon size={15} />}
-            </button>
-          </div>
-        </label>
-
-        {mode === "signup" && (
+          </label>
+        )}
+        {mode !== "forgot" && (
           <label className="auth-screen__field">
-            <span className="auth-screen__label">Confirm password</span>
+            <span className="auth-screen__label">
+              {mode === "reset" ? "New password" : "Password"}
+            </span>
+            <div className="auth-screen__password-wrap">
+              <input
+                className="auth-screen__input"
+                type={showPassword ? "text" : "password"}
+                name="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={
+                  mode === "signin" ? "current-password" : "new-password"
+                }
+                minLength={6}
+                required
+              />
+              <button
+                type="button"
+                className="auth-screen__password-toggle"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                onClick={() => setShowPassword((v) => !v)}
+              >
+                {showPassword ? (
+                  <EyeOffIcon size={15} />
+                ) : (
+                  <EyeIcon size={15} />
+                )}
+              </button>
+            </div>
+            {mode !== "signin" && (
+              <span className="auth-screen__hint">At least 6 characters</span>
+            )}
+          </label>
+        )}
+
+        {mode === "signin" && (
+          <button
+            type="button"
+            className="auth-screen__forgot"
+            onClick={() => switchMode("forgot")}
+          >
+            Forgot password?
+          </button>
+        )}
+
+        {(mode === "signup" || mode === "reset") && (
+          <label className="auth-screen__field">
+            <span className="auth-screen__label">
+              {mode === "reset" ? "Confirm new password" : "Confirm password"}
+            </span>
             <div className="auth-screen__password-wrap">
               <input
                 className="auth-screen__input"
@@ -255,10 +441,16 @@ export function AuthScreen() {
               <button
                 type="button"
                 className="auth-screen__password-toggle"
-                aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                aria-label={
+                  showConfirmPassword ? "Hide password" : "Show password"
+                }
                 onClick={() => setShowConfirmPassword((v) => !v)}
               >
-                {showConfirmPassword ? <EyeOffIcon size={15} /> : <EyeIcon size={15} />}
+                {showConfirmPassword ? (
+                  <EyeOffIcon size={15} />
+                ) : (
+                  <EyeIcon size={15} />
+                )}
               </button>
             </div>
           </label>
@@ -297,10 +489,60 @@ export function AuthScreen() {
             {error}
           </div>
         )}
+        {notice && (
+          <div className="auth-screen__notice" role="status" aria-live="polite">
+            {notice}
+          </div>
+        )}
 
-        <Button type="submit" variant="primary" disabled={busy} className="auth-screen__submit">
-          {busy ? "…" : mode === "signup" ? "Create account" : "Sign in"}
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={busy}
+          className="auth-screen__submit"
+        >
+          {busy
+            ? mode === "signup"
+              ? "Creating account…"
+              : mode === "forgot"
+                ? "Sending…"
+                : mode === "reset"
+                  ? "Saving…"
+                  : "Signing in…"
+            : mode === "signup"
+              ? "Create account"
+              : mode === "forgot"
+                ? "Send code"
+                : mode === "reset"
+                  ? "Set new password"
+                  : "Sign in"}
         </Button>
+
+        {mode === "reset" && (
+          <button
+            type="button"
+            className="auth-screen__forgot"
+            disabled={busy}
+            onClick={() => {
+              setError(null);
+              setBusy(true);
+              sendResetCode()
+                .catch((err) => setError(friendlyError(err)))
+                .finally(() => setBusy(false));
+            }}
+          >
+            Didn't get it? Send a new code
+          </button>
+        )}
+        {(mode === "forgot" || mode === "reset") && (
+          <button
+            type="button"
+            className="auth-screen__forgot"
+            onClick={() => switchMode("signin")}
+          >
+            ‹ Back to sign in
+          </button>
+        )}
       </form>
     </div>
   );

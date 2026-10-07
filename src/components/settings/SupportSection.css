@@ -1,72 +1,3 @@
-/* A fixed blue, not the theme's own --accent - a muted/low-saturation
-   theme (Steel, Midnight) washed the old accent-based "selected" pill and
-   Send button out to near-invisible, the same problem Donate/Membership
-   had before those got their own fixed color. Scoped to this file only, so
-   it never fights the app's real accent anywhere else. */
-.support-form {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-}
-
-.support-form__types {
-  display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
-.support-form__type-btn {
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  transition: border-color 0.12s ease, color 0.12s ease, background-color 0.12s ease;
-}
-
-.support-form__type-btn:hover {
-  border-color: var(--border-strong);
-  color: var(--text);
-}
-
-.support-form__type-btn--active {
-  border-color: #5b8ff9;
-  color: #5b8ff9;
-  background: rgba(91, 143, 249, 0.14);
-}
-
-.support-form__textarea {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 8px 10px;
-  font-size: var(--text-sm);
-  color: var(--text);
-  resize: vertical;
-  min-height: 80px;
-  transition: border-color 0.15s ease;
-}
-
-.support-form__textarea:focus-visible {
-  outline: none;
-  border-color: #5b8ff9;
-}
-
-/* .btn.support-form__send (not just .support-form__send) for specificity
-   over .btn--primary's own fixed background - ties the one actionable
-   element in the form to this same fixed blue instead of the theme accent. */
-.btn.support-form__send {
-  align-self: flex-start;
-  background: #5b8ff9;
-  color: #0c1830;
-}
-
-.btn.support-form__send:hover {
-  filter: brightness(1.08);
-}
-
 .support-list__header {
   display: flex;
   align-items: center;
@@ -247,4 +178,117 @@
 .support-list__date {
   font-size: var(--text-xs);
   color: var(--text-muted);
+}
+
+/* --- Grouped layout --- */
+
+.support-page__compose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-1);
+}
+
+.support-page__types {
+  display: flex;
+  padding: 3px;
+  gap: 3px;
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.support-page__type {
+  flex: 1;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.support-page__type--active {
+  background: var(--bg-elevated);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.support-page__textarea {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  line-height: 1.5;
+}
+
+.support-page__textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.support-page__ticket {
+  padding-right: var(--space-2);
+}
+
+.support-page__ticket-open {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: var(--space-1) 0;
+  border: none;
+  background: none;
+  color: var(--text);
+  text-align: left;
+}
+
+.support-page__ticket-top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.support-page__ticket-type {
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+.support-page__new {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.support-page__ticket-date {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.support-page__ticket-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.support-page__ticket-delete {
+  flex: none;
+  display: inline-flex;
+  padding: var(--space-2);
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
 }

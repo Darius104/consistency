@@ -14,7 +14,7 @@ import {
   TrendingUpIcon,
 } from "../ui/icons";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
-import { addDays, parseDateKey, todayKey } from "../../utils/dates";
+import { formatDayName } from "../../utils/dates";
 import "./AddMenu.css";
 
 interface AddMenuProps {
@@ -39,16 +39,6 @@ interface AddMenuProps {
   hasResult?: boolean;
 }
 
-function dayName(dateKey: string): string {
-  const today = todayKey();
-  if (dateKey === today) return "Today";
-  if (dateKey === addDays(today, 1)) return "Tomorrow";
-  return parseDateKey(dateKey).toLocaleDateString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-}
 
 type Step = "main" | "templates" | "review";
 
@@ -175,7 +165,7 @@ export function AddMenu({
 
   const sheetTitle =
     step === "main"
-      ? `Add to ${dayName(dateKey)}`
+      ? `Add to ${formatDayName(dateKey)}`
       : step === "templates"
         ? "Use a template"
         : (reviewingTemplate?.name ?? "");

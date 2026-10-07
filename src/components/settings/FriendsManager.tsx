@@ -8,10 +8,7 @@ import {
 } from "../../db/friends";
 import { formatRelativeTime } from "../../utils/relativeTime";
 import { AvatarBadge } from "../stats/AvatarBadge";
-import { Button } from "../ui/Button";
-import { Card } from "../ui/Card";
-import { EmptyState } from "../ui/EmptyState";
-import { UsersIcon, TrashIcon } from "../ui/icons";
+import { ChevronRightIcon } from "../ui/icons";
 import { Skeleton } from "../ui/Skeleton";
 import "./FriendsManager.css";
 
@@ -50,6 +47,7 @@ export function FriendsManager({
   // Holds the friend awaiting a second confirming tap, so an accidental
   // stray tap on the X doesn't instantly unlink someone.
   const [confirmingRemoveId, setConfirmingRemoveId] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   // Remembered across loads (not reset each time) so the loading skeleton
   // guesses from how many friends you actually had last time, instead of a
   // fixed placeholder count that doesn't match and visibly resizes once the
@@ -148,123 +146,156 @@ export function FriendsManager({
   const codeExpired = code !== null && secondsLeft <= 0;
 
   return (
-    <div className="friends-manager">
-      {error && <div className="friends-manager__error">{error}</div>}
+    <div className="settings-pages friends-manager">
+      {error && <span className="settings-footnote settings-footnote--warning">{error}</span>}
 
-      <Card>
-        <span className="settings__label">Invite a friend</span>
-        <span className="settings__hint">
-          Ask them for a code (or generate your own here and send it to them) - entering a valid
-          code links you both automatically, no approval step needed.
-        </span>
-        {code && !codeExpired ? (
-          <div className="friends-manager__code">
-            <span className="friends-manager__code-value">{code.code}</span>
-            <span className="friends-manager__code-timer">expires in {secondsLeft}s</span>
-          </div>
-        ) : (
-          <Button onClick={handleGenerateCode} disabled={generating || !online}>
-            {generating ? "Generating…" : "Generate a code"}
-          </Button>
-        )}
-        {!online && <span className="settings__hint">Needs a connection.</span>}
-      </Card>
-
-      <Card>
-        <span className="settings__label">Redeem a code</span>
-        <div className="friends-manager__redeem">
-          <input
-            className="friends-manager__input friends-manager__input--code"
-            value={redeemInput}
-            onChange={(e) => setRedeemInput(e.target.value.toUpperCase())}
-            placeholder="ABC123"
-            aria-label="Friend code"
-            autoComplete="off"
-            spellCheck={false}
-            maxLength={8}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") void handleRedeem();
-            }}
-          />
-          <Button
-            variant="primary"
-            onClick={handleRedeem}
-            disabled={redeeming || !online || !redeemInput.trim()}
-          >
-            {redeeming ? "…" : "Redeem"}
-          </Button>
+      <div className="settings-group-wrap">
+        <div className="friends-manager__title-row">
+          <span className="settings-group__title">Your friends</span>
+          {friends.length > 0 && (
+            <button
+              type="button"
+              className="friends-manager__edit"
+              onClick={() => {
+                setEditing((v) => !v);
+                setConfirmingRemoveId(null);
+              }}
+            >
+              {editing ? "Done" : "Edit"}
+            </button>
+          )}
         </div>
-        {redeemMessage && <span className="friends-manager__success">{redeemMessage}</span>}
-        {!isPremium && friends.length >= FREE_FRIEND_LIMIT && (
-          <span className="settings__hint">
-            Free members can have {FREE_FRIEND_LIMIT} friend - upgrade to Premium to add more.
-          </span>
-        )}
-      </Card>
-
-      <Card>
-        <span className="settings__label">Your friends</span>
-        {loading ? (
-          <div className="friends-manager__list">
-            {Array.from({ length: lastKnownCountRef.current }, (_, i) => (
-              <div className="friends-manager__card" key={i}>
-                <Skeleton width={48} height={48} radius="50%" />
-                <Skeleton width={70} height="0.85em" />
-                <Skeleton width="100%" height={30} radius="var(--radius-sm)" />
+        <div className="settings-group">
+          {loading ? (
+            Array.from({ length: lastKnownCountRef.current }, (_, i) => (
+              <div className="settings-group__row" key={i}>
+                <Skeleton width={40} height={40} radius="50%" />
+                <Skeleton width={110} height="0.85em" />
               </div>
-            ))}
-          </div>
-        ) : friends.length === 0 ? (
-          <EmptyState icon={<UsersIcon size={16} />}>No friends linked yet.</EmptyState>
-        ) : (
-          <div className="friends-manager__list">
-            {friends.map((friend) => {
+            ))
+          ) : friends.length === 0 ? (
+            <div className="settings-group__row settings-group__row--muted">No friends yet - add one below.</div>
+          ) : (
+            friends.map((friend) => {
               const isOnline = onlineFriendIds.has(friend.userId);
-              return confirmingRemoveId === friend.userId ? (
-                <div className="friends-manager__card" key={friend.userId}>
-                  <span className="friends-manager__name">Remove {friend.displayName}?</span>
-                  <div className="friends-manager__card-actions friends-manager__card-actions--confirm">
-                    <Button onClick={() => setConfirmingRemoveId(null)}>Cancel</Button>
-                    <Button variant="danger" onClick={() => handleConfirmRemove(friend)}>
-                      Remove
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div className="friends-manager__card" key={friend.userId}>
+              const confirming = confirmingRemoveId === friend.userId;
+              const status = isOnline
+                ? "Online now"
+                : friend.lastSeenAt
+                  ? `Last seen ${formatRelativeTime(friend.lastSeenAt)}`
+                  : "Offline";
+              const body = (
+                <>
                   <span className="friends-manager__avatar-wrap">
-                    <AvatarBadge avatarId={friend.avatarId} size={48} />
+                    <AvatarBadge avatarId={friend.avatarId} size={40} />
                     <span
                       className={`friends-manager__status-dot ${isOnline ? "friends-manager__status-dot--online" : ""}`}
                     />
                   </span>
-                  <span className="friends-manager__name">{friend.displayName}</span>
-                  <span className="friends-manager__status-text">
-                    {isOnline
-                      ? "Online now"
-                      : friend.lastSeenAt
-                        ? `Last seen ${formatRelativeTime(friend.lastSeenAt)}`
-                        : "Offline"}
+                  <span className="friends-manager__row-text">
+                    <span className="friends-manager__name">{friend.displayName}</span>
+                    <span className="friends-manager__status-text">{status}</span>
                   </span>
-                  <div className="friends-manager__card-actions">
-                    <Button variant="primary" onClick={() => onViewFriend(friend)} disabled={!online}>
-                      View calendar
-                    </Button>
-                    <button
-                      type="button"
-                      className="friends-manager__remove"
-                      onClick={() => setConfirmingRemoveId(friend.userId)}
-                    >
-                      <TrashIcon size={12} />
-                      Remove
-                    </button>
-                  </div>
-                </div>
+                </>
               );
-            })}
+              if (editing) {
+                return (
+                  <div className="settings-group__row" key={friend.userId}>
+                    {body}
+                    {confirming ? (
+                      <button
+                        type="button"
+                        className="settings-row-action settings-row-action--danger"
+                        onClick={() => void handleConfirmRemove(friend)}
+                      >
+                        Confirm
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        className="friends-manager__remove-link"
+                        onClick={() => setConfirmingRemoveId(friend.userId)}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                );
+              }
+              return (
+                <button
+                  type="button"
+                  className="settings-group__row"
+                  key={friend.userId}
+                  onClick={() => onViewFriend(friend)}
+                  disabled={!online}
+                >
+                  {body}
+                  <span className="settings-group__value">Calendar</span>
+                  <ChevronRightIcon size={15} className="settings-group__chevron" />
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      <div className="settings-group-wrap">
+        <span className="settings-group__title">Add a friend</span>
+        <div className="settings-group">
+          <div className="settings-group__row">
+            <span className="settings-group__label">Your code</span>
+            {code && !codeExpired ? (
+              <span className="friends-manager__code">
+                <span className="friends-manager__code-value">{code.code}</span>
+                <span className="friends-manager__code-timer">{secondsLeft}s</span>
+              </span>
+            ) : (
+              <button
+                type="button"
+                className="settings-row-action"
+                onClick={handleGenerateCode}
+                disabled={generating || !online}
+              >
+                {generating ? "…" : "Get a code"}
+              </button>
+            )}
           </div>
+          <div className="settings-group__row">
+            <input
+              className="settings-group__input friends-manager__redeem-input"
+              value={redeemInput}
+              onChange={(e) => setRedeemInput(e.target.value.toUpperCase())}
+              placeholder="Enter a friend's code"
+              aria-label="Friend code"
+              autoComplete="off"
+              spellCheck={false}
+              maxLength={8}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void handleRedeem();
+              }}
+            />
+            <button
+              type="button"
+              className="settings-row-action"
+              onClick={() => void handleRedeem()}
+              disabled={redeeming || !online || !redeemInput.trim()}
+            >
+              {redeeming ? "…" : "Add"}
+            </button>
+          </div>
+        </div>
+        {redeemMessage && (
+          <span className="settings-footnote settings-footnote--success">{redeemMessage}</span>
         )}
-      </Card>
+        <span className="settings-footnote">
+          {!online
+            ? "Needs a connection."
+            : !isPremium && friends.length >= FREE_FRIEND_LIMIT
+              ? `Free members can have ${FREE_FRIEND_LIMIT} friend - Premium for more.`
+              : "Send them your code, or enter theirs - you're linked right away."}
+        </span>
+      </div>
     </div>
   );
 }

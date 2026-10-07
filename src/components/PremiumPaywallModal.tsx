@@ -18,7 +18,7 @@ export function PremiumPaywallModal({ feature, onClose }: PremiumPaywallModalPro
   return (
     <Modal title="Go Premium" onClose={onClose}>
       <div className="paywall">
-        <PremiumUpsellCard gatedFeature={feature} ctaLabel="Buy Premium →" onBuy={buyPremium} />
+        <PremiumUpsellCard gatedFeature={feature} ctaLabel="Request Premium by email" onBuy={buyPremium} />
         <Button className="paywall__later" onClick={onClose}>
           Maybe later
         </Button>

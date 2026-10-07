@@ -168,6 +168,7 @@ pub fn run() {
             native_notifications::native_notifications_available,
             native_notifications::native_request_permission,
             native_notifications::native_schedule_notification,
+            native_notifications::native_schedule_notification_at,
             native_notifications::native_cancel_notifications,
             native_notifications::native_pending_notification_ids,
         ])

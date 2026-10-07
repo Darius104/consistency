@@ -4,7 +4,7 @@ import type { FriendNote } from "../../db/friendNotes";
 import type { FriendStreakEntry } from "../../hooks/useFriendStreaks";
 import type { AvatarId } from "../../utils/avatars";
 import type { DayNote, Tag, Task, Template, TradingResult, TradingResultUnit } from "../../types";
-import { parseDateKey, todayKey } from "../../utils/dates";
+import { formatDayName, parseDateKey, todayKey } from "../../utils/dates";
 import { WIDGET_LABELS, type PanelBlockId, type WidgetId } from "../../utils/panelOrder";
 import type { Quote } from "../../utils/quotes";
 import {
@@ -14,6 +14,7 @@ import {
   type WeeklyCompletion as WeeklyCompletionData,
 } from "../../utils/stats";
 import { useMediaQuery } from "../../hooks/useMediaQuery";
+import { usePanelGestures } from "../../hooks/usePanelGestures";
 import { ActionSheet } from "../ui/ActionSheet";
 import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
@@ -23,6 +24,7 @@ import {
   GripIcon,
   MoreIcon,
   PlusIcon,
+  RefreshIcon,
   XIcon,
 } from "../ui/icons";
 import { TemplateBreakdown } from "../stats/TemplateBreakdown";
@@ -115,6 +117,10 @@ interface DayPanelProps {
    * sharing it with the compact calendar above. Ignored on wider screens. */
   expanded: boolean;
   onToggleExpanded: () => void;
+  /** Phone: swipe left/right across the panel for the next/previous day. */
+  onSwipeDay: (delta: 1 | -1) => void;
+  /** Phone: pull down from the top to sync now. */
+  onRefresh: () => Promise<unknown>;
   tradingResult: TradingResult | null;
   /** Remembered last-used unit - just the modal's starting pick for a
    *  brand-new entry (see TradingResultModal); an already-logged day
@@ -164,6 +170,8 @@ export function DayPanel({
   onReorderNotePositions,
   expanded,
   onToggleExpanded,
+  onSwipeDay,
+  onRefresh,
   tradingResult,
   tradingResultUnit,
   onSetTradingResult,
@@ -178,6 +186,12 @@ export function DayPanel({
   // Phone only: widgets show as compact tiles (WidgetTiles) and tapping one
   // opens the full widget here, in a sheet.
   const isPhone = useMediaQuery("(max-width: 700px)");
+  const panelRef = useRef<HTMLDivElement>(null);
+  const { pull, refreshing, triggered } = usePanelGestures(panelRef, {
+    enabled: isPhone,
+    onRefresh,
+    onSwipeDay,
+  });
   const [openWidget, setOpenWidget] = useState<WidgetId | null>(null);
   const [addWidgetSheetOpen, setAddWidgetSheetOpen] = useState(false);
   const blockRefs = useRef<Partial<Record<PanelBlockId, HTMLDivElement>>>({});
@@ -214,6 +228,10 @@ export function DayPanel({
     day: "numeric",
   });
   const isPastDay = selectedDate < todayKey();
+  // "Today" / "Tomorrow" / "Yesterday" up front when it applies, the date
+  // underneath - so it's obvious at a glance which day you're looking at.
+  const relativeName = formatDayName(selectedDate);
+  const isRelative = relativeName !== label;
 
   // Manual pointer-based dragging instead of the native HTML5 DnD API -
   // WKWebView's support for native drag/drop is unreliable, and this also
@@ -436,6 +454,7 @@ export function DayPanel({
         onReorderTasks={onReorderTasks}
         onReorderTags={onReorderTags}
         notes={notes}
+        dayFrozen={selectedDate === todayKey() && todayStatus.frozen}
         onEditNote={onEditNote}
         onDeleteNote={onDeleteNote}
         onReorderNotePositions={onReorderNotePositions}
@@ -451,7 +470,25 @@ export function DayPanel({
   const visibleOrder = order.filter((id) => id === "tasks" || !hiddenWidgets.includes(id as WidgetId));
 
   return (
-    <div className="day-panel">
+    <div className="day-panel" ref={panelRef}>
+      {isPhone && (
+        <div
+          className={`day-panel__pull ${refreshing ? "day-panel__pull--refreshing" : ""}`}
+          style={{ height: pull }}
+          aria-hidden={!refreshing}
+          role={refreshing ? "status" : undefined}
+        >
+          {(pull > 0 || refreshing) && (
+            <span
+              className="day-panel__pull-icon"
+              style={{ transform: refreshing ? undefined : `rotate(${triggered ? 180 : pull * 2}deg)` }}
+            >
+              <RefreshIcon size={18} />
+            </span>
+          )}
+          {refreshing && <span className="day-panel__pull-text">Syncing…</span>}
+        </div>
+      )}
       <div className="day-panel__expand-toggle-wrap">
         <button
           type="button"
@@ -463,7 +500,16 @@ export function DayPanel({
         </button>
       </div>
       <div className="day-panel__header">
-        <h2 className="day-panel__date">{label}</h2>
+        <h2 className="day-panel__date" key={selectedDate}>
+          {isRelative ? (
+            <>
+              {relativeName}
+              <span className="day-panel__date-sub">{label}</span>
+            </>
+          ) : (
+            label
+          )}
+        </h2>
         <div className="day-panel__header-actions">
           <TradingResultBadge
             value={tradingResult?.value ?? null}

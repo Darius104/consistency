@@ -190,6 +190,26 @@ export function generateRandomThemeColors(): RandomThemeColors {
  *  alone is enough: the whole point of this shape is that it already looks
  *  "in family" with the rest of the app at any hue, so there's no need to
  *  also expose chroma/lightness controls for this to feel personal. */
-export function generateCustomThemeColors(hue: number): RandomThemeColors {
-  return buildThemeColors(hue, CANONICAL_SHAPE);
+export function generateCustomThemeColors(hue: number, mode: "dark" | "light" = "dark"): RandomThemeColors {
+  return mode === "light" ? buildLightThemeColors(hue) : buildThemeColors(hue, CANONICAL_SHAPE);
+}
+
+/** The light-mode version of the same hue: near-white surfaces with a
+ *  faint tint of it, dark text, and a deeper accent that reads on white. */
+function buildLightThemeColors(hue: number): RandomThemeColors {
+  const [ar, ag, ab] = oklchToRgb(0.55, 0.17, hue);
+  return {
+    bg: hex(0.965, 0.008, hue),
+    bgElevated: hex(1, 0, hue),
+    surface: hex(0.95, 0.01, hue),
+    surfaceHover: hex(0.92, 0.012, hue),
+    border: hex(0.91, 0.01, hue),
+    borderStrong: hex(0.84, 0.012, hue),
+    text: hex(0.2, 0.01, hue),
+    textSecondary: hex(0.45, 0.012, hue),
+    textMuted: hex(0.64, 0.01, hue),
+    accent: hex(0.55, 0.17, hue),
+    accentRgb: `${ar}, ${ag}, ${ab}`,
+    accentSoft: `rgba(${ar}, ${ag}, ${ab}, 0.12)`,
+  };
 }

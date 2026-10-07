@@ -3,14 +3,16 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  height: 26px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 1px dashed var(--border);
+  /* Same size and shape as the "+ Add" button next to it (see Button.css)
+     - only the dashed outline says it's the optional one. */
+  height: 30px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--border-strong);
   background: transparent;
-  color: var(--text-muted);
-  font-size: var(--text-xs);
-  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 500;
   white-space: nowrap;
   transition: border-color 0.12s ease, color 0.12s ease, background-color 0.12s ease;
 }

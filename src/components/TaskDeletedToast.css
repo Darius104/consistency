@@ -42,3 +42,26 @@
     transform: translate(-50%, 8px);
   }
 }
+
+/* Phone: above the bottom tab bar (~60px + the home-indicator inset),
+   with a thumb-sized Undo. */
+@media (max-width: 700px) {
+  .task-deleted-toast {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 72px);
+    max-width: calc(100vw - 32px);
+    padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+    font-size: var(--text-sm);
+  }
+
+  .task-deleted-toast__text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .task-deleted-toast__undo {
+    min-height: 36px;
+    padding: 0 var(--space-3);
+    font-size: var(--text-sm);
+  }
+}

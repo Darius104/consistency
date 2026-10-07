@@ -1,3 +1,4 @@
+import { uuid } from "../utils/uuid";
 import { trySync } from "../sync";
 import type {
   DayNote,
@@ -105,7 +106,7 @@ export async function getTags(): Promise<Tag[]> {
 }
 
 export async function createTag(name: string, color: string): Promise<Tag> {
-  const row: TagRow = { id: crypto.randomUUID(), name, color, sort_order: await cacheNextTagSortOrder() };
+  const row: TagRow = { id: uuid(), name, color, sort_order: await cacheNextTagSortOrder() };
   await cacheUpsertTag(row);
   await enqueueOp({ table: "tags", op: "upsert", rowId: row.id, payload: row });
   kickSync();
@@ -180,7 +181,7 @@ function taskRowFrom(id: string, task: NewTask, sortOrder: number): TaskRow {
 }
 
 export async function createTask(task: NewTask): Promise<Task> {
-  const row = taskRowFrom(crypto.randomUUID(), task, await cacheNextTaskSortOrder());
+  const row = taskRowFrom(uuid(), task, await cacheNextTaskSortOrder());
   await cacheUpsertTask(row);
   await enqueueOp({ table: "tasks", op: "upsert", rowId: row.id, payload: row });
   kickSync();
@@ -266,7 +267,7 @@ export async function getAllNotes(): Promise<DayNote[]> {
 
 export async function createNote(date: string, content: string): Promise<DayNote> {
   const row: NoteRow = {
-    id: crypto.randomUUID(),
+    id: uuid(),
     date,
     content,
     sort_order: await cacheNextNoteSortOrder(),
@@ -461,7 +462,7 @@ export async function createTemplateFromTasks(
   tasks: TemplateTaskBlueprint[],
 ): Promise<Template> {
   const existing = tagId ? await cacheFindTemplateByTagId(tagId) : null;
-  const templateId = existing?.id ?? crypto.randomUUID();
+  const templateId = existing?.id ?? uuid();
 
   await cacheUpsertTemplate({ id: templateId, name, tag_id: tagId });
   await enqueueOp({
@@ -472,7 +473,7 @@ export async function createTemplateFromTasks(
   });
 
   const taskRows: TemplateTaskRow[] = tasks.map((t, i) => ({
-    id: crypto.randomUUID(),
+    id: uuid(),
     template_id: templateId,
     title: t.title,
     notes: t.notes,
@@ -508,7 +509,7 @@ export async function applyTemplate(
   let sortOrder = await cacheNextTaskSortOrder();
   for (const bp of blueprints) {
     const row: TaskRow = {
-      id: crypto.randomUUID(),
+      id: uuid(),
       title: bp.title,
       notes: bp.notes,
       time: bp.time,

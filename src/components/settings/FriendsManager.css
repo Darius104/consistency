@@ -4,43 +4,6 @@
   gap: var(--space-5);
 }
 
-.friends-manager__error {
-  font-size: var(--text-sm);
-  color: var(--danger);
-}
-
-.friends-manager__success {
-  font-size: var(--text-sm);
-  color: var(--success);
-}
-
-.friends-manager__input {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--text-sm);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.friends-manager__input:hover {
-  border-color: var(--border-strong);
-}
-
-.friends-manager__input:focus-visible {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-.friends-manager__input--code {
-  font-family: monospace;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  width: 120px;
-}
-
-.friends-manager__name-edit,
 .friends-manager__redeem {
   display: flex;
   align-items: center;
@@ -68,30 +31,6 @@
 .friends-manager__code-timer {
   font-size: var(--text-xs);
   color: var(--text-muted);
-}
-
-/* A wrapping grid of vertical cards, not a single-column list of thin
-   horizontal rows - a row crammed avatar+name+status+last-seen+two actions
-   onto one line, which got tight fast with anything longer than a short
-   name. Each friend now gets its own self-contained card, and the grid
-   scales to however many friends someone actually has instead of always
-   stacking into one long column. */
-.friends-manager__list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: var(--space-3);
-}
-
-.friends-manager__card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  text-align: center;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: var(--space-4) var(--space-3);
 }
 
 .friends-manager__avatar-wrap {
@@ -130,23 +69,6 @@
   color: var(--text-muted);
 }
 
-.friends-manager__card-actions {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-  width: 100%;
-  margin-top: var(--space-2);
-}
-
-.friends-manager__card-actions .btn {
-  width: 100%;
-}
-
-.friends-manager__card-actions--confirm {
-  flex-direction: row;
-}
-
 .friends-manager__remove {
   display: inline-flex;
   align-items: center;
@@ -166,3 +88,85 @@
   background: var(--surface-hover);
 }
 
+/* --- Grouped layout --- */
+
+.friends-manager__title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-right: var(--space-3);
+}
+
+.friends-manager__edit {
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.friends-manager .friends-manager__avatar-wrap {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+}
+
+.friends-manager__row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.friends-manager .friends-manager__name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.friends-manager .friends-manager__status-text {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.friends-manager__remove-link {
+  flex: none;
+  border: none;
+  background: none;
+  color: var(--danger);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.friends-manager .friends-manager__code {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.friends-manager .friends-manager__code-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  user-select: all;
+  -webkit-user-select: all;
+}
+
+.friends-manager .friends-manager__code-timer {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.friends-manager__redeem-input {
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.friends-manager__redeem-input::placeholder {
+  text-transform: none;
+}

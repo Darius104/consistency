@@ -223,3 +223,30 @@
     padding-inline: calc(var(--space-2) + 4px);
   }
 }
+
+.task-item__line {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.task-item__line .task-item__title {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-item__priority {
+  display: inline-flex;
+  vertical-align: 1px;
+  margin-left: 6px;
+}
+
+.task-item__line .task-item__time {
+  align-self: center;
+}
+
+.task-item--completed .task-item__priority,
+.task-item--completed .task-item__line .task-item__time {
+  opacity: 0.55;
+}

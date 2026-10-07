@@ -9,14 +9,10 @@ import {
 } from "../../db/support";
 import type { MembershipState } from "../../hooks/useMembership";
 import { Button } from "../ui/Button";
-import { Card } from "../ui/Card";
 import { ConfirmModal } from "../ui/ConfirmModal";
-import { EmptyState } from "../ui/EmptyState";
 import { Skeleton } from "../ui/Skeleton";
-import { HelpIcon, TrashIcon } from "../ui/icons";
+import { ChevronRightIcon, TrashIcon } from "../ui/icons";
 import { AdminTicketsList } from "./AdminTicketsList";
-import { SettingsCardHeader } from "./SettingsCardHeader";
-import { TicketStatusGroup } from "./TicketStatusGroup";
 import { TicketThreadModal } from "./TicketThreadModal";
 import "./SupportSection.css";
 
@@ -35,6 +31,12 @@ const TICKET_TYPE_LABEL: Record<TicketType, string> = {
   bug: "Bug Report",
   feature: "Feature Request",
   question: "General Question",
+};
+
+const SHORT_TYPE_LABEL: Record<TicketType, string> = {
+  bug: "Bug",
+  feature: "Idea",
+  question: "Question",
 };
 
 const STATUS_LABEL: Record<TicketStatus, string> = {
@@ -84,6 +86,7 @@ function MemberSupportForm({ onSeen }: MemberSupportFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [openTicket, setOpenTicket] = useState<SupportTicket | null>(null);
   const [pendingDelete, setPendingDelete] = useState<SupportTicket | null>(null);
+  const [composing, setComposing] = useState(false);
 
   function load() {
     listMyTickets()
@@ -130,6 +133,7 @@ function MemberSupportForm({ onSeen }: MemberSupportFormProps) {
     try {
       await createTicket(type, trimmed);
       setDescription("");
+      setComposing(false);
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -139,107 +143,110 @@ function MemberSupportForm({ onSeen }: MemberSupportFormProps) {
   }
 
   return (
-    <>
-      <Card>
-        <SettingsCardHeader
-          icon={<HelpIcon size={16} />}
-          label="Contact Support"
-          hint="Only visible to you and the app's admin - not shared with other members."
-          color="#5b8ff9"
-        />
-
-        <div className="support-form">
-          <div className="support-form__types">
-            {TICKET_TYPE_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                className={`support-form__type-btn ${type === opt.value ? "support-form__type-btn--active" : ""}`}
-                onClick={() => setType(opt.value)}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-          <textarea
-            className="support-form__textarea"
-            placeholder="Describe the issue, idea, or question…"
-            aria-label="Support message"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={4}
-          />
-          <Button
-            variant="primary"
-            className="support-form__send"
-            onClick={() => void handleSubmit()}
-            disabled={submitting || !description.trim()}
+    <div className="settings-pages support-page">
+      <div className="settings-group-wrap">
+        <div className="settings-group">
+          <button
+            type="button"
+            className="settings-group__row settings-group__row--accent"
+            aria-expanded={composing}
+            onClick={() => setComposing((v) => !v)}
           >
-            {submitting ? "Sending…" : "Send"}
-          </Button>
-        </div>
-
-        {error && <span className="settings__hint settings__hint--warning">{error}</span>}
-      </Card>
-
-      <Card>
-        <div className="support-list__header">
-          <span className="settings__label">Your Tickets</span>
-          {tickets && tickets.length > 0 && (
-            <span className="ticket-status-group__count">{tickets.length}</span>
+            <span className="settings-group__label">New message</span>
+            <ChevronRightIcon
+              size={15}
+              className={`settings-group__chevron ${composing ? "settings-group__chevron--open" : ""}`}
+            />
+          </button>
+          {composing && (
+            <div className="settings-group__expand support-page__compose">
+              <div className="support-page__types" role="radiogroup" aria-label="Message type">
+                {TICKET_TYPE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={type === opt.value}
+                    className={`support-page__type ${type === opt.value ? "support-page__type--active" : ""}`}
+                    onClick={() => setType(opt.value)}
+                  >
+                    {SHORT_TYPE_LABEL[opt.value]}
+                  </button>
+                ))}
+              </div>
+              <textarea
+                className="support-page__textarea"
+                placeholder="Describe the issue, idea, or question…"
+                aria-label="Support message"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={4}
+              />
+              <Button
+                variant="primary"
+                className="settings-primary-action"
+                onClick={() => void handleSubmit()}
+                disabled={submitting || !description.trim()}
+              >
+                {submitting ? "Sending…" : "Send"}
+              </Button>
+            </div>
           )}
         </div>
+        <span className="settings-footnote">Only you and the app's admin can see your messages.</span>
+        {error && <span className="settings-footnote settings-footnote--warning">{error}</span>}
+      </div>
 
-        {!tickets && !error && (
-          <div className="support-list">
-            {[0, 1].map((i) => (
-              <div className="support-list__row-skeleton" key={i}>
-                <Skeleton width="40%" height="0.85em" />
-                <Skeleton width="90%" height="0.85em" />
-              </div>
-            ))}
-          </div>
-        )}
-        {tickets && tickets.length === 0 && (
-          <EmptyState icon={<HelpIcon size={16} />}>You haven't sent any tickets yet.</EmptyState>
-        )}
-        {tickets &&
-          tickets.length > 0 &&
-          STATUS_GROUP_ORDER.map((status) => (
-            <TicketStatusGroup
-              key={status}
-              label={STATUS_LABEL[status]}
-              tickets={tickets.filter((t) => t.status === status)}
-              renderRow={(ticket) => (
-                <div className="support-list__row" key={ticket.id}>
-                  <button
-                    type="button"
-                    className="support-list__row-open"
-                    onClick={() => handleOpenTicket(ticket)}
-                  >
-                    <div className="support-list__row-header">
-                      <span className="support-list__type">{TICKET_TYPE_LABEL[ticket.type]}</span>
-                      <span className={`support-list__status support-list__status--${ticket.status}`}>
-                        {STATUS_LABEL[ticket.status]}
-                      </span>
-                      {ticket.unseenByMember && <span className="support-list__new-badge">New</span>}
-                    </div>
-                    <p className="support-list__description">{ticket.description}</p>
-                    <span className="support-list__date">{formatDate(ticket.createdAt)}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="support-list__delete"
-                    aria-label="Delete this ticket"
-                    onClick={() => setPendingDelete(ticket)}
-                  >
-                    <TrashIcon size={14} />
-                  </button>
-                </div>
-              )}
-            />
+      {!tickets && !error && (
+        <div className="settings-group">
+          {[0, 1].map((i) => (
+            <div className="settings-group__row" key={i}>
+              <Skeleton width="60%" height="0.85em" />
+            </div>
           ))}
-      </Card>
+        </div>
+      )}
+      {tickets && tickets.length === 0 && (
+        <span className="settings-footnote">You haven't sent any messages yet.</span>
+      )}
+      {tickets &&
+        STATUS_GROUP_ORDER.map((status) => {
+          const group = tickets.filter((t) => t.status === status);
+          if (group.length === 0) return null;
+          return (
+            <div className="settings-group-wrap" key={status}>
+              <span className="settings-group__title">
+                {STATUS_LABEL[status]} · {group.length}
+              </span>
+              <div className="settings-group">
+                {group.map((ticket) => (
+                  <div className="settings-group__row support-page__ticket" key={ticket.id}>
+                    <button
+                      type="button"
+                      className="support-page__ticket-open"
+                      onClick={() => handleOpenTicket(ticket)}
+                    >
+                      <span className="support-page__ticket-top">
+                        <span className="support-page__ticket-type">{SHORT_TYPE_LABEL[ticket.type]}</span>
+                        {ticket.unseenByMember && <span className="support-page__new">New reply</span>}
+                        <span className="support-page__ticket-date">{formatDate(ticket.createdAt)}</span>
+                      </span>
+                      <span className="support-page__ticket-text">{ticket.description}</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="support-page__ticket-delete"
+                      aria-label="Delete this message"
+                      onClick={() => setPendingDelete(ticket)}
+                    >
+                      <TrashIcon size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
 
       {openTicket && (
         <TicketThreadModal
@@ -258,6 +265,6 @@ function MemberSupportForm({ onSeen }: MemberSupportFormProps) {
           onClose={() => setPendingDelete(null)}
         />
       )}
-    </>
+    </div>
   );
 }

@@ -1,6 +1,6 @@
 import type { AvatarId } from "../utils/avatars";
 import { AvatarBadge } from "./stats/AvatarBadge";
-import { CalendarIcon, PlusIcon, ProfileIcon, TodayIcon, UsersIcon } from "./ui/icons";
+import { CalendarIcon, PlusIcon, ProfileIcon, SettingsIcon, TodayIcon } from "./ui/icons";
 import "./MobileTabBar.css";
 
 export type MobileTab = "calendar" | "today";
@@ -9,22 +9,22 @@ interface MobileTabBarProps {
   activeTab: MobileTab;
   onSelectTab: (tab: MobileTab) => void;
   onAdd: () => void;
-  onOpenFriends: () => void;
   onOpenProfile: () => void;
+  onOpenSettings: () => void;
   avatarId: AvatarId | null;
   profileBadgeCount?: number;
 }
 
 /** Phone-only bottom navigation (hidden above 700px, where the calendar
  *  and day panel already sit side by side). Calendar and Today are real
- *  views of this screen; +, Friends and Profile open the same add menu /
+ *  views of this screen; +, Settings and Profile open the same add menu /
  *  Settings sections the desktop header buttons do. */
 export function MobileTabBar({
   activeTab,
   onSelectTab,
   onAdd,
-  onOpenFriends,
   onOpenProfile,
+  onOpenSettings,
   avatarId,
   profileBadgeCount,
 }: MobileTabBarProps) {
@@ -54,13 +54,15 @@ export function MobileTabBar({
           <PlusIcon size={22} />
         </span>
       </button>
-      <button type="button" className="mobile-tab-bar__item" onClick={onOpenFriends} aria-label="Friends">
-        <UsersIcon size={24} />
+      <button type="button" className="mobile-tab-bar__item" onClick={onOpenSettings} aria-label="Settings">
+        <span className="mobile-tab-bar__avatar">
+          <SettingsIcon size={24} />
+          {!!profileBadgeCount && <span className="mobile-tab-bar__badge" aria-hidden="true" />}
+        </span>
       </button>
       <button type="button" className="mobile-tab-bar__item" onClick={onOpenProfile} aria-label="Profile">
         <span className="mobile-tab-bar__avatar">
           {avatarId ? <AvatarBadge avatarId={avatarId} size={28} /> : <ProfileIcon size={24} />}
-          {!!profileBadgeCount && <span className="mobile-tab-bar__badge" aria-hidden="true" />}
         </span>
       </button>
     </nav>

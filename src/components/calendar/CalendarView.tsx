@@ -116,7 +116,11 @@ export function CalendarView({
     // ever begins. The trailing click it would otherwise cause on release
     // is handled separately below (suppressNextClick), so excluding it here
     // is safe.
-    if ((e.target as HTMLElement).closest("button:not(.cal-day), input, a, [data-no-drag]")) {
+    if (
+      (e.target as HTMLElement).closest(
+        "button:not(.cal-day), input, a, [data-no-drag]",
+      )
+    ) {
       return;
     }
 
@@ -155,7 +159,10 @@ export function CalendarView({
       if (ev.pointerId !== pointerId) return;
       cleanup();
       if (engaged) {
-        startTarget.addEventListener("click", suppressNextClick, { capture: true, once: true });
+        startTarget.addEventListener("click", suppressNextClick, {
+          capture: true,
+          once: true,
+        });
       }
       setPullSettling(true);
       setPullDistance((current) => {
@@ -177,6 +184,7 @@ export function CalendarView({
     window.addEventListener("pointerup", onUp);
   }
 
+  // Always 6 weeks, so every month's cells are the same size.
   const { weeks, monthLabel } = buildMonthGrid(cursor.year, cursor.monthIndex);
   const tagColorById = new Map(tags.map((t) => [t.id, t.color]));
 
@@ -225,7 +233,9 @@ export function CalendarView({
             style={
               refreshing
                 ? undefined
-                : { transform: `rotate(${Math.min(1, pullDistance / PULL_TRIGGER_PX) * 180}deg)` }
+                : {
+                    transform: `rotate(${Math.min(1, pullDistance / PULL_TRIGGER_PX) * 180}deg)`,
+                  }
             }
           />
         </div>
@@ -236,7 +246,11 @@ export function CalendarView({
           release. */}
       <div
         className={`cal-view__content ${pullSettling ? "cal-view__content--settling" : ""}`}
-        style={pullDistance ? { transform: `translateY(${pullDistance}px)` } : undefined}
+        style={
+          pullDistance
+            ? { transform: `translateY(${pullDistance}px)` }
+            : undefined
+        }
       >
         <CalendarHeader
           monthLabel={monthLabel}
@@ -266,37 +280,46 @@ export function CalendarView({
             weekday row + grid) - display: contents on desktop, so the layout
             there is exactly as if this wrapper didn't exist. */}
         <div className="cal-view__sheet">
-        <div className="cal-view__weekdays">
-          {WEEKDAY_LABELS.map((label) => (
-            <div key={label} className="cal-view__weekday">
-              <span className="cal-view__weekday-full">{label}</span>
-              <span className="cal-view__weekday-short" aria-hidden="true">
-                {label[0]}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div className="cal-view__grid">
-          {weeks.flat().map((dateKey) => {
-            const scheduled = tasksScheduledOn(tasks, dateKey);
-            return (
-              <CalendarDay
-                key={dateKey}
-                dateKey={dateKey}
-                dayNumber={parseDateKey(dateKey).getDate()}
-                isCurrentMonth={isSameMonth(dateKey, cursor.year, cursor.monthIndex)}
-                isToday={dateKey === today}
-                isSelected={dateKey === selectedDate}
-                hasTasks={scheduled.length > 0}
-                completionRate={dayCompletionRate(tasks, completions, dateKey)}
-                isFrozen={freezes.has(dateKey)}
-                tradingResult={tradingResults[dateKey] ?? null}
-                chips={chipsFor(scheduled, dateKey)}
-                onSelect={onSelectDate}
-              />
-            );
-          })}
-        </div>
+          <div className="cal-view__weekdays">
+            {WEEKDAY_LABELS.map((label) => (
+              <div key={label} className="cal-view__weekday">
+                <span className="cal-view__weekday-full">{label}</span>
+                <span className="cal-view__weekday-short" aria-hidden="true">
+                  {label[0]}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="cal-view__grid">
+            {weeks.flat().map((dateKey) => {
+              const scheduled = tasksScheduledOn(tasks, dateKey);
+              return (
+                <CalendarDay
+                  key={dateKey}
+                  dateKey={dateKey}
+                  dayNumber={parseDateKey(dateKey).getDate()}
+                  isCurrentMonth={isSameMonth(
+                    dateKey,
+                    cursor.year,
+                    cursor.monthIndex,
+                  )}
+                  isToday={dateKey === today}
+                  isSelected={dateKey === selectedDate}
+                  hasTasks={scheduled.length > 0}
+                  isPast={dateKey < today}
+                  completionRate={dayCompletionRate(
+                    tasks,
+                    completions,
+                    dateKey,
+                  )}
+                  isFrozen={freezes.has(dateKey)}
+                  tradingResult={tradingResults[dateKey] ?? null}
+                  chips={chipsFor(scheduled, dateKey)}
+                  onSelect={onSelectDate}
+                />
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

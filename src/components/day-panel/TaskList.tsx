@@ -5,7 +5,7 @@ import type { DayNote, Tag, Task } from "../../types";
 import { addDays, todayKey } from "../../utils/dates";
 import { occurrenceDateTime } from "../../utils/recurrence";
 import { EmptyState } from "../ui/EmptyState";
-import { CheckIcon } from "../ui/icons";
+import { CheckIcon, ChevronRightIcon } from "../ui/icons";
 import { NoteRow } from "./NoteRow";
 import { TaskGroup } from "./TaskGroup";
 import { TaskItem } from "./TaskItem";
@@ -18,6 +18,13 @@ const NO_TAG_KEY = "none";
 // down to 21:00 itself would hit 0 and vanish right as the reminder fires,
 // even though there'd still be 3 hours left to actually act on it.
 const URGENCY_WINDOW_MS = 3 * 60 * 60 * 1000;
+const URGENCY_HIGH_MS = 60 * 60 * 1000;
+const URGENCY_CRITICAL_MS = 15 * 60 * 1000;
+
+/** How close today's deadline is, once it's within URGENCY_WINDOW_MS:
+ *  "warn" (calm amber, plenty of time), "high" (red, under an hour),
+ *  "critical" (red and pulsing, under 15 minutes). */
+export type UrgencyLevel = "warn" | "high" | "critical";
 const AUTO_COLLAPSE_DELAY_MS = 250;
 // How long a deleted task stays on screen playing its exit (see TaskItem's
 // `leaving`) - matches the slide-out + collapse there.
@@ -55,6 +62,9 @@ interface TaskListProps {
   onReorderTasks: (taskIds: string[]) => void;
   onReorderTags: (tagIds: string[]) => void;
   notes: DayNote[];
+  /** Today is protected by a freeze - the streak isn't at risk, so no
+   *  deadline warning. */
+  dayFrozen?: boolean;
   onEditNote: (note: DayNote) => void;
   onDeleteNote: (id: string) => void;
   onReorderNotePositions: (
@@ -62,9 +72,29 @@ interface TaskListProps {
   ) => void;
 }
 
+const SHOW_DONE_KEY = "consistency:showCompletedGroups";
+
+function readShowDone(): Set<string> {
+  try {
+    const raw = localStorage.getItem(SHOW_DONE_KEY);
+    return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeShowDone(keys: Set<string>) {
+  try {
+    localStorage.setItem(SHOW_DONE_KEY, JSON.stringify([...keys]));
+  } catch {
+    // Not remembered across launches - still applies now.
+  }
+}
+
 function sortOccurrences(occurrences: Occurrence[]): Occurrence[] {
   return [...occurrences].sort(
-    (a, b) => a.task.sortOrder - b.task.sortOrder || a.task.id.localeCompare(b.task.id),
+    (a, b) =>
+      a.task.sortOrder - b.task.sortOrder || a.task.id.localeCompare(b.task.id),
   );
 }
 
@@ -78,6 +108,7 @@ export function TaskList({
   onReorderTasks,
   onReorderTags,
   notes,
+  dayFrozen = false,
   onEditNote,
   onDeleteNote,
   onReorderNotePositions,
@@ -126,7 +157,9 @@ export function TaskList({
 
   const occurrences: Occurrence[] = [
     ...liveOccurrences,
-    ...[...leaving.values()].filter((o) => !liveOccurrences.some((l) => l.task.id === o.task.id)),
+    ...[...leaving.values()].filter(
+      (o) => !liveOccurrences.some((l) => l.task.id === o.task.id),
+    ),
   ];
 
   // Only today can ever be "urgent" - a future day's own deadline hasn't
@@ -135,10 +168,22 @@ export function TaskList({
   const now = useNow(30_000);
   const msUntilMidnight =
     selectedDate === todayKey()
-      ? occurrenceDateTime(addDays(selectedDate, 1), "00:00").getTime() - now.getTime()
+      ? occurrenceDateTime(addDays(selectedDate, 1), "00:00").getTime() -
+        now.getTime()
       : null;
-  const showUrgency =
-    msUntilMidnight !== null && msUntilMidnight > 0 && msUntilMidnight <= URGENCY_WINDOW_MS;
+  const remainingCount = liveOccurrences.filter((o) => !o.completed).length;
+  const urgency: UrgencyLevel | null =
+    msUntilMidnight === null ||
+    msUntilMidnight <= 0 ||
+    msUntilMidnight > URGENCY_WINDOW_MS ||
+    remainingCount === 0 ||
+    dayFrozen
+      ? null
+      : msUntilMidnight <= URGENCY_CRITICAL_MS
+        ? "critical"
+        : msUntilMidnight <= URGENCY_HIGH_MS
+          ? "high"
+          : "warn";
 
   // Collapse state and "have we seen this group finish before" tracking are
   // both scoped to `${selectedDate}:${tagKey}` - a tag collapsing because you
@@ -155,7 +200,57 @@ export function TaskList({
   // layoutDrag below) so a note can be dropped anywhere among the groups,
   // not just reordered against other notes ("No tag" excluded from that
   // combined domain - it isn't a real group, it always stays last).
-  const taskDrag = useReorderDrag((nextTaskIds) => onReorderTasks(nextTaskIds));
+  // Completed tasks folded away in the group being dragged within - kept at
+  // the end of the saved order, so reordering the open ones never shuffles
+  // them in between (see the fold below).
+  const dragHiddenIdsRef = useRef<string[]>([]);
+  const taskDrag = useReorderDrag((nextTaskIds) =>
+    onReorderTasks([...nextTaskIds, ...dragHiddenIdsRef.current]),
+  );
+
+  // Completed tasks fold into a "✓ N completed" row per group (opened per
+  // group). One just ticked stays in place briefly first, so the check
+  // registers before it slides into the fold.
+  // Per template (not per day), remembered on this device: a template
+  // showing its completed tasks keeps showing them on every day.
+  const [showDone, setShowDone] = useState<Set<string>>(readShowDone);
+  const [lingering, setLingering] = useState<Set<string>>(new Set());
+  const lingerTimersRef = useRef<Set<number>>(new Set());
+  useEffect(
+    () => () => {
+      for (const t of lingerTimersRef.current) window.clearTimeout(t);
+    },
+    [],
+  );
+  const prevCompletedRef = useRef<{ date: string; ids: Set<string> }>({
+    date: selectedDate,
+    ids: new Set(
+      liveOccurrences.filter((o) => o.completed).map((o) => o.task.id),
+    ),
+  });
+  useEffect(() => {
+    const done = new Set(
+      liveOccurrences.filter((o) => o.completed).map((o) => o.task.id),
+    );
+    const prev = prevCompletedRef.current;
+    prevCompletedRef.current = { date: selectedDate, ids: done };
+    if (prev.date !== selectedDate) return;
+    const fresh = [...done].filter((id) => !prev.ids.has(id));
+    if (fresh.length === 0) return;
+    setLingering((cur) => new Set([...cur, ...fresh]));
+    // Not cleared by this effect's own cleanup - the list re-renders right
+    // after a tick, and cancelling the timer then left the task stuck in
+    // place instead of folding away. Only cleared on unmount (below).
+    const timer = window.setTimeout(() => {
+      lingerTimersRef.current.delete(timer);
+      setLingering((cur) => {
+        const next = new Set(cur);
+        for (const id of fresh) next.delete(id);
+        return next;
+      });
+    }, 900);
+    lingerTimersRef.current.add(timer);
+  }, [liveOccurrences, selectedDate]);
   const layoutDrag = useReorderDrag((nextIds) => {
     const nextTagIds = nextIds
       .filter((id) => id.startsWith("group:"))
@@ -165,7 +260,11 @@ export function TaskList({
     // Whichever group id most recently passed in this same reordered list
     // becomes every following note's new anchor, until the next group -
     // notes before the first group anchor to null ("top of the day").
-    const noteUpdates: { id: string; afterGroupKey: string | null; sortOrder: number }[] = [];
+    const noteUpdates: {
+      id: string;
+      afterGroupKey: string | null;
+      sortOrder: number;
+    }[] = [];
     let currentAnchor: string | null = null;
     let sortOrder = 0;
     for (const id of nextIds) {
@@ -215,7 +314,9 @@ export function TaskList({
   // disappear.
   const notesByAnchor = new Map<string | null, DayNote[]>();
   for (const note of sortedNotes) {
-    const anchor = groups.some((g) => g.key === note.afterGroupKey) ? note.afterGroupKey : null;
+    const anchor = groups.some((g) => g.key === note.afterGroupKey)
+      ? note.afterGroupKey
+      : null;
     const bucket = notesByAnchor.get(anchor);
     if (bucket) bucket.push(note);
     else notesByAnchor.set(anchor, [note]);
@@ -264,7 +365,8 @@ export function TaskList({
     const timers: number[] = [];
 
     for (const g of groups) {
-      const isComplete = g.occurrences.length > 0 && g.occurrences.every((o) => o.completed);
+      const isComplete =
+        g.occurrences.length > 0 && g.occurrences.every((o) => o.completed);
 
       if (!seenKeys.current.has(g.scopedKey)) {
         // First time this day+tag combination has been seen: if it's
@@ -333,8 +435,9 @@ export function TaskList({
                 <NoteRow
                   note={note}
                   dragging={draggedNoteId === note.id}
-                  onHandlePointerDown={layoutDrag.bindHandlePointerDown(entry.itemId, () =>
-                    draggableLayout.map((e) => e.itemId),
+                  onHandlePointerDown={layoutDrag.bindHandlePointerDown(
+                    entry.itemId,
+                    () => draggableLayout.map((e) => e.itemId),
                   )}
                   onEdit={() => onEditNote(note)}
                   onDelete={() => onDeleteNote(note.id)}
@@ -344,12 +447,23 @@ export function TaskList({
           );
         }
 
-        const { key, scopedKey, tag, occurrences: groupOccurrences } = entry.group!;
+        const {
+          key,
+          scopedKey,
+          tag,
+          occurrences: groupOccurrences,
+        } = entry.group!;
         const isDraggable = entry.draggable;
 
         return (
           <Fragment key={entry.itemId}>
-            <div ref={isDraggable ? layoutDrag.registerItemRef(entry.itemId) : undefined}>
+            <div
+              ref={
+                isDraggable
+                  ? layoutDrag.registerItemRef(entry.itemId)
+                  : undefined
+              }
+            >
               <TaskGroup
                 label={tag?.name ?? "No template"}
                 color={tag?.color}
@@ -367,31 +481,85 @@ export function TaskList({
                     : undefined
                 }
                 suppressClick={layoutDrag.suppressClick}
-                urgentMsLeft={
-                  showUrgency && groupOccurrences.some((o) => !o.completed) ? msUntilMidnight : null
+                urgency={
+                  urgency && groupOccurrences.some((o) => !o.completed)
+                    ? urgency
+                    : null
                 }
+                msLeft={msUntilMidnight}
               >
-                {groupOccurrences.map(({ task, completed }) => (
-                  <Fragment key={task.id}>
-                    <div ref={leaving.has(task.id) ? undefined : taskDrag.registerItemRef(task.id)}>
-                      <TaskItem
-                        task={task}
-                        completed={completed}
-                        leaving={leaving.has(task.id)}
-                        locked={isPastDay}
-                        onToggle={() => onToggle(task)}
-                        onView={() => onView(task)}
-                        onDelete={() => onDelete(task)}
-                        onDragPointerDown={taskDrag.bindLongPress(
-                          task.id,
-                          () => groupOccurrences.map((o) => o.task.id),
-                        )}
-                        suppressClick={taskDrag.suppressClick}
-                        dragging={draggedTaskId === task.id}
-                      />
-                    </div>
-                  </Fragment>
-                ))}
+                {(() => {
+                  const scoped = key;
+                  const folded = (o: Occurrence) =>
+                    o.completed && !lingering.has(o.task.id);
+                  const open = groupOccurrences.filter((o) => !folded(o));
+                  const done = groupOccurrences.filter(folded);
+                  const expanded = showDone.has(scoped);
+                  const visible = expanded ? [...open, ...done] : open;
+                  const hiddenIds = expanded ? [] : done.map((o) => o.task.id);
+                  return (
+                    <>
+                      {visible.map(({ task, completed }) => (
+                        <Fragment key={task.id}>
+                          <div
+                            ref={
+                              leaving.has(task.id)
+                                ? undefined
+                                : taskDrag.registerItemRef(task.id)
+                            }
+                          >
+                            <TaskItem
+                              task={task}
+                              completed={completed}
+                              leaving={leaving.has(task.id)}
+                              locked={isPastDay}
+                              onToggle={() => onToggle(task)}
+                              onView={() => onView(task)}
+                              onDelete={() => onDelete(task)}
+                              onDragPointerDown={taskDrag.bindLongPress(
+                                task.id,
+                                () => {
+                                  dragHiddenIdsRef.current = hiddenIds;
+                                  return visible.map((o) => o.task.id);
+                                },
+                              )}
+                              suppressClick={taskDrag.suppressClick}
+                              dragging={draggedTaskId === task.id}
+                            />
+                          </div>
+                        </Fragment>
+                      ))}
+                      {done.length > 0 && (
+                        <button
+                          type="button"
+                          className="task-list__done-fold"
+                          aria-expanded={expanded}
+                          onClick={() =>
+                            setShowDone((cur) => {
+                              const next = new Set(cur);
+                              if (next.has(scoped)) next.delete(scoped);
+                              else next.add(scoped);
+                              writeShowDone(next);
+                              return next;
+                            })
+                          }
+                        >
+                          <CheckIcon
+                            size={12}
+                            className="task-list__done-fold-check"
+                          />
+                          {expanded
+                            ? "Hide completed"
+                            : `${done.length} completed`}
+                          <ChevronRightIcon
+                            size={13}
+                            className={`task-list__done-fold-chevron ${expanded ? "task-list__done-fold-chevron--open" : ""}`}
+                          />
+                        </button>
+                      )}
+                    </>
+                  );
+                })()}
               </TaskGroup>
             </div>
           </Fragment>

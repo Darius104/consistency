@@ -1,57 +1,34 @@
-/* A themed card (red wash tied to the heart icon), same pattern as the
-   gold Premium card and the green active-membership card elsewhere in
-   Settings - previously this was a flat, uncolored box whose button pulled
-   the app's generic accent color, which had nothing to do with the red
-   heart icon two lines above it. */
-.donate-section {
+.donate-page__hero {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-3);
-  margin-top: var(--space-3);
-  padding: var(--space-5) var(--space-4) var(--space-4);
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4);
+  border-radius: 16px;
+  background: color-mix(in srgb, #ec4899 9%, var(--surface));
   text-align: center;
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(229, 104, 107, 0.35);
-  background: linear-gradient(180deg, rgba(229, 104, 107, 0.14), var(--bg-elevated) 65%);
-  box-shadow: 0 10px 30px -14px rgba(229, 104, 107, 0.35);
 }
 
-.donate-section__icon {
+.donate-page__icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
-  background: rgba(229, 104, 107, 0.18);
-  color: var(--danger);
+  background: rgba(236, 72, 153, 0.18);
+  color: #ec4899;
 }
 
-.donate-section__text {
+.donate-page__title {
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.donate-page__text {
   margin: 0;
-  max-width: 36ch;
+  max-width: 32ch;
   font-size: var(--text-sm);
+  line-height: 1.5;
   color: var(--text-secondary);
-}
-
-/* .btn.donate-section__button (not just .donate-section__button) for
-   specificity over .btn--primary's own fixed background - ties the one
-   actionable element in the card to the same red as everything else in
-   it, instead of the app's unrelated theme accent. */
-.btn.donate-section__button {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  margin-top: var(--space-1);
-  background: var(--danger);
-  color: #2a0e0f;
-  transition: transform 150ms var(--ease-out), box-shadow 150ms var(--ease-out),
-    filter 0.12s ease;
-}
-
-.btn.donate-section__button:hover {
-  filter: brightness(1.08);
-  transform: translateY(-1px) scale(1.01);
-  box-shadow: 0 6px 18px rgba(229, 104, 107, 0.4);
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import type { ReactNode } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { Friend } from "../../db/friends";
@@ -6,9 +6,15 @@ import type { MembershipState } from "../../hooks/useMembership";
 import type { ReminderStatus } from "../../hooks/useTaskReminders";
 import type { FriendStreakEntry } from "../../hooks/useFriendStreaks";
 import type { Tag, Task, ThemeId } from "../../types";
+import type { AppearanceMode } from "../../utils/themes";
 import type { AvatarId } from "../../utils/avatars";
 import type { RandomThemeColors } from "../../utils/randomTheme";
-import { FREE_WIDGET_LIMIT, WIDGET_IDS, WIDGET_LABELS, type WidgetId } from "../../utils/panelOrder";
+import {
+  FREE_WIDGET_LIMIT,
+  WIDGET_IDS,
+  WIDGET_LABELS,
+  type WidgetId,
+} from "../../utils/panelOrder";
 import type { Quote } from "../../utils/quotes";
 import {
   MAX_FREEZES_PER_MONTH,
@@ -23,13 +29,12 @@ import { FriendStreakCompare } from "../stats/FriendStreakCompare";
 import { QuoteWidget } from "../stats/QuoteWidget";
 import { StreakCounter } from "../stats/StreakCounter";
 import { WeeklyCompletion } from "../stats/WeeklyCompletion";
-import { Button } from "../ui/Button";
-import { Card } from "../ui/Card";
-import { Checkbox } from "../ui/Checkbox";
 import { Modal } from "../ui/Modal";
+import { Switch } from "../ui/Switch";
 import {
   BellIcon,
   ChevronLeftIcon,
+  ChevronRightIcon,
   CrownIcon,
   EyeIcon,
   FrostIcon,
@@ -37,7 +42,7 @@ import {
   HeartIcon,
   HelpIcon,
   ProfileIcon,
-  EditIcon,
+  PaletteIcon,
   UserIcon,
   UsersIcon,
 } from "../ui/icons";
@@ -51,8 +56,11 @@ import { FriendsManager } from "./FriendsManager";
 import { MembershipSection } from "./MembershipSection";
 import { ProfileSection } from "./ProfileSection";
 import { ReminderList } from "./ReminderList";
-import { SettingsCardHeader } from "./SettingsCardHeader";
-import { SettingsNav, type SettingsSection } from "./SettingsNav";
+import {
+  SettingsHome,
+  type SettingsHomeRow,
+  type SettingsSection,
+} from "./SettingsHome";
 import { StreakFreezeManager } from "./StreakFreezeManager";
 import { SupportSection } from "./SupportSection";
 import "./SettingsModal.css";
@@ -67,6 +75,8 @@ interface SettingsModalProps {
   onChangeTheme: (theme: ThemeId) => void;
   customThemeColors: RandomThemeColors | null;
   onSetCustomTheme: (hue: number) => void;
+  appearanceMode: AppearanceMode;
+  onChangeAppearanceMode: (mode: AppearanceMode) => void;
   remindersEnabled: boolean;
   onChangeRemindersEnabled: (enabled: boolean) => void;
   reminderStatus: ReminderStatus;
@@ -109,6 +119,7 @@ const PRIVACY_URL = "https://darius104.github.io/consistency/privacy.html";
 
 const BASE_SECTIONS: SettingsSection[] = [
   { id: "profile", label: "Profile", icon: ProfileIcon },
+  { id: "appearance", label: "Appearance", icon: PaletteIcon },
   { id: "widgets", label: "Widgets", icon: GridIcon },
   { id: "freezes", label: "Streak Freezes", icon: FrostIcon },
   { id: "reminders", label: "Reminders", icon: BellIcon },
@@ -131,6 +142,8 @@ export function SettingsModal({
   onChangeTheme,
   customThemeColors,
   onSetCustomTheme,
+  appearanceMode,
+  onChangeAppearanceMode,
   remindersEnabled,
   onChangeRemindersEnabled,
   reminderStatus,
@@ -168,15 +181,28 @@ export function SettingsModal({
   onSupportSeen,
 }: SettingsModalProps) {
   const SECTIONS = [
-    ...BASE_SECTIONS.map((s) => (s.id === "support" ? { ...s, badge: supportBadgeCount } : s)),
+    ...BASE_SECTIONS.map((s) =>
+      s.id === "support" ? { ...s, badge: supportBadgeCount } : s,
+    ),
     ...(membership.actualTier === "admin" ? [ADMIN_SECTION] : []),
   ];
-  const [activeId, setActiveId] = useState(initialSectionId ?? SECTIONS[0].id);
+  // "home" = just open Settings (the phone's start list); the desktop
+  // sidebar then shows Profile beside it.
+  const [activeId, setActiveId] = useState(
+    initialSectionId && initialSectionId !== "home"
+      ? initialSectionId
+      : SECTIONS[0].id,
+  );
   // Only meaningful on phone-sized modal widths, where the nav list and the
   // section detail can't both fit - mirrors the same list/detail pattern
   // used for the calendar vs. day panel on mobile.
-  const [showingDetail, setShowingDetail] = useState(false);
+  // Phone: a shortcut straight to a section (the avatar -> Profile, the
+  // Friends tab) opens that page; the Settings tab lands on the start list.
+  const [showingDetail, setShowingDetail] = useState(
+    initialSectionId !== undefined && initialSectionId !== "home",
+  );
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [previewWidget, setPreviewWidget] = useState<WidgetId | null>(null);
 
   function selectSection(id: string) {
     setActiveId(id);
@@ -186,11 +212,22 @@ export function SettingsModal({
   function renderWidgetPreview(id: WidgetId): ReactNode {
     switch (id) {
       case "streak":
-        return <StreakCounter streak={streak} best={bestStreak} today={todayStatus} />;
+        return (
+          <StreakCounter
+            streak={streak}
+            best={bestStreak}
+            today={todayStatus}
+          />
+        );
       case "weekly":
         return <WeeklyCompletion data={weekly} />;
       case "freezes":
-        return <FreezeSummary remaining={freezesRemaining} total={MAX_FREEZES_PER_MONTH} />;
+        return (
+          <FreezeSummary
+            remaining={freezesRemaining}
+            total={MAX_FREEZES_PER_MONTH}
+          />
+        );
       case "templates":
         return <TemplateBreakdown data={templateBreakdown} tags={tags} />;
       case "quote":
@@ -209,10 +246,58 @@ export function SettingsModal({
 
   const activeLabel = SECTIONS.find((s) => s.id === activeId)?.label ?? "";
 
+  // Phone start screen (SettingsHome): grouped like iOS Settings, each row
+  // with its own icon color and current value.
+  const visibleWidgetCount = WIDGET_IDS.length - hiddenWidgets.length;
+  const homeRow = (
+    id: string,
+    color: string,
+    value?: string,
+  ): SettingsHomeRow | null => {
+    const section = SECTIONS.find((sec) => sec.id === id);
+    return section ? { ...section, color, value } : null;
+  };
+  const homeGroups = [
+    [
+      homeRow("appearance", "#8b5cf6"),
+      homeRow("widgets", "#f97316", `${visibleWidgetCount} on`),
+      homeRow("reminders", "#ef4444", remindersEnabled ? "On" : "Off"),
+    ],
+    [homeRow("freezes", "#0ea5e9", `${freezesRemaining} left`)],
+    [
+      homeRow(
+        "friends",
+        "#22c55e",
+        onlineFriendIds.size > 0 ? `${onlineFriendIds.size} online` : undefined,
+      ),
+      homeRow("support", "#3b82f6"),
+    ],
+    [
+      homeRow(
+        "membership",
+        "#eab308",
+        membership.isPremium ? "Premium" : "Free",
+      ),
+      homeRow("donate", "#ec4899"),
+    ],
+    [homeRow("account", "#64748b"), homeRow("admin-preview", "#6b7280")],
+  ].map((group) => group.filter((r): r is SettingsHomeRow => r !== null));
+
   return (
     <Modal title="Settings" onClose={onClose} size="wide">
-      <div className="settings" data-mobile-pane={showingDetail ? "detail" : "list"}>
-        <SettingsNav sections={SECTIONS} activeId={activeId} onSelect={selectSection} />
+      <div
+        className="settings"
+        data-mobile-pane={showingDetail ? "detail" : "list"}
+      >
+        <SettingsHome
+          groups={homeGroups}
+          avatarId={yourAvatarId}
+          streak={streak}
+          isPremium={membership.isPremium}
+          onSelect={selectSection}
+          onSignOut={onSignOut}
+          activeId={activeId}
+        />
 
         <div className="settings-detail">
           <div className="settings-detail__header">
@@ -222,237 +307,356 @@ export function SettingsModal({
               onClick={() => setShowingDetail(false)}
               aria-label="Back to settings list"
             >
-              <ChevronLeftIcon size={16} />
+              <ChevronLeftIcon size={18} />
+              <span className="settings-detail__back-label">Settings</span>
             </button>
             <h3 className="settings-detail__title">{activeLabel}</h3>
           </div>
 
           <div className="settings-detail__body">
-          <div className="settings-detail__pane" key={activeId}>
-            {activeId === "profile" && (
-              <>
-                <Card>
-                  <SettingsCardHeader
-                    icon={<EditIcon size={16} />}
-                    label="Appearance"
-                    hint="Pick a theme, or build your own from any color."
-                    color="#2dd4bf"
-                  />
-                  <AppearancePicker
-                    activeTheme={theme}
-                    customColors={customThemeColors}
-                    onChangeTheme={onChangeTheme}
-                    onSetCustomTheme={onSetCustomTheme}
-                  />
-                </Card>
-                <ProfileSection />
-              </>
-            )}
+            <div className="settings-detail__pane" key={activeId}>
+              {activeId === "profile" && <ProfileSection />}
 
-            {activeId === "widgets" && (
-              <Card>
-                <SettingsCardHeader
-                  icon={<GridIcon size={16} />}
-                  label="Widgets"
-                  hint="Choose which widgets show up on your day panel, and preview what each one looks like with your real data."
-                  color="#fb923c"
-                />
-
-                <div className="settings__row settings__row--divided">
-                  <span className="settings__row-text">
-                    <span className="only-desktop">Reorder widgets on the right panel</span>
-                    <span className="only-mobile">Reorder your widgets</span>
-                  </span>
-                  <Button onClick={onStartArranging}>
-                    <span className="only-desktop">Arrange right panel</span>
-                    <span className="only-mobile">Arrange panel</span>
-                  </Button>
-                </div>
-
-                <div className="widget-gallery">
-                  {WIDGET_IDS.map((id) => {
-                    const visible = !hiddenWidgets.includes(id);
-                    const visibleCount = WIDGET_IDS.length - hiddenWidgets.length;
-                    const locked = !visible && !membership.isPremium && visibleCount >= FREE_WIDGET_LIMIT;
-                    return (
-                      <div className="widget-gallery__item" key={id}>
-                        <Checkbox
-                          checked={visible}
-                          onChange={(checked) => (checked ? onShowWidget(id) : onHideWidget(id))}
-                          label={locked ? `${WIDGET_LABELS[id]} (Premium)` : WIDGET_LABELS[id]}
-                        />
-                        <div
-                          className={`widget-gallery__preview ${visible ? "" : "widget-gallery__preview--hidden"}`}
-                          aria-hidden="true"
+              {activeId === "appearance" && (
+                <div className="settings-pages">
+                  <div className="settings-group-wrap">
+                    <span className="settings-group__title">Mode</span>
+                    <div
+                      className="appearance-mode"
+                      role="radiogroup"
+                      aria-label="Light or dark"
+                    >
+                      {(["dark", "light"] as const).map((m) => (
+                        <button
+                          key={m}
+                          type="button"
+                          role="radio"
+                          aria-checked={appearanceMode === m}
+                          className={`appearance-mode__option ${appearanceMode === m ? "appearance-mode__option--active" : ""}`}
+                          onClick={() => onChangeAppearanceMode(m)}
                         >
-                          {renderWidgetPreview(id)}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </Card>
-            )}
-
-            {activeId === "freezes" && (
-              <StreakFreezeManager
-                frozenDays={frozenDays}
-                candidates={freezeCandidates}
-                freezesRemaining={freezesRemaining}
-                onFreeze={onFreezeDay}
-                onUnfreeze={onUnfreezeDay}
-              />
-            )}
-
-            {activeId === "reminders" && (
-              <>
-                <Card>
-                  <Checkbox
-                    checked={remindersEnabled}
-                    onChange={onChangeRemindersEnabled}
-                    label="Notify me when a scheduled task's time arrives"
-                  />
-                  <span className="settings__hint">
-                    Needs notification permission - each one arrives at that task's own
-                    time, not right away when you turn this on, and even if the app isn't
-                    open. Also sends one extra nudge at 9 PM if anything's still left for
-                    today.
-                  </span>
-                  {remindersEnabled && reminderStatus.permission === "denied" && (
-                    <div className="settings-status-banner settings-status-banner--warning settings-status-banner--with-action">
-                      <span>
-                        Notifications permission was denied - macOS only asks once, so
-                        turning this on again won't re-prompt. Enable it for this app in
-                        System Settings instead.
-                      </span>
-                      <Button
-                        onClick={() =>
-                          void openUrl("x-apple.systempreferences:com.apple.preference.notifications")
-                        }
-                      >
-                        Open System Settings
-                      </Button>
+                          <span
+                            className={`appearance-mode__preview appearance-mode__preview--${m}`}
+                            aria-hidden="true"
+                          >
+                            <span />
+                            <span />
+                          </span>
+                          {m === "dark" ? "Dark" : "Light"}
+                        </button>
+                      ))}
                     </div>
-                  )}
-                  {remindersEnabled && reminderStatus.lastError && (
-                    <div className="settings-status-banner settings-status-banner--warning">
-                      Couldn't schedule reminders: {reminderStatus.lastError}
-                    </div>
-                  )}
-                  {remindersEnabled &&
-                    reminderStatus.permission === "granted" &&
-                    reminderStatus.usesLiveFallback && (
-                      <div className="settings-status-banner settings-status-banner--info">
-                        This device checks for due reminders every 30 seconds while
-                        Consistency is open - they won't arrive while the app is closed.
-                      </div>
-                    )}
-                  {remindersEnabled &&
-                    reminderStatus.permission === "granted" &&
-                    !reminderStatus.usesLiveFallback && (
-                      <div
-                        className={`settings-status-banner ${
-                          reminderStatus.attemptedCount > reminderStatus.confirmedCount
-                            ? "settings-status-banner--warning"
-                            : "settings-status-banner--success"
-                        }`}
-                      >
-                        {reminderStatus.attemptedCount > reminderStatus.confirmedCount
-                          ? `${reminderStatus.attemptedCount - reminderStatus.confirmedCount} of ${reminderStatus.attemptedCount} reminders didn't actually register with the system - they may not arrive.`
-                          : `${reminderStatus.confirmedCount} reminder${reminderStatus.confirmedCount === 1 ? "" : "s"} confirmed with the system.`}
-                      </div>
-                    )}
-                </Card>
-
-                {remindersEnabled && (
-                  <Card>
-                    <span className="settings__label">Upcoming Reminders</span>
-                    <ReminderList
-                      tasks={tasks}
-                      completions={completions}
-                      onSelectReminder={onJumpToReminder}
-                    />
-                  </Card>
-                )}
-              </>
-            )}
-
-            {activeId === "friends" && (
-              <FriendsManager
-                online={online}
-                onlineFriendIds={onlineFriendIds}
-                onViewFriend={(friend) => {
-                  onViewFriend(friend);
-                  onClose();
-                }}
-                isPremium={membership.isPremium}
-                onFriendLimitReached={onFriendLimitReached}
-              />
-            )}
-
-            {activeId === "membership" && (
-              <MembershipSection
-                online={online}
-                membership={membership}
-                onViewMember={(member) => {
-                  onViewFriend(member);
-                  onClose();
-                }}
-              />
-            )}
-
-            {activeId === "donate" && <DonateSection />}
-
-            {activeId === "support" && (
-              <SupportSection membership={membership} onSeen={onSupportSeen} />
-            )}
-
-            {activeId === "account" && (
-              <>
-                <AppUpdateSection />
-                <BackupSection />
-                <Card>
-                  <span className="settings__label">Legal</span>
-                  <div className="settings__legal-links">
-                    <button
-                      type="button"
-                      className="settings__legal-link"
-                      onClick={() => void openUrl(TERMS_URL)}
-                    >
-                      Terms and Conditions
-                    </button>
-                    <button
-                      type="button"
-                      className="settings__legal-link"
-                      onClick={() => void openUrl(PRIVACY_URL)}
-                    >
-                      Privacy Policy
-                    </button>
-                  </div>
-                </Card>
-                <Card>
-                  <div className="settings__row">
-                    <span className="settings__row-text">Sign out of your account on this device</span>
-                    <Button variant="danger" onClick={onSignOut}>
-                      Sign out
-                    </Button>
-                  </div>
-                </Card>
-                <Card>
-                  <div className="settings__row">
-                    <span className="settings__row-text">
-                      Permanently delete your account and all its data
+                    <span className="settings-footnote">
+                      Works with every theme below, on all your devices.
                     </span>
-                    <Button variant="danger" onClick={() => setDeletingAccount(true)}>
-                      Delete account
-                    </Button>
                   </div>
-                </Card>
-              </>
-            )}
+                  <div className="settings-group-wrap">
+                    <span className="settings-group__title">Theme</span>
+                    <div className="settings-group settings-group--padded">
+                      <AppearancePicker
+                        activeTheme={theme}
+                        customColors={customThemeColors}
+                        onChangeTheme={onChangeTheme}
+                        onSetCustomTheme={onSetCustomTheme}
+                      />
+                    </div>
+                    <span className="settings-footnote">
+                      Pick a theme, or build your own from any color.
+                    </span>
+                  </div>
+                </div>
+              )}
 
-            {activeId === "admin-preview" && <AdminPreviewSection membership={membership} />}
-          </div>
+              {activeId === "widgets" && (
+                <div className="settings-pages">
+                  <div className="settings-group-wrap">
+                    <div className="settings-group">
+                      <button
+                        type="button"
+                        className="settings-group__row settings-group__row--accent"
+                        onClick={onStartArranging}
+                      >
+                        <span className="settings-group__label">
+                          Arrange widgets
+                        </span>
+                        <ChevronRightIcon
+                          size={15}
+                          className="settings-group__chevron"
+                        />
+                      </button>
+                    </div>
+                    <span className="settings-footnote">
+                      Reorder them right on your day panel.
+                    </span>
+                  </div>
+
+                  <div className="settings-group-wrap">
+                    <span className="settings-group__title">
+                      Show on your day
+                    </span>
+                    <div className="settings-group">
+                      {WIDGET_IDS.map((id) => {
+                        const visible = !hiddenWidgets.includes(id);
+                        const locked =
+                          !visible &&
+                          !membership.isPremium &&
+                          visibleWidgetCount >= FREE_WIDGET_LIMIT;
+                        const previewing = previewWidget === id;
+                        return (
+                          <Fragment key={id}>
+                            {/* Two separate controls in one row - tapping the
+                              name previews the widget, the switch shows or
+                              hides it (a switch nested inside a row button
+                              was invalid HTML and could swallow taps). */}
+                            <div className="settings-group__row settings-group__row--split">
+                              <button
+                                type="button"
+                                className="settings-group__row-main"
+                                aria-expanded={previewing}
+                                onClick={() =>
+                                  setPreviewWidget(previewing ? null : id)
+                                }
+                              >
+                                <ChevronRightIcon
+                                  size={14}
+                                  className={`settings-group__chevron ${previewing ? "settings-group__chevron--open" : ""}`}
+                                />
+                                <span className="settings-group__label">
+                                  {WIDGET_LABELS[id]}
+                                </span>
+                                {locked && (
+                                  <span className="settings-group__value">
+                                    Premium
+                                  </span>
+                                )}
+                              </button>
+                              <Switch
+                                checked={visible}
+                                onChange={(checked) =>
+                                  checked ? onShowWidget(id) : onHideWidget(id)
+                                }
+                                label={`Show ${WIDGET_LABELS[id]}`}
+                              />
+                            </div>
+                            {previewing && (
+                              <div
+                                className="settings-group__expand widget-preview"
+                                aria-hidden="true"
+                              >
+                                {renderWidgetPreview(id)}
+                              </div>
+                            )}
+                          </Fragment>
+                        );
+                      })}
+                    </div>
+                    <span className="settings-footnote">
+                      Tap a widget to preview it with your data.
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {activeId === "freezes" && (
+                <StreakFreezeManager
+                  frozenDays={frozenDays}
+                  candidates={freezeCandidates}
+                  freezesRemaining={freezesRemaining}
+                  onFreeze={onFreezeDay}
+                  onUnfreeze={onUnfreezeDay}
+                />
+              )}
+
+              {activeId === "reminders" && (
+                <div className="settings-pages">
+                  <div className="settings-group-wrap">
+                    <div className="settings-group">
+                      <div className="settings-group__row">
+                        <span className="settings-group__label">
+                          Task reminders
+                        </span>
+                        <Switch
+                          checked={remindersEnabled}
+                          onChange={onChangeRemindersEnabled}
+                          label="Task reminders"
+                        />
+                      </div>
+                      {remindersEnabled &&
+                        reminderStatus.permission === "denied" && (
+                          <button
+                            type="button"
+                            className="settings-group__row settings-group__row--accent"
+                            onClick={() =>
+                              void openUrl(
+                                "x-apple.systempreferences:com.apple.preference.notifications",
+                              )
+                            }
+                          >
+                            <span className="settings-group__label">
+                              Allow notifications in System Settings
+                            </span>
+                            <ChevronRightIcon
+                              size={15}
+                              className="settings-group__chevron"
+                            />
+                          </button>
+                        )}
+                    </div>
+                    <span className="settings-footnote">
+                      At each task's time, plus a 9 PM nudge if anything's still
+                      left today.
+                    </span>
+                    {remindersEnabled &&
+                      reminderStatus.permission === "denied" && (
+                        <span className="settings-footnote settings-footnote--warning">
+                          Notifications are turned off for Consistency.
+                        </span>
+                      )}
+                    {remindersEnabled && reminderStatus.lastError && (
+                      <span className="settings-footnote settings-footnote--warning">
+                        Couldn't schedule reminders: {reminderStatus.lastError}
+                      </span>
+                    )}
+                    {remindersEnabled &&
+                      reminderStatus.permission === "granted" &&
+                      reminderStatus.usesLiveFallback && (
+                        <span className="settings-footnote">
+                          On this device they only arrive while the app is open.
+                        </span>
+                      )}
+                    {remindersEnabled &&
+                      reminderStatus.permission === "granted" &&
+                      !reminderStatus.usesLiveFallback &&
+                      reminderStatus.attemptedCount >
+                        reminderStatus.confirmedCount && (
+                        <span className="settings-footnote settings-footnote--warning">
+                          {reminderStatus.attemptedCount -
+                            reminderStatus.confirmedCount}{" "}
+                          of {reminderStatus.attemptedCount} reminders didn't
+                          register - they may not arrive.
+                        </span>
+                      )}
+                  </div>
+
+                  {remindersEnabled && (
+                    <div className="settings-group-wrap">
+                      <span className="settings-group__title">Upcoming</span>
+                      <div className="settings-group settings-group--padded">
+                        <ReminderList
+                          tasks={tasks}
+                          completions={completions}
+                          onSelectReminder={onJumpToReminder}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeId === "friends" && (
+                <FriendsManager
+                  online={online}
+                  onlineFriendIds={onlineFriendIds}
+                  onViewFriend={(friend) => {
+                    onViewFriend(friend);
+                    onClose();
+                  }}
+                  isPremium={membership.isPremium}
+                  onFriendLimitReached={onFriendLimitReached}
+                />
+              )}
+
+              {activeId === "membership" && (
+                <MembershipSection
+                  online={online}
+                  membership={membership}
+                  onViewMember={(member) => {
+                    onViewFriend(member);
+                    onClose();
+                  }}
+                />
+              )}
+
+              {activeId === "donate" && <DonateSection />}
+
+              {activeId === "support" && (
+                <SupportSection
+                  membership={membership}
+                  onSeen={onSupportSeen}
+                />
+              )}
+
+              {activeId === "account" && (
+                <div className="settings-pages">
+                  {/* The phone updates through the App Store / TestFlight. */}
+                  <div className="only-desktop">
+                    <AppUpdateSection />
+                  </div>
+                  <BackupSection />
+
+                  <div className="settings-group-wrap">
+                    <span className="settings-group__title">Legal</span>
+                    <div className="settings-group">
+                      <button
+                        type="button"
+                        className="settings-group__row"
+                        onClick={() => void openUrl(TERMS_URL)}
+                      >
+                        <span className="settings-group__label">
+                          Terms and Conditions
+                        </span>
+                        <ChevronRightIcon
+                          size={15}
+                          className="settings-group__chevron"
+                        />
+                      </button>
+                      <button
+                        type="button"
+                        className="settings-group__row"
+                        onClick={() => void openUrl(PRIVACY_URL)}
+                      >
+                        <span className="settings-group__label">
+                          Privacy Policy
+                        </span>
+                        <ChevronRightIcon
+                          size={15}
+                          className="settings-group__chevron"
+                        />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="settings-group">
+                    <button
+                      type="button"
+                      className="settings-group__row settings-group__row--danger"
+                      onClick={onSignOut}
+                    >
+                      Sign out
+                    </button>
+                  </div>
+
+                  <div className="settings-group-wrap">
+                    <div className="settings-group">
+                      <button
+                        type="button"
+                        className="settings-group__row settings-group__row--danger"
+                        onClick={() => setDeletingAccount(true)}
+                      >
+                        Delete account
+                      </button>
+                    </div>
+                    <span className="settings-footnote">
+                      Permanently deletes your account and all its data.
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {activeId === "admin-preview" && (
+                <AdminPreviewSection membership={membership} />
+              )}
+            </div>
           </div>
         </div>
       </div>

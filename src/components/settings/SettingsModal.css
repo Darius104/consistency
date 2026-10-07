@@ -96,48 +96,6 @@
   color: var(--danger);
 }
 
-.settings-status-banner {
-  font-size: var(--text-sm);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-}
-
-.settings-status-banner--warning {
-  color: var(--danger);
-  background: rgba(229, 104, 107, 0.1);
-  border-color: rgba(229, 104, 107, 0.35);
-}
-
-.settings-status-banner--success {
-  color: var(--success);
-  background: var(--success-soft);
-  border-color: rgba(70, 201, 143, 0.35);
-}
-
-.settings-status-banner--info {
-  color: var(--text-secondary);
-  background: var(--surface);
-  border-color: var(--border);
-}
-
-/* A banner that also needs to hand the user a real shortcut, not just tell
-   them where to go - macOS only ever shows its own permission prompt once
-   per app, so after a denial the only way back in is System Settings
-   itself, and pointing at that pane directly beats a plain sentence
-   telling someone to go find it on their own. */
-.settings-status-banner--with-action {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  justify-content: space-between;
-}
-
-.settings-status-banner--with-action .btn {
-  flex: none;
-}
-
 .settings__row {
   display: flex;
   align-items: center;
@@ -145,101 +103,57 @@
   gap: var(--space-3);
 }
 
-/* Same divider technique used elsewhere (CustomThemeCreator, ProfileSection's
-   bio field) - marks this row as a second, related setting inside a card
-   that already opened with its own SettingsCardHeader above. */
-.settings__row--divided {
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--border);
-}
-
 .settings__row-text {
   font-size: var(--text-md);
   color: var(--text-secondary);
-}
-
-.settings__legal-links {
-  display: flex;
-  gap: var(--space-4);
-  margin-top: var(--space-2);
-}
-
-.settings__legal-link {
-  background: none;
-  border: none;
-  padding: 0;
-  font-size: var(--text-sm);
-  color: var(--accent);
-  text-decoration: underline;
 }
 
 /* Phone-sized modal widths: the nav list and the section detail can't both
    fit, so only one shows at a time (same list/detail pattern as the
    calendar vs. day panel) - the back button only makes sense here too. */
 @media (max-width: 700px) {
-  .settings-nav {
-    width: 100%;
-    border-right: none;
-  }
 
   .settings[data-mobile-pane="list"] .settings-detail {
     display: none;
   }
 
-  .settings[data-mobile-pane="detail"] .settings-nav {
+  .settings[data-mobile-pane="detail"] .settings-home {
     display: none;
   }
 
-  .settings-detail__back {
-    display: inline-flex;
-    width: 36px;
-    height: 36px;
-    margin-left: -8px;
+  /* iOS nav bar: "‹ Settings" on the left, the page title centered. */
+  .settings-detail__header {
+    position: relative;
+    justify-content: center;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-4) 0;
   }
 
-  .settings-detail__header {
-    padding: var(--space-3) var(--space-4) 0;
+  .settings-detail__back {
+    position: absolute;
+    left: var(--space-2);
+    display: inline-flex;
+    align-items: center;
+    gap: 0;
+    width: auto;
+    height: 40px;
+    padding: 0 var(--space-2) 0 0;
+    color: var(--accent);
+    font-size: var(--text-md);
+  }
+
+  .settings-detail__back-label {
+    display: inline;
+  }
+
+  .settings-detail__title {
+    font-size: var(--text-md);
+    font-weight: 600;
   }
 
   .settings-detail__body {
     padding: var(--space-4);
   }
-}
-
-.widget-gallery {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--border);
-}
-
-/* Each widget is now one self-contained bordered card (checkbox + label as
-   its own title bar, the live preview inside the same box below it) rather
-   than a preview floating loose above a naked checkbox - a long list of
-   those read as an undifferentiated stack with no boundary between one
-   widget's preview ending and the next one's checkbox starting. */
-.widget-gallery__item {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: var(--space-3);
-}
-
-/* The real StreakCounter/WeeklyCompletion, rendered with the user's actual
-   data so this is a true preview, not a mockup - not interactive here, so
-   pointer events (and any hover/press states meant for the live day panel)
-   are switched off. */
-.widget-gallery__preview {
-  pointer-events: none;
-  transition: opacity 0.15s ease;
-}
-
-.widget-gallery__preview--hidden {
-  opacity: 0.45;
 }
 
 /* Generic responsive-text-swap utility (same 700px breakpoint used
@@ -256,4 +170,285 @@
   .only-mobile {
     display: none;
   }
+}
+
+@media (min-width: 701px) {
+  .settings-detail__back-label {
+    display: none;
+  }
+}
+
+/* --- Grouped list (iOS "inset grouped") for settings pages --- */
+
+.settings-group-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.settings-group__title {
+  padding: 0 var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.settings-group__row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 48px;
+  padding: var(--space-2) var(--space-4);
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--text-md);
+  text-align: left;
+}
+
+button.settings-group__row:active {
+  background: var(--surface-hover);
+}
+
+@media (hover: hover) {
+  button.settings-group__row:hover {
+    background: var(--surface-hover);
+  }
+}
+
+.settings-group__row + .settings-group__row::before,
+.settings-group__row + .settings-group__expand::before,
+.settings-group__expand + .settings-group__row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: var(--space-4);
+  height: 1px;
+  background: var(--border);
+}
+
+.settings-group__label {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-group__value {
+  flex: none;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.settings-group__chevron {
+  flex: none;
+  color: var(--text-muted);
+  transition: transform 0.2s ease;
+}
+
+.settings-group__chevron--open {
+  transform: rotate(90deg);
+}
+
+.settings-group__row--danger {
+  justify-content: center;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.settings-group__row--accent {
+  color: var(--accent);
+}
+
+/* One short grey line under a group - instead of paragraphs. */
+.settings-footnote {
+  padding: 0 var(--space-3);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.settings-footnote--warning {
+  color: var(--warning, #f5a524);
+}
+
+.settings-footnote--success {
+  color: var(--success);
+}
+
+.settings-group__expand {
+  position: relative;
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+.settings-pages {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.settings-group--padded {
+  padding: var(--space-2) var(--space-3);
+}
+
+/* A widget preview inside the list - full widget, nothing clickable. */
+.widget-preview {
+  pointer-events: none;
+}
+
+/* Inline field inside a grouped row (Profile's name/bio, codes). */
+.settings-group__input {
+  flex: 2;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  color: var(--text);
+  text-align: right;
+}
+
+.settings-group__input:focus {
+  outline: none;
+}
+
+.settings-group__input::placeholder {
+  color: var(--text-muted);
+}
+
+.settings-group__row--top {
+  align-items: flex-start;
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-3);
+}
+
+.settings-group__row--muted {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+/* A page's one main action - full width, comfortable to tap. */
+.settings-primary-action {
+  width: 100%;
+  height: 46px;
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+/* Small pill-shaped action at the end of a row ("Freeze", "Copy"...). */
+.settings-row-action {
+  flex: none;
+  height: 30px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.settings-row-action:disabled {
+  opacity: 0.4;
+}
+
+.settings-row-action--danger {
+  background: rgba(229, 104, 107, 0.14);
+  color: var(--danger);
+}
+
+/* A row holding two controls side by side (see Widgets): the main part
+   is its own button filling the row, the trailing control sits beside it. */
+.settings-group__row--split {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.settings-group__row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  align-self: stretch;
+  padding: var(--space-2) 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+/* Settings > Appearance: Dark / Light, each with a tiny preview card. */
+.appearance-mode {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.appearance-mode__option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: 14px;
+  border: 2px solid transparent;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.appearance-mode__option--active {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.appearance-mode__preview {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  max-width: 120px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.appearance-mode__preview span {
+  height: 8px;
+  border-radius: 4px;
+}
+
+.appearance-mode__preview span:first-child {
+  width: 70%;
+  background: var(--accent);
+}
+
+.appearance-mode__preview--dark {
+  background: #17181c;
+}
+
+.appearance-mode__preview--dark span:last-child {
+  background: #2b2d33;
+}
+
+.appearance-mode__preview--light {
+  background: #ffffff;
+}
+
+.appearance-mode__preview--light span:last-child {
+  background: #e3e6ec;
 }

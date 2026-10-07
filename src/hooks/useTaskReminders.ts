@@ -8,8 +8,8 @@ import {
   requestPermission,
   Schedule,
 } from "@tauri-apps/plugin-notification";
-import type { Task } from "../types";
-import { todayKey } from "../utils/dates";
+import type { Tag, Task } from "../types";
+import { addDays, todayKey } from "../utils/dates";
 import { occurrenceDateTime, tasksScheduledOn, upcomingReminders } from "../utils/recurrence";
 import { computeTodayStatus } from "../utils/stats";
 
@@ -39,7 +39,22 @@ const LIVE_POLL_GRACE_MS = 5 * 60 * 1000;
 // frozen" all correctly suppress it without duplicating that logic here.
 export const END_OF_DAY_REMINDER_TIME = "21:00";
 
-function endOfDayNudgeContent(remaining: number): { title: string; body: string } {
+// How many days ahead the evening nudge is armed - so it still arrives on
+// a day you never open the app (exactly when it's most useful), and gets
+// cancelled as soon as that day is done or frozen.
+const END_OF_DAY_LOOKAHEAD_DAYS = 7;
+
+// iOS (and macOS) keep only the soonest 64 pending notifications per app and
+// silently drop the rest - so only the soonest this-many are handed over;
+// later ones get scheduled as earlier ones pass. A little under 64 for slack.
+const MAX_SCHEDULED = 60;
+
+function endOfDayNudgeContent(remaining: number | null): { title: string; body: string } {
+  // Today's count is known; a future day's isn't (it can still change by
+  // then), so those get a count-free line.
+  if (remaining === null) {
+    return { title: "Day's almost over", body: "Finish today's tasks to keep your streak alive." };
+  }
   const noun = remaining === 1 ? "task" : "tasks";
   return {
     title: "Day's almost over",
@@ -143,33 +158,96 @@ export interface ReminderStatus {
   usesLiveFallback: boolean;
 }
 
+/** One reminder the OS should have pending. `key` is stable per task+day
+ *  (or nudge+day) so a pass can tell what's already scheduled. */
+interface DesiredReminder {
+  key: string;
+  date: string;
+  time: string;
+  title: string;
+  body: string;
+  /** Fire time, for ordering/capping. */
+  at: number;
+}
+
+/** Everything that should be scheduled right now: each timed task
+ *  occurrence over the lookahead window, plus the evening nudge for every
+ *  upcoming day that has tasks and isn't done or frozen - soonest first,
+ *  capped at MAX_SCHEDULED. */
+function desiredReminders(
+  tasks: Task[],
+  tags: Tag[],
+  completions: Set<string>,
+  freezes: Set<string>,
+): DesiredReminder[] {
+  const today = todayKey();
+  const now = Date.now();
+  const tagName = new Map(tags.map((t) => [t.id, t.name]));
+  const out: DesiredReminder[] = [];
+
+  for (const { taskId, date } of upcomingReminders(tasks, completions, today, REMINDER_LOOKAHEAD_DAYS)) {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task?.time) continue;
+    const group = task.tagId ? tagName.get(task.tagId) : undefined;
+    out.push({
+      key: `${taskId}:${date}`,
+      date,
+      time: task.time,
+      // "Morning routine · Drink water" - says which group it belongs to.
+      title: group ? `${group} · ${task.title}` : task.title,
+      body: task.notes || `Scheduled for ${task.time}`,
+      at: occurrenceDateTime(date, task.time).getTime(),
+    });
+  }
+
+  for (let i = 0; i < END_OF_DAY_LOOKAHEAD_DAYS; i++) {
+    const date = addDays(today, i);
+    const at = occurrenceDateTime(date, END_OF_DAY_REMINDER_TIME).getTime();
+    if (at <= now) continue;
+    const status = computeTodayStatus(tasks, completions, freezes, date);
+    if (!status.hasTasks || status.allDone || status.frozen) continue;
+    const content = endOfDayNudgeContent(i === 0 ? status.remaining : null);
+    out.push({ key: `eod:${date}`, date, time: END_OF_DAY_REMINDER_TIME, ...content, at });
+  }
+
+  return out
+    .filter((r) => r.at > now)
+    .sort((a, b) => a.at - b.at)
+    .slice(0, MAX_SCHEDULED);
+}
+
+/** What a reminder looks like, so an edited title/time/note is re-sent
+ *  even though its key didn't change. */
+function signature(r: DesiredReminder): string {
+  return `${r.date} ${r.time}|${r.title}|${r.body}`;
+}
+
 /**
- * Real OS-scheduled reminders - one per upcoming task occurrence with a
- * `time` set, over the next REMINDER_LOOKAHEAD_DAYS days, plus one
- * additional end-of-day nudge for *today only* (see END_OF_DAY_REMINDER_TIME)
- * when today still has incomplete tasks - all cancelled and rescheduled from
- * scratch whenever tasks/completions/freezes/enabled change. The nudge can
- * only ever cover today, not the lookahead window, since whether a future
- * day ends up incomplete isn't knowable ahead of time the way a task's own
- * scheduled occurrences are.
+ * Real OS-scheduled reminders - one per upcoming timed task occurrence over
+ * the next REMINDER_LOOKAHEAD_DAYS days, plus the evening "day's almost
+ * over" nudge (END_OF_DAY_REMINDER_TIME) for each upcoming day that still
+ * has something left - recomputed whenever tasks/completions/freezes/enabled
+ * change, and whenever the app comes back to the foreground.
  *
- * Three platform paths, tried in order:
+ * Each pass compares what should be scheduled with what the OS has pending
+ * and only adds/removes the difference. Passes never overlap: a change that
+ * arrives mid-pass just queues one more pass with the latest data - two
+ * overlapping passes could otherwise finish out of order and put back a
+ * reminder for a task that was just ticked off.
+ *
+ * Three platform paths:
  * 1. macOS: real scheduling via UNUserNotificationCenter, invoked directly
  *    (see native_notifications.rs) - tauri-plugin-notification's own
- *    desktop backend silently ignores any `schedule` passed to it and just
- *    fires immediately, so this bypasses it entirely on this one platform.
+ *    desktop backend silently ignores any `schedule` and fires immediately.
+ *    Uses calendar (wall-clock) triggers, so daylight saving can't shift it.
  * 2. Mobile (iOS/Android): the plugin's own real scheduling, via
- *    `pending()`/`cancel()` - these only exist on mobile (they route
- *    straight to the native Swift/Kotlin plugin code, bypassing Rust's
- *    command registration entirely).
- * 3. Anything else (Windows/Linux desktop): the live poll this hook used
- *    before real scheduling existed at all - `notify()` only ever fires
- *    immediately there regardless of any `schedule` passed to it, so the
- *    best this can do is check every 30s and fire the moment a task's own
- *    time arrives, only for as long as the app stays open.
+ *    `pending()`/`cancel()` - these only exist on mobile.
+ * 3. Anything else (Windows/Linux desktop): a live 30s poll that fires the
+ *    moment a task's time arrives, only while the app is open.
  */
 export function useTaskReminders(
   tasks: Task[],
+  tags: Tag[],
   completions: Set<string>,
   freezes: Set<string>,
   enabled: boolean,
@@ -182,30 +260,39 @@ export function useTaskReminders(
     usesLiveFallback: false,
   });
 
-  // Only used by the live-poll fallback below - kept fresh so the periodic
-  // check always sees current data without needing to be in its own effect
-  // dependency array (which would mean tearing down/recreating the interval
-  // on every single task edit).
+  // Latest inputs, read by each pass when it starts (passes are queued, so
+  // they must always work from current data, not what was current when
+  // they were requested).
   const tasksRef = useRef(tasks);
-  // The latest reschedule() from the main effect below - lets the window
-  // focus listener be registered once for the hook's whole lifetime instead
-  // of being torn down and re-added on every task/completion change.
-  const rescheduleRef = useRef<(() => Promise<void>) | null>(null);
   tasksRef.current = tasks;
+  const tagsRef = useRef(tags);
+  tagsRef.current = tags;
   const completionsRef = useRef(completions);
   completionsRef.current = completions;
   const freezesRef = useRef(freezes);
   freezesRef.current = freezes;
+  const enabledRef = useRef(enabled);
+  enabledRef.current = enabled;
+
+  // What this app session last handed to the OS, per key - lets a pass skip
+  // reminders that are already pending unchanged. Empty at launch, so the
+  // first pass replaces whatever an older version left behind.
+  const scheduledRef = useRef<Map<string, string>>(new Map());
+  const runningRef = useRef(false);
+  const rerunRef = useRef(false);
+  const unmountedRef = useRef(false);
+  const fallbackIntervalRef = useRef<number | null>(null);
   const notifiedTodayRef = useRef<Set<string>>(new Set());
-  // Only the live-poll fallback needs this - the OS-scheduled paths below
-  // naturally stop re-sending once the target time is in the past (see
-  // eodEligible's own secondsFromNow > 0 check), but a 30s poll would
-  // otherwise fire again on every tick for the rest of the day.
   const eodNotifiedDateRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    let fallbackInterval: number | null = null;
+  const passRef = useRef<() => Promise<void>>(async () => {});
+
+  passRef.current = async function pass() {
+    const tasks = tasksRef.current;
+    const tags = tagsRef.current;
+    const completions = completionsRef.current;
+    const freezes = freezesRef.current;
+    const enabled = enabledRef.current;
 
     async function checkDueRightNow() {
       const today = todayKey();
@@ -227,12 +314,11 @@ export function useTaskReminders(
           await notify({
             id: reminderNotificationId(task.id, today),
             title: task.title,
-            body: task.notes || "It's time for this task.",
+            body: task.notes || `Scheduled for ${task.time}`,
             sound: "default",
           });
         } catch {
-          // Best-effort on this fallback path - nothing more to do with a
-          // failure here than just try again next tick.
+          // Best-effort on this fallback path - try again next tick.
         }
       }
     }
@@ -241,295 +327,243 @@ export function useTaskReminders(
       const today = todayKey();
       if (eodNotifiedDateRef.current === today) return;
       if (new Date() < occurrenceDateTime(today, END_OF_DAY_REMINDER_TIME)) return;
-      const status = computeTodayStatus(
-        tasksRef.current,
-        completionsRef.current,
-        freezesRef.current,
-        today,
-      );
-      if (!status.hasTasks || status.allDone || status.frozen) return;
+      const st = computeTodayStatus(tasksRef.current, completionsRef.current, freezesRef.current, today);
+      if (!st.hasTasks || st.allDone || st.frozen) return;
       eodNotifiedDateRef.current = today;
       try {
-        const content = endOfDayNudgeContent(status.remaining);
-        await notify({
-          id: reminderNotificationId("eod", today),
-          title: content.title,
-          body: content.body,
-          sound: "default",
-        });
+        const content = endOfDayNudgeContent(st.remaining);
+        await notify({ id: reminderNotificationId("eod", today), ...content, sound: "default" });
       } catch {
         // Best-effort, same as checkDueRightNow above.
       }
     }
 
-    // This whole pipeline (permission and scheduling) fails completely
-    // silently otherwise - wrapping it is the only way a real failure ever
-    // becomes visible (see ReminderStatus/ReminderList in Settings).
-    async function reschedule() {
-      try {
-        const isNativeMacOS = await invoke<boolean>("native_notifications_available").catch(
-          () => false,
-        );
+    const isNativeMacOS = await invoke<boolean>("native_notifications_available").catch(() => false);
 
-        // Computed once up front and shared by both OS-scheduled branches
-        // below - re-derived from scratch on every pass (same as the
-        // per-task entries), so a task getting completed/added/deleted
-        // immediately cancels or reschedules this along with everything
-        // else, and it naturally stops re-arming for today once the target
-        // time itself is already in the past.
-        const eodToday = todayKey();
-        const eodStatusNow = computeTodayStatus(tasks, completions, freezes, eodToday);
-        const eodSecondsFromNow =
-          (occurrenceDateTime(eodToday, END_OF_DAY_REMINDER_TIME).getTime() - Date.now()) / 1000;
-        const eodEligible =
-          eodStatusNow.hasTasks &&
-          !eodStatusNow.allDone &&
-          !eodStatusNow.frozen &&
-          eodSecondsFromNow > 0;
-        const eodContent = endOfDayNudgeContent(eodStatusNow.remaining);
-
-        if (!enabled) {
-          if (isNativeMacOS) {
-            const ids = await invoke<string[]>("native_pending_notification_ids");
-            if (ids.length > 0) await invoke("native_cancel_notifications", { ids });
-          } else {
-            try {
-              const owned = await pending();
-              if (owned.length > 0) await cancel(owned.map((n) => n.id));
-            } catch {
-              // Desktop (non-macOS) has no pending()/cancel() - nothing
-              // OS-scheduled to clean up there in the first place.
-            }
-          }
-          if (!cancelled) {
-            setStatus({
-              permission: "disabled",
-              lastError: null,
-              attemptedCount: 0,
-              confirmedCount: 0,
-              usesLiveFallback: false,
-            });
-          }
-          return;
-        }
-
-        if (isNativeMacOS) {
-          const granted = await invoke<boolean>("native_request_permission");
-          if (cancelled) return;
-          if (!granted) {
-            setStatus({
-              permission: "denied",
-              lastError: null,
-              attemptedCount: 0,
-              confirmedCount: 0,
-              usesLiveFallback: false,
-            });
-            return;
-          }
-
-          // Same "cancel everything ours, then lay down the fresh batch"
-          // approach as the mobile path below - all pending native
-          // notifications are ours, since this hook is the only thing that
-          // ever schedules one.
-          const existingIds = await invoke<string[]>("native_pending_notification_ids");
-          if (cancelled) return;
-          if (existingIds.length > 0) {
-            await invoke("native_cancel_notifications", { ids: existingIds });
-          }
-          if (cancelled) return;
-
-          const today = todayKey();
-          const entries = upcomingReminders(tasks, completions, today, REMINDER_LOOKAHEAD_DAYS);
-          let attempted = 0;
-          let firstError: string | null = null;
-          for (const { taskId, date } of entries) {
-            const task = tasks.find((t) => t.id === taskId);
-            if (!task || !task.time) continue;
-            const secondsFromNow = (occurrenceDateTime(date, task.time).getTime() - Date.now()) / 1000;
-            if (secondsFromNow <= 0) continue;
-            attempted++;
-            try {
-              await invoke("native_schedule_notification", {
-                id: `${taskId}:${date}`,
-                title: task.title,
-                body: task.notes || "It's time for this task.",
-                secondsFromNow,
-              });
-            } catch (err) {
-              firstError ??= err instanceof Error ? err.message : String(err);
-            }
-          }
-          if (eodEligible) {
-            attempted++;
-            try {
-              await invoke("native_schedule_notification", {
-                id: `eod:${eodToday}`,
-                title: eodContent.title,
-                body: eodContent.body,
-                secondsFromNow: eodSecondsFromNow,
-              });
-            } catch (err) {
-              firstError ??= err instanceof Error ? err.message : String(err);
-            }
-          }
-          if (cancelled) return;
-
-          // Same reasoning as the mobile path's own post-schedule check
-          // below - scheduling is fire-and-forget on the native side too,
-          // so this is the only way to confirm it actually registered.
-          await new Promise((resolve) => setTimeout(resolve, 500));
-          if (cancelled) return;
-          const confirmedIds = await invoke<string[]>("native_pending_notification_ids");
-          if (!cancelled) {
-            setStatus({
-              permission: "granted",
-              lastError: firstError,
-              attemptedCount: attempted,
-              confirmedCount: confirmedIds.length,
-              usesLiveFallback: false,
-            });
-          }
-          return;
-        }
-
-        const granted = await ensurePermission();
-        if (cancelled) return;
-        if (!granted) {
-          setStatus({
-            permission: "denied",
-            lastError: null,
-            attemptedCount: 0,
-            confirmedCount: 0,
-            usesLiveFallback: false,
-          });
-          return;
-        }
-
-        let owned: { id: number }[];
+    if (!enabled) {
+      if (fallbackIntervalRef.current !== null) {
+        window.clearInterval(fallbackIntervalRef.current);
+        fallbackIntervalRef.current = null;
+      }
+      if (isNativeMacOS) {
+        const ids = await invoke<string[]>("native_pending_notification_ids");
+        if (ids.length > 0) await invoke("native_cancel_notifications", { ids });
+      } else {
         try {
-          owned = await pending();
+          const owned = await pending();
+          if (owned.length > 0) await cancel(owned.map((n) => n.id));
         } catch {
-          // This platform can't schedule ahead of time at all - fall back
-          // to firing immediately the moment a task's own time arrives,
-          // same as this hook's very first (pre-rework) version, and only
-          // for as long as the app stays open.
+          // Desktop (non-macOS) has nothing OS-scheduled to clean up.
+        }
+      }
+      scheduledRef.current.clear();
+      setStatus({
+        permission: "disabled",
+        lastError: null,
+        attemptedCount: 0,
+        confirmedCount: 0,
+        usesLiveFallback: false,
+      });
+      return;
+    }
+
+    const desired = desiredReminders(tasks, tags, completions, freezes);
+    const desiredByKey = new Map(desired.map((r) => [r.key, r]));
+    let firstError: string | null = null;
+    const noteError = (err: unknown) => {
+      firstError ??= err instanceof Error ? err.message : String(err);
+    };
+
+    if (isNativeMacOS) {
+      const granted = await invoke<boolean>("native_request_permission");
+      if (!granted) {
+        setStatus({
+          permission: "denied",
+          lastError: null,
+          attemptedCount: 0,
+          confirmedCount: 0,
+          usesLiveFallback: false,
+        });
+        return;
+      }
+
+      // Remove what's pending but no longer wanted (done, deleted, moved,
+      // or changed - a changed one is re-added below).
+      const pendingIds = await invoke<string[]>("native_pending_notification_ids");
+      const stale = pendingIds.filter((id) => {
+        const want = desiredByKey.get(id);
+        return !want || scheduledRef.current.get(id) !== signature(want);
+      });
+      if (stale.length > 0) await invoke("native_cancel_notifications", { ids: stale });
+      for (const id of stale) scheduledRef.current.delete(id);
+      const stillPending = new Set(pendingIds.filter((id) => !stale.includes(id)));
+
+      for (const r of desired) {
+        if (stillPending.has(r.key)) continue;
+        const [year, month, day] = r.date.split("-").map(Number);
+        const [hour, minute] = r.time.split(":").map(Number);
+        try {
+          await invoke("native_schedule_notification_at", {
+            id: r.key,
+            title: r.title,
+            body: r.body,
+            year,
+            month,
+            day,
+            hour,
+            minute,
+          });
+          scheduledRef.current.set(r.key, signature(r));
+        } catch (err) {
+          noteError(err);
+        }
+      }
+
+      // Scheduling is fire-and-forget natively - ask the OS what it really
+      // has, to tell "dropped" apart from "scheduled, not fired yet".
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      const confirmedIds = await invoke<string[]>("native_pending_notification_ids");
+      setStatus({
+        permission: "granted",
+        lastError: firstError,
+        attemptedCount: desired.length,
+        confirmedCount: confirmedIds.length,
+        usesLiveFallback: false,
+      });
+      return;
+    }
+
+    const granted = await ensurePermission();
+    if (!granted) {
+      setStatus({
+        permission: "denied",
+        lastError: null,
+        attemptedCount: 0,
+        confirmedCount: 0,
+        usesLiveFallback: false,
+      });
+      return;
+    }
+
+    let owned: { id: number }[];
+    try {
+      owned = await pending();
+    } catch {
+      // This platform can't schedule ahead at all - fire live instead, only
+      // while the app is open.
+      void checkDueRightNow();
+      void checkEndOfDayNudge();
+      if (fallbackIntervalRef.current === null) {
+        fallbackIntervalRef.current = window.setInterval(() => {
           void checkDueRightNow();
           void checkEndOfDayNudge();
-          fallbackInterval = window.setInterval(() => {
-            void checkDueRightNow();
-            void checkEndOfDayNudge();
-          }, 30_000);
-          if (!cancelled) {
-            setStatus({
-              permission: "granted",
-              lastError: null,
-              attemptedCount: 0,
-              confirmedCount: 0,
-              usesLiveFallback: true,
-            });
-          }
-          return;
-        }
-        if (cancelled) return;
+        }, 30_000);
+      }
+      setStatus({
+        permission: "granted",
+        lastError: null,
+        attemptedCount: 0,
+        confirmedCount: 0,
+        usesLiveFallback: true,
+      });
+      return;
+    }
 
-        const today = todayKey();
-        const entries = upcomingReminders(tasks, completions, today, REMINDER_LOOKAHEAD_DAYS).map(
-          ({ taskId, date }) => ({ notificationId: reminderNotificationId(taskId, date), taskId, date }),
-        );
+    // Mobile ids are numbers (hashed from the key) - same diff as macOS.
+    const idFor = (key: string) => {
+      const [first, ...rest] = key.split(":");
+      return reminderNotificationId(first, rest.join(":"));
+    };
+    const desiredById = new Map(desired.map((r) => [idFor(r.key), r]));
+    const staleIds = owned
+      .map((n) => n.id)
+      .filter((id) => {
+        const want = desiredById.get(id);
+        return !want || scheduledRef.current.get(want.key) !== signature(want);
+      });
+    if (staleIds.length > 0) await cancel(staleIds);
+    const stillPending = new Set(owned.map((n) => n.id).filter((id) => !staleIds.includes(id)));
 
-        if (cancelled) return;
-
-        // Cancel everything currently scheduled (all of it is ours - this
-        // hook is the only thing that ever schedules a notification) before
-        // laying down the fresh batch, so an edited/deleted/completed
-        // task's stale reminder never lingers.
-        if (owned.length > 0) await cancel(owned.map((n) => n.id));
-        if (cancelled) return;
-
-        let firstNotifyError: string | null = null;
-        for (const { notificationId, taskId, date } of entries) {
-          const task = tasks.find((t) => t.id === taskId);
-          if (!task) continue;
-          try {
-            await notify({
-              id: notificationId,
-              title: task.title,
-              body: task.notes || "It's time for this task.",
-              sound: "default",
-              schedule: scheduleForOccurrence(date, task.time as string),
-            });
-          } catch (err) {
-            firstNotifyError ??= err instanceof Error ? err.message : String(err);
-          }
-        }
-        if (eodEligible) {
-          try {
-            await notify({
-              id: reminderNotificationId("eod", eodToday),
-              title: eodContent.title,
-              body: eodContent.body,
-              sound: "default",
-              schedule: scheduleForOccurrence(eodToday, END_OF_DAY_REMINDER_TIME),
-            });
-          } catch (err) {
-            firstNotifyError ??= err instanceof Error ? err.message : String(err);
-          }
-        }
-
-        // Give the native side a moment to actually register each request
-        // (sendNotification returns before that's necessarily done), then
-        // ask the OS itself what it really has pending - this is the only
-        // way to tell "scheduled but the OS silently dropped it" apart from
-        // "scheduled fine, just hasn't fired yet".
-        await new Promise((resolve) => setTimeout(resolve, 500));
-        if (cancelled) return;
-        const confirmed = await pending();
-        if (!cancelled) {
-          setStatus({
-            permission: "granted",
-            lastError: firstNotifyError,
-            attemptedCount: entries.length + (eodEligible ? 1 : 0),
-            confirmedCount: confirmed.length,
-            usesLiveFallback: false,
-          });
-        }
+    for (const r of desired) {
+      const id = idFor(r.key);
+      if (stillPending.has(id)) continue;
+      try {
+        await notify({
+          id,
+          title: r.title,
+          body: r.body,
+          sound: "default",
+          schedule: scheduleForOccurrence(r.date, r.time),
+        });
+        scheduledRef.current.set(r.key, signature(r));
       } catch (err) {
-        if (!cancelled) {
-          setStatus((s) => ({ ...s, lastError: err instanceof Error ? err.message : String(err) }));
-        }
+        noteError(err);
       }
     }
 
-    rescheduleRef.current = reschedule;
-    void reschedule();
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const confirmed = await pending();
+    setStatus({
+      permission: "granted",
+      lastError: firstError,
+      attemptedCount: desired.length,
+      confirmedCount: confirmed.length,
+      usesLiveFallback: false,
+    });
+  };
 
-    return () => {
-      cancelled = true;
-      if (fallbackInterval !== null) window.clearInterval(fallbackInterval);
-    };
-  }, [tasks, completions, freezes, enabled]);
+  // One pass at a time; anything requested meanwhile collapses into a single
+  // follow-up pass with the latest data.
+  const runPass = useRef(async () => {
+    if (runningRef.current) {
+      rerunRef.current = true;
+      return;
+    }
+    runningRef.current = true;
+    try {
+      do {
+        rerunRef.current = false;
+        try {
+          await passRef.current();
+        } catch (err) {
+          if (!unmountedRef.current) {
+            setStatus((st) => ({ ...st, lastError: err instanceof Error ? err.message : String(err) }));
+          }
+        }
+      } while (rerunRef.current && !unmountedRef.current);
+    } finally {
+      runningRef.current = false;
+    }
+  }).current;
 
   useEffect(() => {
-    // Permission can only change from outside the app (System Settings),
-    // which this hook has no way to be pushed a notification about - so
-    // instead, re-check the moment the user comes back to the app at all,
-    // the same "did something external change" signal macOS apps
-    // conventionally use. Covers both directions: a denied banner clearing
-    // itself once notifications get allowed, and a granted status catching
-    // a revoke that happened while the app was in the background.
+    void runPass();
+  }, [tasks, tags, completions, freezes, enabled, runPass]);
+
+  useEffect(() => {
+    // Things only noticed when the app comes back: a new day (tomorrow's
+    // reminders and nudge need arming), or notification permission changed
+    // in System Settings. Window focus covers the Mac; the page becoming
+    // visible again covers the iPhone, where window focus doesn't fire.
+    unmountedRef.current = false;
     const unlistenFocus = getCurrentWindow().onFocusChanged(({ payload: focused }) => {
-      if (focused) void rescheduleRef.current?.();
+      if (focused) void runPass();
     });
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void runPass();
+    };
+    document.addEventListener("visibilitychange", onVisible);
 
     return () => {
+      unmountedRef.current = true;
+      document.removeEventListener("visibilitychange", onVisible);
+      if (fallbackIntervalRef.current !== null) window.clearInterval(fallbackIntervalRef.current);
       // Tauri's unlisten can throw ("listeners[eventId].handlerId") if the
       // listener's already gone, e.g. after a webview reload - harmless,
       // but uncaught it surfaced as WriteErrorToast's "didn't save".
-      unlistenFocus
-        .then((unlisten) => unlisten())
-        .catch(() => {});
+      unlistenFocus.then((unlisten) => unlisten()).catch(() => {});
     };
-  }, []);
+  }, [runPass]);
 
   return status;
 }

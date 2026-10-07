@@ -81,7 +81,7 @@
 }
 
 .cal-day__number--today {
-  color: #10131f;
+  color: var(--on-accent);
   background: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
   border-radius: 50%;
@@ -265,5 +265,26 @@
     /* The sheet itself is --surface-hover now (see CalendarView.css), so
        the selected day needs to be a step lighter than that. */
     background: color-mix(in srgb, var(--text) 9%, var(--surface-hover));
+  }
+}
+
+/* Desktop: completed days were the loudest thing on screen (a strong blue
+   fill), outshining today. The completion tint is softened to about a
+   third, the ✓ still marks them, and today gets the clear outline. */
+@media (min-width: 701px) {
+  .cal-day:not(.cal-day--frozen) {
+    background-image: linear-gradient(
+      rgba(var(--accent-rgb), calc(var(--heat-alpha, 0) * 0.38)),
+      rgba(var(--accent-rgb), calc(var(--heat-alpha, 0) * 0.38))
+    );
+  }
+
+  .cal-day--complete {
+    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  }
+
+  .cal-day:has(.cal-day__number--today) {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
   }
 }

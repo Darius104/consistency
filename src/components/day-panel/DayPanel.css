@@ -272,3 +272,56 @@
     );
   }
 }
+
+/* --- Phone: pull to refresh (see usePanelGestures) --- */
+
+.day-panel__pull {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-bottom: calc(-1 * var(--space-5));
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  transition: height 220ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.day-panel__pull-icon {
+  display: inline-flex;
+  transition: transform 160ms ease;
+}
+
+.day-panel__pull--refreshing .day-panel__pull-icon {
+  animation: day-panel-spin 0.8s linear infinite;
+}
+
+@keyframes day-panel-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* The date eases in when it changes (a swipe to another day), so the
+   switch is visible rather than an instant text swap. */
+@media (max-width: 700px) {
+  .day-panel__date {
+    animation: day-panel-date-in 220ms var(--ease-out);
+  }
+}
+
+@keyframes day-panel-date-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.day-panel__date-sub {
+  display: block;
+  margin-top: 1px;
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-muted);
+}

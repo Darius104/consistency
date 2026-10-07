@@ -4,11 +4,11 @@ import { getTemplateTasks } from "../../db/queries";
 import type { Tag, Template, TemplateTaskBlueprint } from "../../types";
 import { PRESET_COLORS } from "../../utils/tagColors";
 import { Button } from "../ui/Button";
-import { EmptyState } from "../ui/EmptyState";
-import { ChevronLeftIcon, EditIcon, TagIcon, TrashIcon } from "../ui/icons";
+import { ChevronLeftIcon, ChevronRightIcon, TagIcon, TrashIcon } from "../ui/icons";
 import { Modal } from "../ui/Modal";
 import { Skeleton } from "../ui/Skeleton";
 import { TemplateTaskModal } from "./TemplateTaskModal";
+import "./SettingsModal.css";
 import "./TemplatesModal.css";
 
 interface TemplatesModalProps {
@@ -187,7 +187,7 @@ export function TemplatesModal({
       {editingKey ? (
         <div className="templates-modal-edit">
           <button type="button" className="templates-modal-edit__back" onClick={() => setEditingKey(null)}>
-            <ChevronLeftIcon size={14} />
+            <ChevronLeftIcon size={16} />
             All templates
           </button>
 
@@ -195,6 +195,7 @@ export function TemplatesModal({
             className="templates-modal-edit__hero"
             style={{ "--hero-color": draftColor } as CSSProperties}
           >
+            <span className="templates-modal-edit__field-label">Name</span>
             <input
               className="templates-modal-edit__hero-name"
               placeholder="Template name"
@@ -214,6 +215,7 @@ export function TemplatesModal({
               }}
               autoFocus
             />
+            <span className="templates-modal-edit__field-label">Color</span>
             <div className="templates-modal-edit__colors">
               {PRESET_COLORS.map((c) => (
                 <button
@@ -230,121 +232,129 @@ export function TemplatesModal({
             </div>
           </div>
 
-          {error && <div className="templates-modal-edit__error">{error}</div>}
-
-          <div className="templates-modal-edit__tasks">
-            <span className="templates-modal-edit__section-label">
-              Starter tasks{draftTasks.length > 0 ? ` (${draftTasks.length})` : ""}
+          {error ? (
+            <div className="templates-modal-edit__error">{error}</div>
+          ) : (
+            <span className="settings-footnote templates-modal-edit__autosave">
+              {liveTag ? "Changes save automatically." : "Name it first - it's saved as soon as it has a name."}
             </span>
-            {draftTasksLoading ? (
-              <div className="templates-modal-edit__task-list">
-                {[0, 1].map((i) => (
-                  <Skeleton key={i} height={28} radius="var(--radius-sm)" />
-                ))}
-              </div>
-            ) : (
-              <>
-                {draftTasks.length === 0 ? (
-                  <div className="templates-modal-edit__empty">
-                    Add a few tasks below - they'll stamp onto any day this template is used.
-                  </div>
-                ) : (
-                  <div className="templates-modal-edit__task-list">
-                    {draftTasks.map((t, i) => (
-                      <div
-                        className={`templates-modal-edit__task-row ${
-                          justAddedIndex === i ? "templates-modal-edit__task-row--entering" : ""
-                        }`}
-                        key={i}
+          )}
+
+          <div className="settings-group-wrap">
+            <span className="settings-group__title">
+              Starter tasks{draftTasks.length > 0 ? ` · ${draftTasks.length}` : ""}
+            </span>
+            <div className="settings-group">
+              {draftTasksLoading
+                ? [0, 1].map((i) => (
+                    <div className="settings-group__row" key={i}>
+                      <Skeleton width="55%" height="0.85em" />
+                    </div>
+                  ))
+                : draftTasks.map((t, i) => (
+                    <div
+                      className={`settings-group__row settings-group__row--split templates-modal-edit__task-row ${
+                        justAddedIndex === i ? "templates-modal-edit__task-row--entering" : ""
+                      }`}
+                      key={i}
+                    >
+                      <button
+                        type="button"
+                        className="settings-group__row-main"
+                        onClick={() => setEditingTaskIndex(i)}
                       >
                         <span
                           className="templates-modal-edit__task-dot"
                           style={{ background: draftColor }}
                           aria-hidden="true"
                         />
-                        <button
-                          type="button"
-                          className="templates-modal-edit__task-title"
-                          onClick={() => setEditingTaskIndex(i)}
-                        >
-                          {t.title}
-                        </button>
-                        <button
-                          type="button"
-                          className="templates-modal-edit__icon-btn"
-                          aria-label={`Edit ${t.title}`}
-                          onClick={() => setEditingTaskIndex(i)}
-                        >
-                          <EditIcon size={13} />
-                        </button>
-                        <button
-                          type="button"
-                          className="templates-modal-edit__icon-btn templates-modal-edit__icon-btn--danger"
-                          aria-label={`Remove ${t.title}`}
-                          onClick={() => void removeTask(i)}
-                        >
-                          <TrashIcon size={13} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="templates-modal-edit__task-add">
-                  <input
-                    className="templates-modal-edit__task-add-input"
-                    placeholder="Add a starter task"
-                    aria-label="Starter task title"
-                    value={newTaskTitle}
-                    onChange={(e) => setNewTaskTitle(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        void addTask();
-                      }
-                    }}
-                  />
-                  <Button onClick={() => void addTask()}>Add</Button>
-                </div>
-              </>
-            )}
-          </div>
-
-          <div className="templates-modal-edit__actions">
-            {liveTag && (
-              <button
-                type="button"
-                className="templates-modal-edit__delete-link"
-                onClick={() => setConfirmingDeleteId(liveTag.id)}
-              >
-                <TrashIcon size={13} />
-                Delete template
-              </button>
-            )}
-            <div className="templates-modal-edit__actions-right">
-              <Button variant="primary" onClick={() => setEditingKey(null)}>
-                Done
-              </Button>
-            </div>
-          </div>
-
-          {confirmingDeleteId && (
-            <div className="templates-modal-edit__confirm">
-              <span>Delete {liveTag?.name}? This removes its starter tasks too.</span>
-              <div className="templates-modal-edit__confirm-actions">
-                <Button onClick={() => setConfirmingDeleteId(null)}>Cancel</Button>
-                <Button
-                  variant="danger"
-                  onClick={() => {
-                    onDeleteTag(confirmingDeleteId);
-                    setConfirmingDeleteId(null);
-                    setEditingKey(null);
+                        <span className="settings-group__label">{t.title}</span>
+                        {t.time && <span className="settings-group__value">{t.time}</span>}
+                      </button>
+                      <button
+                        type="button"
+                        className="templates-modal-edit__remove"
+                        aria-label={`Remove ${t.title}`}
+                        onClick={() => void removeTask(i)}
+                      >
+                        <TrashIcon size={14} />
+                      </button>
+                    </div>
+                  ))}
+              <div className="settings-group__row">
+                <input
+                  className="settings-group__input templates-modal-edit__add-input"
+                  placeholder="Add a starter task"
+                  aria-label="Starter task title"
+                  value={newTaskTitle}
+                  onChange={(e) => setNewTaskTitle(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void addTask();
+                    }
                   }}
+                />
+                <button
+                  type="button"
+                  className="settings-row-action"
+                  onClick={() => void addTask()}
+                  disabled={!newTaskTitle.trim()}
                 >
-                  Delete
-                </Button>
+                  Add
+                </button>
+              </div>
+            </div>
+            <span className="settings-footnote">
+              {draftTasks.length === 0
+                ? "They're added to any day you use this template on."
+                : "Tap a task to change its time, notes or priority."}
+            </span>
+          </div>
+
+          {liveTag && (
+            <div className="settings-group-wrap">
+              <div className="settings-group">
+                {confirmingDeleteId ? (
+                  <div className="settings-group__row">
+                    <span className="settings-group__label templates-modal-edit__confirm-text">
+                      Delete {liveTag.name} and its starter tasks?
+                    </span>
+                    <button
+                      type="button"
+                      className="templates-modal-edit__cancel"
+                      onClick={() => setConfirmingDeleteId(null)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="settings-row-action settings-row-action--danger"
+                      onClick={() => {
+                        onDeleteTag(confirmingDeleteId);
+                        setConfirmingDeleteId(null);
+                        setEditingKey(null);
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="settings-group__row settings-group__row--danger"
+                    onClick={() => setConfirmingDeleteId(liveTag.id)}
+                  >
+                    Delete template
+                  </button>
+                )}
               </div>
             </div>
           )}
+
+          <Button variant="primary" className="settings-primary-action" onClick={() => setEditingKey(null)}>
+            Done
+          </Button>
 
           {editingTaskIndex !== null && draftTasks[editingTaskIndex] && (
             <TemplateTaskModal
@@ -356,35 +366,50 @@ export function TemplatesModal({
           )}
         </div>
       ) : (
-        <div className="templates-modal-grid">
-          <button type="button" className="templates-modal-card templates-modal-card--new" onClick={startCreate}>
-            <span className="templates-modal-card--new__plus">+</span>
-            New template
-          </button>
-          {tags.map((tag) => {
-            const count = taskCountFor(tag);
-            return (
+        <div className="settings-pages templates-modal-list">
+          <div className="settings-group-wrap">
+            <div className="settings-group">
               <button
                 type="button"
-                className="templates-modal-card"
-                key={tag.id}
-                style={{ "--card-color": tag.color } as CSSProperties}
-                onClick={() => startEdit(tag)}
+                className="settings-group__row settings-group__row--accent"
+                onClick={startCreate}
               >
-                <span className="templates-modal-card__name">{tag.name}</span>
-                <span className="templates-modal-card__count">
-                  {count === 0 ? "No starter tasks" : `${count} starter ${count === 1 ? "task" : "tasks"}`}
+                <span className="templates-modal-list__plus" aria-hidden="true">
+                  +
                 </span>
+                <span className="settings-group__label">New template</span>
               </button>
-            );
-          })}
-          {tags.length === 0 && (
-            <div className="templates-modal-grid__empty-wrap">
-              <EmptyState icon={<TagIcon size={16} />}>
-                No templates yet - create your first one above.
-              </EmptyState>
+              {tags.map((tag) => {
+                const count = taskCountFor(tag);
+                return (
+                  <button
+                    type="button"
+                    className="settings-group__row"
+                    key={tag.id}
+                    onClick={() => startEdit(tag)}
+                  >
+                    <span
+                      className="templates-modal-list__swatch"
+                      style={{ "--card-color": tag.color } as CSSProperties}
+                      aria-hidden="true"
+                    >
+                      <TagIcon size={14} />
+                    </span>
+                    <span className="settings-group__label">{tag.name}</span>
+                    <span className="settings-group__value">
+                      {count === 0 ? "No tasks" : `${count} ${count === 1 ? "task" : "tasks"}`}
+                    </span>
+                    <ChevronRightIcon size={15} className="settings-group__chevron" />
+                  </button>
+                );
+              })}
             </div>
-          )}
+            <span className="settings-footnote">
+              {tags.length === 0
+                ? "A template groups tasks you add together - like a Morning routine."
+                : "Use one from + on any day to add its tasks at once."}
+            </span>
+          </div>
         </div>
       )}
     </Modal>

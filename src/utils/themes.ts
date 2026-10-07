@@ -8,9 +8,12 @@ export interface ThemeMeta {
   accent: string;
 }
 
-// All dark - only the accent hue and background undertone change, so the
-// rest of the app (contrast, layout, focus states) stays identical across
-// themes.
+// Themes change only the accent hue and background undertone, so the rest
+// of the app (contrast, layout, focus states) stays identical across them.
+// Each can be shown dark or light - see AppearanceMode and the
+// [data-mode="light"] layer in tokens.css.
+
+export type AppearanceMode = "dark" | "light";
 export const THEMES: ThemeMeta[] = [
   { id: "midnight", name: "Midnight", bg: "#101114", accent: "#7c9eff" },
   { id: "steel", name: "Steel", bg: "#0d0e10", accent: "#64748b" },

@@ -1,3 +1,4 @@
+import { uuid } from "../utils/uuid";
 import { getDb } from "./client";
 
 // Thin typed wrapper around the local SQLite cache (schema: see
@@ -409,7 +410,7 @@ export async function enqueueOp(op: {
   const db = await getDb();
   await db.execute(
     "INSERT INTO pending_ops (id, table_name, op, row_id, payload) VALUES ($1,$2,$3,$4,$5)",
-    [crypto.randomUUID(), op.table, op.op, op.rowId, op.payload ? JSON.stringify(op.payload) : null],
+    [uuid(), op.table, op.op, op.rowId, op.payload ? JSON.stringify(op.payload) : null],
   );
 }
 

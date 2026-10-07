@@ -1,11 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MAX_FREEZES_PER_MONTH, type FreezeCandidate } from "../../utils/stats";
 import { parseDateKey, todayKey } from "../../utils/dates";
-import { Button } from "../ui/Button";
-import { Card } from "../ui/Card";
-import { EmptyState } from "../ui/EmptyState";
-import { FrostIcon, TrashIcon } from "../ui/icons";
-import { SettingsCardHeader } from "./SettingsCardHeader";
+import { FrostIcon } from "../ui/icons";
 import "./StreakFreezeManager.css";
 
 // How long the "X frozen" confirmation stays up after clicking Freeze.
@@ -61,91 +57,84 @@ export function StreakFreezeManager({
   }
 
   return (
-    <div className="freeze-manager">
-      <Card>
-        <SettingsCardHeader
-          icon={<FrostIcon size={16} />}
-          label="Streak Freezes"
-          hint="Protect your streak on a day you miss, without breaking it."
-          color="#5ec8e8"
-        />
+    <div className="settings-pages freeze-manager">
+      <div className="freeze-manager__hero">
+        <span className="freeze-manager__hero-icon">
+          <FrostIcon size={22} />
+        </span>
+        <span className="freeze-manager__hero-count">
+          {freezesRemaining} <span>of {MAX_FREEZES_PER_MONTH} left</span>
+        </span>
+        <span className="freeze-manager__hero-text">this month · protects your streak on a missed day</span>
+      </div>
 
-        <div className="freeze-manager__remaining">
-          <span className="freeze-manager__remaining-count">{freezesRemaining}</span>
-          <span className="freeze-manager__remaining-text">
-            of {MAX_FREEZES_PER_MONTH} freezes left this month
-          </span>
+      {confirmation && (
+        <div className="freeze-manager__confirm" key={confirmation.id}>
+          <FrostIcon size={13} />
+          {formatDate(confirmation.date)} frozen - streak protected.
         </div>
-
-        {confirmation && (
-          <div className="freeze-manager__confirm" key={confirmation.id}>
-            <FrostIcon size={13} />
-            {formatDate(confirmation.date)} frozen - streak protected.
-          </div>
-        )}
-      </Card>
-
-      {frozenDays.length > 0 && (
-        <Card className="freeze-manager__group">
-          <span className="settings__label">Frozen days</span>
-          <div className="freeze-manager__list">
-            {frozenDays.map((date) => (
-              <div className="freeze-manager__row freeze-manager__row--frozen" key={date}>
-                <span className="freeze-manager__date">
-                  <FrostIcon size={13} />
-                  {formatDate(date)}
-                </span>
-                {isCurrentMonth(date) && (
-                  <button
-                    type="button"
-                    className="freeze-manager__unfreeze"
-                    aria-label={`Unfreeze ${formatDate(date)}`}
-                    onClick={() => onUnfreeze(date)}
-                  >
-                    <TrashIcon size={13} />
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </Card>
       )}
 
-      <Card className="freeze-manager__group">
-        <span className="settings__label">Freeze a missed day</span>
+      <div className="settings-group-wrap">
+        <span className="settings-group__title">Missed days you can freeze</span>
         {candidates.length === 0 ? (
-          <EmptyState icon={<FrostIcon size={16} />}>
-            Nothing to freeze - no incomplete days this month.
-          </EmptyState>
+          <div className="settings-group">
+            <div className="settings-group__row settings-group__row--muted">Nothing to freeze this month</div>
+          </div>
         ) : (
-          <div className="freeze-manager__list">
+          <div className="settings-group">
             {candidates.map((c) => {
               const percent = Math.round(c.rate * 100);
               return (
-                <div className="freeze-manager__row freeze-manager__row--candidate" key={c.date}>
-                  <div className="freeze-manager__candidate-info">
-                    <div className="freeze-manager__candidate-header">
-                      <span className="freeze-manager__date">{formatDate(c.date)}</span>
-                      <span className="freeze-manager__rate">{percent}% done</span>
-                    </div>
-                    <div className="freeze-manager__progress">
-                      <div className="freeze-manager__progress-fill" style={{ width: `${percent}%` }} />
-                    </div>
-                  </div>
-                  <Button
-                    variant="primary"
-                    className="freeze-manager__freeze-btn"
+                <div className="settings-group__row" key={c.date}>
+                  <span className="settings-group__label">
+                    {formatDate(c.date)}
+                    <span className="freeze-manager__rate">{percent}% done</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="freeze-manager__freeze"
                     onClick={() => handleFreezeClick(c.date)}
                     disabled={freezesRemaining === 0}
                   >
                     Freeze
-                  </Button>
+                  </button>
                 </div>
               );
             })}
           </div>
         )}
-      </Card>
+        {freezesRemaining === 0 && candidates.length > 0 && (
+          <span className="settings-footnote">No freezes left this month.</span>
+        )}
+      </div>
+
+      {frozenDays.length > 0 && (
+        <div className="settings-group-wrap">
+          <span className="settings-group__title">Frozen</span>
+          <div className="settings-group">
+            {frozenDays.map((date) => (
+              <div className="settings-group__row" key={date}>
+                <FrostIcon size={14} className="freeze-manager__frost" />
+                <span className="settings-group__label">{formatDate(date)}</span>
+                {isCurrentMonth(date) ? (
+                  <button
+                    type="button"
+                    className="freeze-manager__remove"
+                    aria-label={`Unfreeze ${formatDate(date)}`}
+                    onClick={() => onUnfreeze(date)}
+                  >
+                    Remove
+                  </button>
+                ) : (
+                  <span className="settings-group__value">Locked</span>
+                )}
+              </div>
+            ))}
+          </div>
+          <span className="settings-footnote">Past months' freezes are locked in.</span>
+        </div>
+      )}
     </div>
   );
 }

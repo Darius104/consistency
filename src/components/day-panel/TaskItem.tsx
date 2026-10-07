@@ -152,7 +152,6 @@ export function TaskItem({
     }
   }
 
-  const showMeta = !!task.time || task.priority === "high";
 
   return (
     <div
@@ -210,9 +209,13 @@ export function TaskItem({
           // already handle their own Enter/Space, and this would otherwise
           // also fire from their bubbled keydown events.
           if (e.target !== e.currentTarget) return;
-          if (e.key === "Enter" || e.key === " ") {
+          // Enter opens it; Space ticks it (like a checkbox).
+          if (e.key === "Enter") {
             e.preventDefault();
             onView();
+          } else if (e.key === " ") {
+            e.preventDefault();
+            if (!locked) onToggle();
           }
         }}
       >
@@ -223,15 +226,23 @@ export function TaskItem({
           ariaLabel={`Mark ${task.title} complete`}
         />
         <div className="task-item__main">
-          <span className="task-item__title">{task.title}</span>
-          {/* Only when it says something - "All day" and a Low/Medium badge
-              on every single row were noise. */}
-          {showMeta && (
-            <div className="task-item__meta-row">
-              {task.priority === "high" && <PriorityDot priority="high" />}
-              {task.time && <span className="task-item__time">{task.time}</span>}
-            </div>
-          )}
+          {/* One line: title, then High priority and the time on the right -
+              each used to take a line of its own, doubling the row height.
+              Only shown when they say something ("All day" and Low/Medium
+              badges on every row were noise). */}
+          <div className="task-item__line">
+            <span className="task-item__title">
+              {task.title}
+              {/* Right after the title - it's about this task, not a
+                  floating badge out at the edge of the row. */}
+              {task.priority === "high" && (
+                <span className="task-item__priority">
+                  <PriorityDot priority="high" />
+                </span>
+              )}
+            </span>
+            {task.time && <span className="task-item__time">{task.time}</span>}
+          </div>
           {task.notes && <div className="task-item__notes">{task.notes}</div>}
         </div>
         {!locked && (

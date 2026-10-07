@@ -247,7 +247,7 @@
 @media (max-width: 700px) {
   .friend-view__bar {
     display: grid;
-    grid-template-columns: 44px 1fr 44px;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
     align-items: center;
     gap: var(--space-2);
     padding: var(--space-2) var(--space-3);
@@ -269,6 +269,8 @@
     font-size: var(--text-md);
     color: var(--text);
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .friend-view__send-note {
@@ -293,5 +295,50 @@
   .friend-view__bar-extra,
   .friend-view__btn-label {
     display: none;
+  }
+
+  .friend-view__back {
+    justify-self: start;
+  }
+
+  /* "Send a note" spelled out - an icon alone didn't say what it does. */
+  .friend-view__send-note {
+    justify-self: end;
+    width: auto;
+    gap: 5px;
+    padding: 0 12px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    border-color: transparent;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .friend-view__send-note svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  /* Their calendar has no friends row under the month title, so the
+     ‹ Today › controls share the title's line instead of sitting alone on
+     a second, mostly empty one. */
+  .friend-view .cal-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    margin-bottom: var(--space-3);
+  }
+
+  .friend-view .cal-header__row {
+    flex: none;
+  }
+}
+
+/* The note button keeps its words on the phone (only the back button
+   shrinks to an arrow). */
+@media (max-width: 700px) {
+  .friend-view__send-note .friend-view__btn-label {
+    display: inline;
   }
 }

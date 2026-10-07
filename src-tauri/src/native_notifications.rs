@@ -17,7 +17,14 @@
 
 #[tauri::command]
 pub fn native_notifications_available() -> bool {
+    // UNUserNotificationCenter throws (an uncaught NSException that kills
+    // the app) for a bare binary that isn't inside a .app bundle - which is
+    // exactly what `tauri dev` runs. There the JS falls back to its
+    // live-poll reminders instead; real builds always run from the bundle.
     cfg!(target_os = "macos")
+        && std::env::current_exe()
+            .map(|p| p.to_string_lossy().contains(".app/Contents/MacOS/"))
+            .unwrap_or(false)
 }
 
 #[cfg(target_os = "macos")]
@@ -29,10 +36,11 @@ mod macos {
     use core::ptr::NonNull;
     use objc2::rc::Retained;
     use objc2::runtime::Bool;
-    use objc2_foundation::{NSArray, NSError, NSString};
+    use objc2_foundation::{NSArray, NSDateComponents, NSError, NSString};
     use objc2_user_notifications::{
-        UNAuthorizationOptions, UNMutableNotificationContent, UNNotificationRequest,
-        UNNotificationSound, UNTimeIntervalNotificationTrigger, UNUserNotificationCenter,
+        UNAuthorizationOptions, UNCalendarNotificationTrigger, UNMutableNotificationContent,
+        UNNotificationRequest, UNNotificationSound, UNTimeIntervalNotificationTrigger,
+        UNUserNotificationCenter,
     };
     use std::sync::mpsc;
 
@@ -135,6 +143,44 @@ mod macos {
         center().addNotificationRequest_withCompletionHandler(&request, None);
     }
 
+    /// Same as native_schedule_notification, but fires at a wall-clock
+    /// local date and time (a calendar trigger) instead of "N seconds from
+    /// now" - so a reminder after a daylight-saving change still lands at
+    /// its own 07:00, not an hour off.
+    #[tauri::command]
+    #[allow(clippy::too_many_arguments)]
+    pub fn native_schedule_notification_at(
+        id: String,
+        title: String,
+        body: String,
+        year: isize,
+        month: isize,
+        day: isize,
+        hour: isize,
+        minute: isize,
+    ) {
+        let content = UNMutableNotificationContent::new();
+        content.setTitle(&NSString::from_str(&title));
+        content.setBody(&NSString::from_str(&body));
+        content.setSound(Some(&UNNotificationSound::defaultSound()));
+
+        let components = NSDateComponents::new();
+        components.setYear(year);
+        components.setMonth(month);
+        components.setDay(day);
+        components.setHour(hour);
+        components.setMinute(minute);
+        let trigger =
+            UNCalendarNotificationTrigger::triggerWithDateMatchingComponents_repeats(&components, false);
+
+        let request = UNNotificationRequest::requestWithIdentifier_content_trigger(
+            &NSString::from_str(&id),
+            &content,
+            Some(&trigger),
+        );
+        center().addNotificationRequest_withCompletionHandler(&request, None);
+    }
+
     #[tauri::command]
     pub fn native_cancel_notifications(ids: Vec<String>) {
         if ids.is_empty() {
@@ -181,6 +227,20 @@ mod stub {
         _title: String,
         _body: String,
         _seconds_from_now: f64,
+    ) {
+    }
+
+    #[tauri::command]
+    #[allow(clippy::too_many_arguments)]
+    pub fn native_schedule_notification_at(
+        _id: String,
+        _title: String,
+        _body: String,
+        _year: isize,
+        _month: isize,
+        _day: isize,
+        _hour: isize,
+        _minute: isize,
     ) {
     }
 

@@ -97,8 +97,9 @@ export function CalendarHeader({
             </span>
           )}
           {onOpenCreateTemplate && (
-            <Button className="btn--icon" onClick={onOpenCreateTemplate} aria-label="Templates">
+            <Button className="cal-header__templates" onClick={onOpenCreateTemplate} aria-label="Templates">
               <BookmarkIcon size={15} />
+              <span className="cal-header__templates-label">Templates</span>
             </Button>
           )}
           <div className="cal-header__date-nav">

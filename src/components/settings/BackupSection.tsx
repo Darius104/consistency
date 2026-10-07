@@ -3,9 +3,6 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
 import { exportAllData } from "../../db/queries";
 import { todayKey } from "../../utils/dates";
-import { Button } from "../ui/Button";
-import { Card } from "../ui/Card";
-import "./BackupSection.css";
 
 type Status = { kind: "idle" } | { kind: "success"; path: string } | { kind: "error"; message: string };
 
@@ -41,31 +38,23 @@ export function BackupSection() {
   }
 
   return (
-    <Card className="backup-section">
-      <div className="settings__row">
-        <span className="settings__row-text">
-          Save a copy of your tasks, templates, and history to a file
-        </span>
-        <Button onClick={handleSave} disabled={saving}>
-          {saving ? "Exporting…" : "Export Data…"}
-        </Button>
+    <div className="settings-group-wrap">
+      <span className="settings-group__title">Your data</span>
+      <div className="settings-group">
+        <button type="button" className="settings-group__row" onClick={handleSave} disabled={saving}>
+          <span className="settings-group__label">Export data</span>
+          <span className="settings-group__value">{saving ? "Exporting…" : ""}</span>
+        </button>
       </div>
-
       {status.kind === "success" && (
-        <span className="backup-section__status backup-section__status--success">
-          Saved to {status.path}
-        </span>
+        <span className="settings-footnote settings-footnote--success">Saved to {status.path}</span>
       )}
       {status.kind === "error" && (
-        <span className="backup-section__status backup-section__status--error">
-          {status.message}
-        </span>
+        <span className="settings-footnote settings-footnote--warning">{status.message}</span>
       )}
-
-      <span className="settings__hint">
-        Your data lives in your account now, not on this device - this export is a
-        readable snapshot for your own records, not a restore point yet.
+      <span className="settings-footnote">
+        A readable copy of your tasks, templates and history. Your data itself is safe in your account.
       </span>
-    </Card>
+    </div>
   );
 }

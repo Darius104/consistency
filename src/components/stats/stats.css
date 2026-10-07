@@ -97,6 +97,10 @@
    `zoom` rather than a transform so the layout grows with it. */
 .streak-hero__primary .flame {
   zoom: 1.35;
+  /* Optically centered on the number + "day streak" block: the flame's box
+     includes the logs and glow below the fire, so box-centering left it
+     sitting visibly low. */
+  translate: 0 -5px;
 }
 
 .streak-hero__text {
@@ -509,7 +513,22 @@
     display: none;
   }
 
-  /* Number with "day streak" stacked under it, to the right of the flame. */
+  /* Flame on the left, the number with "day streak" stacked under it on
+     the right edge. */
+  .streak-hero__primary {
+    flex: 1;
+    justify-content: space-between;
+  }
+
+  .streak-hero__text {
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  .streak-hero__value {
+    transform-origin: right center;
+  }
+
   .streak-hero__unit {
     font-size: var(--text-sm);
   }

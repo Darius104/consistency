@@ -183,6 +183,22 @@
   .cal-header .cal-header__settings {
     display: none;
   }
+
+  /* Phone: just the icon - the word only fits on desktop. */
+  .cal-header__templates-label {
+    display: none;
+  }
+
+  .cal-header .cal-header__templates {
+    width: 30px;
+    padding: 0;
+  }
+
+  /* Plan label on the far right of the title row, not tucked against the
+     month name. */
+  .cal-header .cal-header__tier {
+    margin-left: auto;
+  }
 }
 
 .cal-header__title-button {

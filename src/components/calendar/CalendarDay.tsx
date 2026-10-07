@@ -21,6 +21,8 @@ interface CalendarDayProps {
   isToday: boolean;
   isSelected: boolean;
   hasTasks: boolean;
+  /** Before today - see the task dot below. */
+  isPast?: boolean;
   completionRate: number | null; // null = nothing scheduled
   isFrozen: boolean;
   /** This day's logged trading result (see TradingResultBadge) - null if
@@ -40,6 +42,7 @@ export function CalendarDay({
   isToday,
   isSelected,
   hasTasks,
+  isPast = false,
   completionRate,
   isFrozen,
   tradingResult,
@@ -100,7 +103,9 @@ export function CalendarDay({
           {formatTradingResult(tradingResult.value, tradingResult.unit)}
         </span>
       )}
-      {hasTasks && <span className="cal-day__indicator" />}
+      {/* Only on days still ahead - on past days it was on nearly every
+          cell and said nothing (their fill/check already tell the story). */}
+      {hasTasks && !isPast && <span className="cal-day__indicator" />}
       {chips.length > 0 && (
         <span className="cal-day__chips">
           {chips.slice(0, MAX_CHIPS).map((chip) => (

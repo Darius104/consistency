@@ -3,11 +3,8 @@ import { getMyProfile, updateDisplayName, updateMyProfile } from "../../db/frien
 import { DEFAULT_AVATAR_ID, MAX_BIO_LENGTH, type AvatarId } from "../../utils/avatars";
 import { AvatarBadge } from "../stats/AvatarBadge";
 import { Button } from "../ui/Button";
-import { Card } from "../ui/Card";
-import { EditIcon, ProfileIcon } from "../ui/icons";
 import { Skeleton } from "../ui/Skeleton";
 import { AvatarPickerModal } from "./AvatarPickerModal";
-import { SettingsCardHeader } from "./SettingsCardHeader";
 import "./ProfileSection.css";
 
 export function ProfileSection() {
@@ -85,89 +82,69 @@ export function ProfileSection() {
 
   if (loading) {
     return (
-      <Card className="profile-card">
-        <div className="settings-card-header">
-          <Skeleton width={32} height={32} radius="50%" />
-          <Skeleton width="30%" height="0.85em" />
+      <div className="settings-pages profile-page">
+        <div className="profile-page__hero">
+          <Skeleton width={88} height={88} radius="50%" />
+          <Skeleton width={90} height="0.8em" />
         </div>
-        <div className="profile-card__header">
-          <Skeleton width={72} height={72} radius="50%" />
-          <div className="profile-card__name-field">
-            <Skeleton width="40%" height="0.75em" />
-            <Skeleton height="2.2em" />
-          </div>
-        </div>
-        <div className="profile-card__bio-field">
-          <Skeleton width="25%" height="0.75em" />
-          <Skeleton height="3.5em" />
-        </div>
-      </Card>
+        <Skeleton height={96} radius="14px" />
+      </div>
     );
   }
 
   return (
-    <div className="profile-section">
-      {error && <div className="profile-section__error">{error}</div>}
+    <div className="settings-pages profile-page">
+      <div className="profile-page__hero">
+        <button
+          type="button"
+          className="profile-page__avatar"
+          onClick={() => setPickingAvatar(true)}
+          aria-label="Change avatar"
+        >
+          <AvatarBadge avatarId={avatarId} size={88} />
+        </button>
+        <button type="button" className="profile-page__change" onClick={() => setPickingAvatar(true)}>
+          Change avatar
+        </button>
+      </div>
 
-      <Card className="profile-card">
-        <SettingsCardHeader
-          icon={<ProfileIcon size={16} />}
-          label="Your Profile"
-          hint="This is what friends see on your card."
-          color="#a78bfa"
-        />
-
-        <div className="profile-card__header">
-          <button
-            type="button"
-            className="profile-card__avatar-trigger"
-            onClick={() => setPickingAvatar(true)}
-            aria-label="Change avatar"
-          >
-            <AvatarBadge avatarId={avatarId} size={72} />
-            <span className="profile-card__avatar-edit">
-              <EditIcon size={12} />
-            </span>
-          </button>
-          <div className="profile-card__name-field">
-            <label className="settings__label" htmlFor="profile-name-input">
-              Name (shown to friends)
-            </label>
+      <div className="settings-group-wrap">
+        <div className="settings-group">
+          <label className="settings-group__row">
+            <span className="settings-group__label profile-page__field-label">Name</span>
             <input
-              id="profile-name-input"
-              className="profile-section__input"
+              className="settings-group__input"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Your name"
               autoComplete="name"
             />
-          </div>
-        </div>
-
-        <div className="profile-card__bio-field">
-          <label className="settings__label" htmlFor="profile-bio-input">
-            Bio
           </label>
-          <textarea
-            id="profile-bio-input"
-            className="profile-section__bio"
-            value={bio}
-            onChange={(e) => setBio(e.target.value.slice(0, MAX_BIO_LENGTH))}
-            placeholder="A short line about you…"
-            rows={2}
-          />
-          <span className="settings__hint">
-            {bio.length}/{MAX_BIO_LENGTH}
-          </span>
+          <label className="settings-group__row settings-group__row--top">
+            <span className="settings-group__label profile-page__field-label">Bio</span>
+            <textarea
+              className="settings-group__input profile-page__bio"
+              value={bio}
+              onChange={(e) => setBio(e.target.value.slice(0, MAX_BIO_LENGTH))}
+              placeholder="A short line about you"
+              rows={2}
+            />
+          </label>
         </div>
+        <span className="settings-footnote">
+          Friends see this on your card · {bio.length}/{MAX_BIO_LENGTH}
+        </span>
+        {error && <span className="settings-footnote settings-footnote--warning">{error}</span>}
+      </div>
 
-        <div className="profile-section__save-row">
-          <Button variant="primary" onClick={handleSave} disabled={saving || !dirty}>
-            {saving ? "Saving…" : "Save"}
-          </Button>
-          {saved && <span className="profile-section__saved">Saved.</span>}
-        </div>
-      </Card>
+      <Button
+        variant="primary"
+        className="settings-primary-action"
+        onClick={handleSave}
+        disabled={saving || !dirty}
+      >
+        {saving ? "Saving…" : saved ? "Saved" : "Save"}
+      </Button>
 
       {pickingAvatar && (
         <AvatarPickerModal

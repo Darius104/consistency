@@ -1,6 +1,7 @@
 import type { CSSProperties, PointerEvent, ReactNode, SyntheticEvent } from "react";
 import { formatCountdown } from "../../utils/dates";
 import { CheckIcon, ChevronRightIcon, ClockIcon } from "../ui/icons";
+import type { UrgencyLevel } from "./TaskList";
 import "./TaskGroup.css";
 
 interface TaskGroupProps {
@@ -17,10 +18,12 @@ interface TaskGroupProps {
    *  useReorderDrag's bindLongPress. */
   onDragPointerDown?: (e: PointerEvent) => void;
   suppressClick?: (e: SyntheticEvent) => boolean;
-  /** Milliseconds left until midnight, only once that's close enough to
-   *  matter (see TaskList's URGENCY_WINDOW_MS) - null/undefined hides the
-   *  banner entirely, including on days this doesn't apply to. */
-  urgentMsLeft?: number | null;
+  /** Set when today's deadline is close and this group still has tasks
+   *  left (see TaskList's UrgencyLevel) - shows the countdown strip across
+   *  the top of the card, amber then red. */
+  urgency?: UrgencyLevel | null;
+  /** Time left until midnight, for that strip. */
+  msLeft?: number | null;
 }
 
 export function TaskGroup({
@@ -35,10 +38,10 @@ export function TaskGroup({
   dragging,
   onDragPointerDown,
   suppressClick,
-  urgentMsLeft,
+  urgency,
+  msLeft,
 }: TaskGroupProps) {
   const isComplete = totalCount > 0 && doneCount === totalCount;
-  const isUrgent = urgentMsLeft != null;
 
   // A finished group that's been folded away shrinks to one quiet line
   // (TaskList also moves it to the bottom) - what's left to do stays on top.
@@ -52,16 +55,21 @@ export function TaskGroup({
         isComplete && "task-group--complete",
         isDoneCompact && "task-group--done-compact",
         dragging && "task-group--dragging",
-        isUrgent && "task-group--urgent",
+        urgency && `task-group--urgency-${urgency}`,
       ]
         .filter(Boolean)
         .join(" ")}
       style={color ? ({ "--group-color": color } as CSSProperties) : undefined}
     >
-      {urgentMsLeft != null && (
-        <div className="task-group__urgency">
-          <ClockIcon size={12} className="task-group__urgency-icon" />
-          {formatCountdown(urgentMsLeft)} to keep your streak
+      {urgency && msLeft != null && (
+        <div className="task-group__urgency" role="status">
+          <ClockIcon size={13} className="task-group__urgency-icon" />
+          <span className="task-group__urgency-text">
+            <strong>{formatCountdown(msLeft)}</strong> to keep your streak
+          </span>
+          <span className="task-group__urgency-count">
+            {totalCount - doneCount} to go
+          </span>
         </div>
       )}
       <div

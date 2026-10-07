@@ -1,5 +1,9 @@
 :root {
   color-scheme: dark;
+  /* Text/icons drawn on top of --accent (filled buttons, checked boxes,
+     today's date) - dark on the bright dark-mode accents, white on the
+     deeper light-mode ones. */
+  --on-accent: #10131f;
 
   --bg: #101114;
   --bg-elevated: #17181c;
@@ -254,4 +258,60 @@ body.is-dragging {
     transition-duration: 0.001ms !important;
     animation-duration: 0.001ms !important;
   }
+}
+
+
+/* --- Light mode ---------------------------------------------------------
+   Any theme can be shown light or dark (Settings > Appearance), set as
+   data-mode="light" on the root next to data-theme. Neutrals go light with
+   a faint tint of the theme's own color; each theme gets a deeper shade of
+   its accent, since its bright dark-mode one doesn't read on white. (The
+   custom color is built in JS instead - see generateCustomThemeColors.) */
+:root[data-mode="light"] {
+  color-scheme: light;
+  --bg: color-mix(in srgb, var(--accent) 5%, #f3f4f7);
+  --bg-elevated: #ffffff;
+  --surface: color-mix(in srgb, var(--accent) 4%, #eef0f4);
+  --surface-hover: color-mix(in srgb, var(--accent) 7%, #e4e7ed);
+  --border: color-mix(in srgb, var(--accent) 6%, #e0e3e9);
+  --border-strong: color-mix(in srgb, var(--accent) 8%, #c8cdd6);
+  --text: #15171c;
+  --text-secondary: #4f5563;
+  --text-muted: #8b919c;
+  --accent: #3b5bdb;
+  --accent-rgb: 59, 91, 219;
+  --accent-soft: rgba(var(--accent-rgb), 0.12);
+  --on-accent: #ffffff;
+  --success: #16a34a;
+  --success-soft: rgba(22, 163, 74, 0.12);
+  --danger: #dc2626;
+  --frost: #0891b2;
+  --frost-soft: rgba(8, 145, 178, 0.12);
+  --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.08);
+  --shadow-md: 0 6px 20px rgba(16, 24, 40, 0.12);
+}
+
+:root[data-mode="light"][data-theme="steel"] {
+  --accent: #475569;
+  --accent-rgb: 71, 85, 105;
+}
+:root[data-mode="light"][data-theme="ocean"] {
+  --accent: #0284c7;
+  --accent-rgb: 2, 132, 199;
+}
+:root[data-mode="light"][data-theme="forest"] {
+  --accent: #059669;
+  --accent-rgb: 5, 150, 105;
+}
+:root[data-mode="light"][data-theme="blossom"] {
+  --accent: #db2777;
+  --accent-rgb: 219, 39, 119;
+}
+:root[data-mode="light"][data-theme="lavender"] {
+  --accent: #7c3aed;
+  --accent-rgb: 124, 58, 237;
+}
+:root[data-mode="light"][data-theme="crimson"] {
+  --accent: #dc2626;
+  --accent-rgb: 220, 38, 38;
 }

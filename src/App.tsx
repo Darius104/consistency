@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { AuthScreen } from "./auth/AuthScreen";
 import { useSession } from "./auth/useSession";
 import { CalendarView } from "./components/calendar/CalendarView";
@@ -16,12 +16,9 @@ import { usePresence } from "./hooks/usePresence";
 import { FreezeSuggestionModal } from "./components/FreezeSuggestionModal";
 import { MobileTabBar, type MobileTab } from "./components/MobileTabBar";
 import { OfflineBanner } from "./components/OfflineBanner";
-import { PremiumPaywallModal } from "./components/PremiumPaywallModal";
 import { TaskDeletedToast } from "./components/TaskDeletedToast";
 import { WriteErrorToast } from "./components/WriteErrorToast";
-import { FriendCalendarView } from "./components/friends/FriendCalendarView";
-import { TemplatesModal } from "./components/settings/TemplatesModal";
-import { SettingsModal } from "./components/settings/SettingsModal";
+import { WelcomeModal, type StarterPack } from "./components/welcome/WelcomeModal";
 import { isCurrentMonth } from "./components/settings/StreakFreezeManager";
 import { TaskForm } from "./components/task-form/TaskForm";
 import { ConfirmModal } from "./components/ui/ConfirmModal";
@@ -79,9 +76,10 @@ import {
   freezesRemainingInMonth,
   getFreezeCandidates,
 } from "./utils/stats";
-import { DEFAULT_THEME } from "./utils/themes";
+import { DEFAULT_THEME, THEMES, type AppearanceMode } from "./utils/themes";
 import {
   generateCustomThemeColors,
+  hexToOklch,
   RANDOM_THEME_CSS_VARS,
   type RandomThemeColors,
 } from "./utils/randomTheme";
@@ -104,6 +102,29 @@ import { useFriendNotes } from "./hooks/useFriendNotes";
 import { useAppUpdater } from "./hooks/useAppUpdater";
 import { UpdateAvailableModal } from "./components/UpdateAvailableModal";
 import "./App.css";
+
+// Opened on demand, so they're not part of the code the app has to load
+// before it can show anything (they're each a fair chunk of the bundle).
+const FriendCalendarView = lazy(() =>
+  import("./components/friends/FriendCalendarView").then((m) => ({
+    default: m.FriendCalendarView,
+  })),
+);
+const TemplatesModal = lazy(() =>
+  import("./components/settings/TemplatesModal").then((m) => ({
+    default: m.TemplatesModal,
+  })),
+);
+const SettingsModal = lazy(() =>
+  import("./components/settings/SettingsModal").then((m) => ({
+    default: m.SettingsModal,
+  })),
+);
+const PremiumPaywallModal = lazy(() =>
+  import("./components/PremiumPaywallModal").then((m) => ({
+    default: m.PremiumPaywallModal,
+  })),
+);
 
 // Legacy keys - each theme change used to write these as two or three
 // separate setSetting() calls. Every write kicks off its own sync (see
@@ -142,14 +163,44 @@ async function persistThemeState(state: StoredThemeState): Promise<void> {
   await setSetting(THEME_STATE_SETTING_KEY, JSON.stringify(state));
 }
 
+// Light/dark follows your account (synced like the color theme), so
+// changing it on one device changes it on the others. The local copy is
+// only so the app opens in the right mode before the account data loads.
+const APPEARANCE_MODE_SETTING_KEY = "appearanceMode";
+// How long a fresh tick overrides what a reload reads - see withRecentToggles.
+const RECENT_TOGGLE_MS = 15_000;
+const APPEARANCE_MODE_KEY = "consistency:appearanceMode";
+
+function readLocalAppearanceMode(): AppearanceMode | null {
+  try {
+    const v = localStorage.getItem(APPEARANCE_MODE_KEY);
+    return v === "light" || v === "dark" ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+function rememberAppearanceModeLocally(mode: AppearanceMode) {
+  try {
+    localStorage.setItem(APPEARANCE_MODE_KEY, mode);
+  } catch {
+    // Storage unavailable - it'll just load in after the account data.
+  }
+}
+
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [completions, setCompletions] = useState<Set<string>>(new Set());
+  // See withRecentToggles / writeCompletion.
+  const recentTogglesRef = useRef<Map<string, { completed: boolean; at: number }>>(new Map());
+  const completionWritesRef = useRef<Promise<unknown>>(Promise.resolve());
   const [freezes, setFreezes] = useState<Set<string>>(new Set());
   const [notes, setNotes] = useState<DayNote[]>([]);
-  const [tradingResults, setTradingResults] = useState<Record<string, TradingResult>>({});
+  const [tradingResults, setTradingResults] = useState<
+    Record<string, TradingResult>
+  >({});
   const [tradingResultUnit, setTradingResultUnit] = useState<TradingResultUnit>(
     DEFAULT_TRADING_RESULT_UNIT,
   );
@@ -170,13 +221,28 @@ export default function App() {
   // one's and silently overwrite it - visible as the theme flashing back
   // to a previous pick a moment after you've already moved on from it.
   const themeRequestRef = useRef(0);
-  const [randomColors, setRandomColors] = useState<RandomThemeColors | null>(null);
+  const [randomColors, setRandomColors] = useState<RandomThemeColors | null>(
+    null,
+  );
   // The profile page's "create your own theme" builder's last saved pick -
   // kept separate from randomColors so switching random <-> custom back and
   // forth never clobbers the other one's saved colors.
-  const [customColors, setCustomColors] = useState<RandomThemeColors | null>(null);
+  // Light or dark, for whichever theme is picked - see
+  // APPEARANCE_MODE_SETTING_KEY.
+  const [appearanceMode, setAppearanceMode] = useState<AppearanceMode>(
+    () => readLocalAppearanceMode() ?? "dark",
+  );
+  function handleChangeAppearanceMode(mode: AppearanceMode) {
+    setAppearanceMode(mode);
+    rememberAppearanceModeLocally(mode);
+    void setSetting(APPEARANCE_MODE_SETTING_KEY, mode);
+  }
+  const [customColors, setCustomColors] = useState<RandomThemeColors | null>(
+    null,
+  );
   const [remindersEnabled, setRemindersEnabled] = useState(false);
-  const [panelOrder, setPanelOrder] = useState<PanelBlockId[]>(DEFAULT_PANEL_ORDER);
+  const [panelOrder, setPanelOrder] =
+    useState<PanelBlockId[]>(DEFAULT_PANEL_ORDER);
   const [hiddenWidgets, setHiddenWidgets] = useState<WidgetId[]>([]);
   const [arranging, setArranging] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -188,10 +254,11 @@ export default function App() {
   const [settingsSection, setSettingsSection] = useState("profile");
   const [createTemplateOpen, setCreateTemplateOpen] = useState(false);
   const [phraseModalOpen, setPhraseModalOpen] = useState(false);
-  const [lastPhraseViewDate, setLastPhraseViewDate] = useState<string | null>(null);
-  const [freezeSuggestionDismissedDate, setFreezeSuggestionDismissedDate] = useState<
-    string | null
-  >(null);
+  const [lastPhraseViewDate, setLastPhraseViewDate] = useState<string | null>(
+    null,
+  );
+  const [freezeSuggestionDismissedDate, setFreezeSuggestionDismissedDate] =
+    useState<string | null>(null);
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
   const [formState, setFormState] = useState<
     { open: false } | { open: true; task?: Task }
@@ -210,16 +277,29 @@ export default function App() {
   // Non-null right after a desktop delete went through without confirmation
   // - shows the Undo toast for a few seconds instead of a modal beforehand.
   const [deletedTaskUndo, setDeletedTaskUndo] = useState<Task | null>(null);
+  // "Completed · Undo" after ticking a task, for a mis-tap - shares the
+  // delete toast's spot, so only one of the two shows at a time.
+  const [completedUndo, setCompletedUndo] = useState<{
+    task: Task;
+    date: string;
+  } | null>(null);
   // Same confirmation step for notes - free-typed content is just as easy
   // to lose to a stray tap as a task, and previously had no confirmation
   // at all, unlike every task-deletion path.
-  const [pendingDeleteNote, setPendingDeleteNote] = useState<DayNote | null>(null);
+  const [pendingDeleteNote, setPendingDeleteNote] = useState<DayNote | null>(
+    null,
+  );
   // Non-null while looking at a friend's read-only calendar instead of your
   // own - never persisted, always starts back at null (your own calendar)
   // on a fresh launch.
   const [viewingFriend, setViewingFriend] = useState<Friend | null>(null);
 
   const { session } = useSession();
+  // True once this session's first sync with the server has finished and
+  // been read back in - before that, an empty task list may just mean this
+  // device hasn't downloaded anything yet (see the welcome sheet below).
+  const [syncedOnce, setSyncedOnce] = useState(false);
+  const [welcomeDismissed, setWelcomeDismissed] = useState(false);
   const { online, syncing, syncNow } = useOnlineStatus(!!session);
   useRealtimeSync(session?.user.id ?? null);
   const onlineFriendIds = usePresence(session?.user.id ?? null);
@@ -230,7 +310,12 @@ export default function App() {
     // Covers both cold start (empty cache, first sign-in on this device)
     // and switching accounts without restarting the app - useOnlineStatus's
     // own mount-time sync only ever fires once per app lifetime.
-    void trySync();
+    setSyncedOnce(false);
+    void trySync().then(async (ok) => {
+      if (!ok) return;
+      await refreshAll();
+      setSyncedOnce(true);
+    });
     // A no-op after the first time (it never overwrites a name you've since
     // customized) - safe to just call unconditionally every session.
     void ensureProfile();
@@ -256,15 +341,34 @@ export default function App() {
   useEffect(() => {
     if (viewingFriend) return;
     const root = document.documentElement.style;
-    const active = theme === "custom" ? customColors : null;
-    for (const key of Object.keys(RANDOM_THEME_CSS_VARS) as (keyof RandomThemeColors)[]) {
+    // In light mode the custom color is rebuilt from its hue as a light
+    // palette (the saved colors are the dark version).
+    const active =
+      theme === "custom" && customColors
+        ? appearanceMode === "light"
+          ? generateCustomThemeColors(hexToOklch(customColors.accent).h, "light")
+          : customColors
+        : null;
+    for (const key of Object.keys(
+      RANDOM_THEME_CSS_VARS,
+    ) as (keyof RandomThemeColors)[]) {
       const cssVar = RANDOM_THEME_CSS_VARS[key];
       if (active) root.setProperty(cssVar, active[key]);
       else root.removeProperty(cssVar);
     }
-  }, [theme, customColors, viewingFriend]);
+  }, [theme, customColors, viewingFriend, appearanceMode]);
 
-  const reminderStatus = useTaskReminders(tasks, completions, freezes, remindersEnabled);
+  useEffect(() => {
+    document.documentElement.setAttribute("data-mode", appearanceMode);
+  }, [appearanceMode]);
+
+  const reminderStatus = useTaskReminders(
+    tasks,
+    tags,
+    completions,
+    freezes,
+    remindersEnabled,
+  );
   // Also enabled while Settings is open (regardless of tab) so the Widgets
   // gallery's live preview has real data the moment someone switches to it,
   // even before they've turned the widget on.
@@ -273,9 +377,8 @@ export default function App() {
   );
 
   const membership = useMembership();
-  const { count: supportBadgeCount, refresh: refreshSupportBadge } = useSupportBadgeCount(
-    membership.effectiveTier === "admin",
-  );
+  const { count: supportBadgeCount, refresh: refreshSupportBadge } =
+    useSupportBadgeCount(membership.effectiveTier === "admin");
   const { notes: friendNotes, dismiss: dismissFriendNote } = useFriendNotes();
   const [paywallFeature, setPaywallFeature] = useState<string | null>(null);
 
@@ -285,7 +388,9 @@ export default function App() {
   // boolean, so dismissing this update doesn't also hide a newer one that
   // shows up on a later check within the same session.
   const appUpdater = useAppUpdater();
-  const [dismissedUpdateVersion, setDismissedUpdateVersion] = useState<string | null>(null);
+  const [dismissedUpdateVersion, setDismissedUpdateVersion] = useState<
+    string | null
+  >(null);
   const pendingUpdate =
     appUpdater.update && appUpdater.update.version !== dismissedUpdateVersion
       ? appUpdater.update
@@ -305,7 +410,11 @@ export default function App() {
     [tasks, completions, freezes, today],
   );
   const bestStreak = useMemo(
-    () => Math.max(streak, computeLongestStreak(tasks, completions, freezes, today)),
+    () =>
+      Math.max(
+        streak,
+        computeLongestStreak(tasks, completions, freezes, today),
+      ),
     [streak, tasks, completions, freezes, today],
   );
 
@@ -329,6 +438,7 @@ export default function App() {
       savedKnownWidgetIds,
       savedPhraseViewDate,
       savedFreezeSuggestionDismissedDate,
+      savedAppearanceMode,
     ] = await Promise.all([
       getAllTasks(),
       getTags(),
@@ -348,11 +458,14 @@ export default function App() {
       getSetting(KNOWN_WIDGET_IDS_SETTING_KEY),
       getSetting(PHRASE_VIEW_SETTING_KEY),
       getSetting(FREEZE_SUGGESTION_DISMISSED_KEY),
+      getSetting(APPEARANCE_MODE_SETTING_KEY),
     ]);
     setTasks(taskRows);
     setTags(tagRows);
     const tagIds = new Set(tagRows.map((t) => t.id));
-    const orphanedTemplates = templateRows.filter((t) => !t.tagId || !tagIds.has(t.tagId));
+    const orphanedTemplates = templateRows.filter(
+      (t) => !t.tagId || !tagIds.has(t.tagId),
+    );
     setTemplates(
       orphanedTemplates.length > 0
         ? templateRows.filter((t) => !orphanedTemplates.includes(t))
@@ -364,14 +477,19 @@ export default function App() {
       // comment) - a template with no matching tag was invisible in
       // Settings (which only ever lists templates by walking tags) but
       // still a live row the day panel's template picker kept offering.
-      void Promise.all(orphanedTemplates.map((t) => deleteTemplate(t.id))).catch(() => {});
+      void Promise.all(
+        orphanedTemplates.map((t) => deleteTemplate(t.id)),
+      ).catch(() => {});
     }
-    setCompletions(completionRows);
+    setCompletions(withRecentToggles(completionRows));
     setFreezes(freezeRows);
     setNotes(noteRows);
-    setTradingResults(Object.fromEntries(tradingResultRows.map((r) => [r.date, r])));
+    setTradingResults(
+      Object.fromEntries(tradingResultRows.map((r) => [r.date, r])),
+    );
     setTradingResultUnit(
-      (savedTradingResultUnit as TradingResultUnit | null) ?? DEFAULT_TRADING_RESULT_UNIT,
+      (savedTradingResultUnit as TradingResultUnit | null) ??
+        DEFAULT_TRADING_RESULT_UNIT,
     );
 
     let resolvedTheme: ThemeId;
@@ -387,8 +505,12 @@ export default function App() {
       // old separate keys (see THEME_SETTING_KEY's comment) - folds them
       // into the combined key so every write from here on is atomic.
       resolvedTheme = legacyTheme ? (legacyTheme as ThemeId) : DEFAULT_THEME;
-      resolvedRandomColors = legacyRandomColors ? JSON.parse(legacyRandomColors) : null;
-      resolvedCustomColors = legacyCustomColors ? JSON.parse(legacyCustomColors) : null;
+      resolvedRandomColors = legacyRandomColors
+        ? JSON.parse(legacyRandomColors)
+        : null;
+      resolvedCustomColors = legacyCustomColors
+        ? JSON.parse(legacyCustomColors)
+        : null;
       if (legacyTheme) {
         await persistThemeState({
           theme: resolvedTheme,
@@ -396,6 +518,12 @@ export default function App() {
           customColors: resolvedCustomColors,
         });
       }
+    }
+    // A theme id this version doesn't know (one that was removed, or saved
+    // by a newer version) falls back to the default instead of rendering
+    // with no theme at all. "custom" has no preset entry.
+    if (resolvedTheme !== "custom" && !THEMES.some((t) => t.id === resolvedTheme)) {
+      resolvedTheme = DEFAULT_THEME;
     }
     setTheme(resolvedTheme);
     setRandomColors(resolvedRandomColors);
@@ -422,18 +550,34 @@ export default function App() {
     setHiddenWidgets(resolvedHiddenWidgets);
     if (newWidgetIds.length > 0 || !savedKnownWidgetIds) {
       void Promise.all([
-        setSetting(HIDDEN_WIDGETS_SETTING_KEY, JSON.stringify(resolvedHiddenWidgets)),
+        setSetting(
+          HIDDEN_WIDGETS_SETTING_KEY,
+          JSON.stringify(resolvedHiddenWidgets),
+        ),
         setSetting(KNOWN_WIDGET_IDS_SETTING_KEY, JSON.stringify(WIDGET_IDS)),
       ]).catch(() => {});
     }
     setLastPhraseViewDate(savedPhraseViewDate);
     setFreezeSuggestionDismissedDate(savedFreezeSuggestionDismissedDate);
+    if (savedAppearanceMode === "light" || savedAppearanceMode === "dark") {
+      setAppearanceMode(savedAppearanceMode);
+      rememberAppearanceModeLocally(savedAppearanceMode);
+    } else {
+      // Picked on this device before it synced (only stored locally) -
+      // upload it once, so your other devices follow. A device that never
+      // picked one has nothing stored here and uploads nothing.
+      const localOnly = readLocalAppearanceMode();
+      if (localOnly) void setSetting(APPEARANCE_MODE_SETTING_KEY, localOnly);
+    }
     setLoading(false);
     // Covers accounts whose theme was already set before profiles/friends
     // existed - not just future changes via handleChangeTheme/
     // handleSetCustomTheme below.
-    const resolvedOverrideColors = resolvedTheme === "custom" ? resolvedCustomColors : null;
-    void syncMyThemeToProfile(resolvedTheme, resolvedOverrideColors).catch(() => {});
+    const resolvedOverrideColors =
+      resolvedTheme === "custom" ? resolvedCustomColors : null;
+    void syncMyThemeToProfile(resolvedTheme, resolvedOverrideColors).catch(
+      () => {},
+    );
   }
 
   async function handleSignOut() {
@@ -468,7 +612,10 @@ export default function App() {
     await setSetting(FREEZE_SUGGESTION_DISMISSED_KEY, date);
   }
 
-  async function handleSetTradingResult(value: number | null, unit: TradingResultUnit) {
+  async function handleSetTradingResult(
+    value: number | null,
+    unit: TradingResultUnit,
+  ) {
     const date = selectedDate;
     setTradingResults((prev) => {
       if (value === null) {
@@ -515,7 +662,11 @@ export default function App() {
     setCustomColors(colors);
 
     if (themeRequestRef.current !== requestId) return;
-    await persistThemeState({ theme: "custom", randomColors, customColors: colors });
+    await persistThemeState({
+      theme: "custom",
+      randomColors,
+      customColors: colors,
+    });
     if (themeRequestRef.current !== requestId) return;
     await syncMyThemeToProfile("custom", colors);
   }
@@ -531,7 +682,9 @@ export default function App() {
   }
 
   async function handleHideWidget(id: WidgetId) {
-    const next = hiddenWidgets.includes(id) ? hiddenWidgets : [...hiddenWidgets, id];
+    const next = hiddenWidgets.includes(id)
+      ? hiddenWidgets
+      : [...hiddenWidgets, id];
     setHiddenWidgets(next);
     await setSetting(HIDDEN_WIDGETS_SETTING_KEY, JSON.stringify(next));
   }
@@ -552,6 +705,125 @@ export default function App() {
     setSettingsOpen(false);
   }
 
+  // Desktop keyboard shortcuts. Read through a ref so the one listener
+  // always sees the current state without re-subscribing every render.
+  const shortcutRef = useRef<(e: KeyboardEvent) => void>(() => {});
+  shortcutRef.current = (e: KeyboardEvent) => {
+    if (!session || !isDesktopWidth()) return;
+    // ⌘, - Settings, from anywhere (the macOS convention).
+    if (e.key === "," && e.metaKey) {
+      e.preventDefault();
+      setSettingsSection("profile");
+      setSettingsOpen(true);
+      return;
+    }
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    // Never while typing, or while a window/sheet is open over the app.
+    const target = e.target as HTMLElement | null;
+    if (target?.closest("input, textarea, select, [contenteditable='true']"))
+      return;
+    if (document.querySelector(".modal-overlay") || viewingFriend) return;
+    switch (e.key) {
+      case "n":
+      case "N":
+        if (selectedDate >= todayKey()) {
+          e.preventDefault();
+          setFormState({ open: true });
+        }
+        break;
+      case "t":
+      case "T":
+        e.preventDefault();
+        setSelectedDate(todayKey());
+        break;
+      case "ArrowLeft":
+        e.preventDefault();
+        setSelectedDate((d) => addDays(d, -1));
+        break;
+      case "ArrowRight":
+        e.preventDefault();
+        setSelectedDate((d) => addDays(d, 1));
+        break;
+    }
+  };
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => shortcutRef.current(e);
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  // First run: a brand-new account with nothing in it yet - offered once
+  // per account on this device, never again after it's answered.
+  const welcomeKey = session ? `consistency:welcomed:${session.user.id}` : null;
+  function alreadyWelcomed(): boolean {
+    try {
+      return !!welcomeKey && localStorage.getItem(welcomeKey) === "1";
+    } catch {
+      return false;
+    }
+  }
+  function dismissWelcome() {
+    setWelcomeDismissed(true);
+    try {
+      if (welcomeKey) localStorage.setItem(welcomeKey, "1");
+    } catch {
+      // Storage unavailable - it just won't be remembered across launches.
+    }
+  }
+  const showWelcome =
+    syncedOnce &&
+    !loading &&
+    !welcomeDismissed &&
+    !viewingFriend &&
+    tasks.length === 0 &&
+    tags.length === 0 &&
+    !alreadyWelcomed();
+
+  async function handleStartWithPacks(packs: StarterPack[]) {
+    const startDate = todayKey();
+    for (const pack of packs) {
+      const tag = await createTag(pack.name, pack.color);
+      for (const task of pack.tasks) {
+        await createTask({ ...task, tagId: tag.id, startDate });
+      }
+    }
+    dismissWelcome();
+    await refreshAll();
+    setSelectedDate(startDate);
+    if (!isDesktopWidth()) setMobileTab("today");
+  }
+
+  // Ticks made in the last few seconds win over whatever a reload reads
+  // from the local cache. A background sync can finish between a tick and
+  // its cache write (or briefly write the server's older copy over it), and
+  // its reload used to flip the checkbox back - then forward again on the
+  // next sync. The cache/server catch up on their own; this only stops the
+  // screen from flickering in the meantime.
+  function withRecentToggles(rows: Set<string>): Set<string> {
+    const now = Date.now();
+    const next = new Set(rows);
+    for (const [key, t] of recentTogglesRef.current) {
+      if (now - t.at > RECENT_TOGGLE_MS) {
+        recentTogglesRef.current.delete(key);
+        continue;
+      }
+      if (t.completed) next.add(key);
+      else next.delete(key);
+    }
+    return next;
+  }
+
+  // Writes go out one at a time, in tap order - two quick taps on the same
+  // task must reach the cache/outbox as "on, then off", never reversed.
+  function writeCompletion(taskId: string, date: string, completed: boolean) {
+    recentTogglesRef.current.set(`${taskId}:${date}`, { completed, at: Date.now() });
+    const write = completionWritesRef.current
+      .catch(() => {})
+      .then(() => setCompletion(taskId, date, completed));
+    completionWritesRef.current = write;
+    return write;
+  }
+
   async function handleToggle(task: Task) {
     // A past day's outcome is locked in once it's over - otherwise coming
     // back the next day and checking off what you missed (or the sibling
@@ -560,14 +832,35 @@ export default function App() {
     // Streak Freezes remain the one sanctioned way to fix a missed day.
     if (selectedDate < todayKey()) return;
     const key = `${task.id}:${selectedDate}`;
-    const nextCompleted = !completions.has(key);
+    // The most recent tap is the truth - reading the rendered state alone
+    // could be one tap behind on a fast double-tap.
+    const current = recentTogglesRef.current.get(key)?.completed ?? completions.has(key);
+    const nextCompleted = !current;
     setCompletions((prev) => {
       const next = new Set(prev);
       if (nextCompleted) next.add(key);
       else next.delete(key);
       return next;
     });
-    await setCompletion(task.id, selectedDate, nextCompleted);
+    if (nextCompleted) {
+      setDeletedTaskUndo(null);
+      setCompletedUndo({ task, date: selectedDate });
+    } else if (completedUndo?.task.id === task.id) {
+      setCompletedUndo(null);
+    }
+    await writeCompletion(task.id, selectedDate, nextCompleted);
+  }
+
+  async function handleUndoComplete() {
+    if (!completedUndo) return;
+    const { task, date } = completedUndo;
+    setCompletedUndo(null);
+    setCompletions((prev) => {
+      const next = new Set(prev);
+      next.delete(`${task.id}:${date}`);
+      return next;
+    });
+    await writeCompletion(task.id, date, false);
   }
 
   async function handleFreezeDay(date: string) {
@@ -655,7 +948,9 @@ export default function App() {
   async function handleReorderTasks(taskIds: string[]) {
     const orderMap = new Map(taskIds.map((id, i) => [id, i]));
     setTasks((prev) =>
-      prev.map((t) => (orderMap.has(t.id) ? { ...t, sortOrder: orderMap.get(t.id)! } : t)),
+      prev.map((t) =>
+        orderMap.has(t.id) ? { ...t, sortOrder: orderMap.get(t.id)! } : t,
+      ),
     );
     await updateTaskOrder(taskIds);
   }
@@ -682,13 +977,18 @@ export default function App() {
     const orderMap = new Map(tagIds.map((id, i) => [id, i]));
     setTags((prev) =>
       [...prev]
-        .map((t) => (orderMap.has(t.id) ? { ...t, sortOrder: orderMap.get(t.id)! } : t))
+        .map((t) =>
+          orderMap.has(t.id) ? { ...t, sortOrder: orderMap.get(t.id)! } : t,
+        )
         .sort((a, b) => a.sortOrder - b.sortOrder),
     );
     await updateTagOrder(tagIds);
   }
 
-  async function handleSaveAsTemplate(tag: Tag, tasks: TemplateTaskBlueprint[]) {
+  async function handleSaveAsTemplate(
+    tag: Tag,
+    tasks: TemplateTaskBlueprint[],
+  ) {
     if (!membership.isPremium) {
       setPaywallFeature("Saving templates");
       return;
@@ -703,7 +1003,10 @@ export default function App() {
     });
   }
 
-  async function handleApplyTemplate(templateId: string, taskIndices: number[]) {
+  async function handleApplyTemplate(
+    templateId: string,
+    taskIndices: number[],
+  ) {
     // Same past-day lock as handleSaveTask's own create guard - applying a
     // template stamps a whole batch of new incomplete tasks onto the
     // selected day at once, the exact same gap just multiplied.
@@ -738,7 +1041,9 @@ export default function App() {
   async function handleSaveNote(content: string) {
     if (noteFormState.open && noteFormState.note) {
       const id = noteFormState.note.id;
-      setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, content } : n)));
+      setNotes((prev) =>
+        prev.map((n) => (n.id === id ? { ...n, content } : n)),
+      );
       await updateNote(id, content);
     } else {
       const note = await createNote(selectedDate, content);
@@ -769,7 +1074,9 @@ export default function App() {
     setNotes((prev) =>
       prev.map((n) => {
         const u = byId.get(n.id);
-        return u ? { ...n, afterGroupKey: u.afterGroupKey, sortOrder: u.sortOrder } : n;
+        return u
+          ? { ...n, afterGroupKey: u.afterGroupKey, sortOrder: u.sortOrder }
+          : n;
       }),
     );
     await updateNotePositions(updates);
@@ -789,11 +1096,13 @@ export default function App() {
 
   if (viewingFriend) {
     return (
-      <FriendCalendarView
-        friend={viewingFriend}
-        isOnline={onlineFriendIds.has(viewingFriend.userId)}
-        onBack={() => setViewingFriend(null)}
-      />
+      <Suspense fallback={null}>
+        <FriendCalendarView
+          friend={viewingFriend}
+          isOnline={onlineFriendIds.has(viewingFriend.userId)}
+          onBack={() => setViewingFriend(null)}
+        />
+      </Suspense>
     );
   }
 
@@ -803,20 +1112,33 @@ export default function App() {
   }));
   const dayNotes = notes.filter((n) => n.date === selectedDate);
 
-  const todayStatus = computeTodayStatus(tasks, completions, freezes, todayKey());
+  const todayStatus = computeTodayStatus(
+    tasks,
+    completions,
+    freezes,
+    todayKey(),
+  );
   const weekly = computeWeeklyCompletion(
     tasks,
     completions,
     startOfWeek(selectedDate),
   );
 
-  const freezesRemainingThisMonth = freezesRemainingInMonth(freezes, todayKey());
+  const freezesRemainingThisMonth = freezesRemainingInMonth(
+    freezes,
+    todayKey(),
+  );
   // Every frozen day, not just this month's - the 3-per-month quota only
   // applies to how many NEW freezes you can spend right now, but a day
   // frozen last month is still frozen and should stay unfreezable, not
   // silently vanish from this list the moment the month rolls over.
   const allFrozenDays = Array.from(freezes).sort().reverse();
-  const freezeCandidates = getFreezeCandidates(tasks, completions, freezes, todayKey());
+  const freezeCandidates = getFreezeCandidates(
+    tasks,
+    completions,
+    freezes,
+    todayKey(),
+  );
   const yesterdayKey = addDays(todayKey(), -1);
   const missedYesterday = freezeCandidates.some((c) => c.date === yesterdayKey);
   // Free members always see the suggestion (it's the moment a paywall
@@ -840,9 +1162,20 @@ export default function App() {
   );
 
   return (
-    <div className={`app ${mobileTab === "today" ? "app--day-expanded" : "app--calendar-tab"}`}>
+    <div
+      className={`app ${mobileTab === "today" ? "app--day-expanded" : "app--calendar-tab"}`}
+    >
       <OfflineBanner online={online} syncing={syncing} />
       <WriteErrorToast />
+      {completedUndo && !deletedTaskUndo && (
+        <TaskDeletedToast
+          key={`done-${completedUndo.task.id}-${completedUndo.date}`}
+          verb="Completed"
+          taskTitle={completedUndo.task.title}
+          onUndo={() => void handleUndoComplete()}
+          onDismiss={() => setCompletedUndo(null)}
+        />
+      )}
       {deletedTaskUndo && (
         <TaskDeletedToast
           key={deletedTaskUndo.id}
@@ -850,6 +1183,9 @@ export default function App() {
           onUndo={() => void handleUndoDeleteTask()}
           onDismiss={() => setDeletedTaskUndo(null)}
         />
+      )}
+      {showWelcome && (
+        <WelcomeModal onStart={handleStartWithPacks} onClose={dismissWelcome} />
       )}
       {freezeSuggestionDate && (
         <FreezeSuggestionModal
@@ -863,7 +1199,9 @@ export default function App() {
             setPaywallFeature("Streak freezes");
             void handleDismissFreezeSuggestion(freezeSuggestionDate);
           }}
-          onClose={() => void handleDismissFreezeSuggestion(freezeSuggestionDate)}
+          onClose={() =>
+            void handleDismissFreezeSuggestion(freezeSuggestionDate)
+          }
         />
       )}
       <CalendarView
@@ -899,6 +1237,8 @@ export default function App() {
       />
       <DayPanel
         selectedDate={selectedDate}
+        onSwipeDay={(delta) => setSelectedDate((d) => addDays(d, delta))}
+        onRefresh={syncNow}
         occurrences={occurrences}
         tags={tags}
         streak={streak}
@@ -935,17 +1275,22 @@ export default function App() {
         onDeleteNote={handleRequestDeleteNote}
         onReorderNotePositions={handleReorderNotePositions}
         expanded={mobileTab === "today"}
-        onToggleExpanded={() => setMobileTab((t) => (t === "today" ? "calendar" : "today"))}
+        onToggleExpanded={() =>
+          setMobileTab((t) => (t === "today" ? "calendar" : "today"))
+        }
         tradingResult={tradingResults[selectedDate] ?? null}
         tradingResultUnit={tradingResultUnit}
-        onSetTradingResult={(value, unit) => void handleSetTradingResult(value, unit)}
+        onSetTradingResult={(value, unit) =>
+          void handleSetTradingResult(value, unit)
+        }
         addMenuOpenRequest={addMenuOpenRequest}
       />
       <MobileTabBar
         activeTab={mobileTab}
         onSelectTab={(tab) => {
           if (tab === "today") setSelectedDate(todayKey());
-          if (tab === "calendar" && mobileTab === "calendar") setResetMonthRequest((n) => n + 1);
+          if (tab === "calendar" && mobileTab === "calendar")
+            setResetMonthRequest((n) => n + 1);
           setMobileTab(tab);
         }}
         onAdd={() => {
@@ -957,12 +1302,12 @@ export default function App() {
           if (selectedDate < todayKey()) setSelectedDate(todayKey());
           setAddMenuOpenRequest((n) => n + 1);
         }}
-        onOpenFriends={() => {
-          setSettingsSection("friends");
-          setSettingsOpen(true);
-        }}
         onOpenProfile={() => {
           setSettingsSection("profile");
+          setSettingsOpen(true);
+        }}
+        onOpenSettings={() => {
+          setSettingsSection("home");
           setSettingsOpen(true);
         }}
         avatarId={friendStreaks.yourAvatarId}
@@ -994,71 +1339,79 @@ export default function App() {
       )}
 
       {createTemplateOpen && (
-        <TemplatesModal
-          tags={tags}
-          templates={templates}
-          onClose={() => setCreateTemplateOpen(false)}
-          onCreateTag={handleCreateTag}
-          onUpdateTag={handleUpdateTag}
-          onDeleteTag={handleDeleteTag}
-          onSaveTemplate={handleSaveAsTemplate}
-          onDeleteTemplate={handleDeleteTemplate}
-        />
+        <Suspense fallback={null}>
+          <TemplatesModal
+            tags={tags}
+            templates={templates}
+            onClose={() => setCreateTemplateOpen(false)}
+            onCreateTag={handleCreateTag}
+            onUpdateTag={handleUpdateTag}
+            onDeleteTag={handleDeleteTag}
+            onSaveTemplate={handleSaveAsTemplate}
+            onDeleteTemplate={handleDeleteTemplate}
+          />
+        </Suspense>
       )}
       {settingsOpen && (
-        <SettingsModal
-          initialSectionId={settingsSection}
-          theme={theme}
-          onChangeTheme={handleChangeTheme}
-          customThemeColors={customColors}
-          onSetCustomTheme={handleSetCustomTheme}
-          remindersEnabled={remindersEnabled}
-          onChangeRemindersEnabled={handleChangeRemindersEnabled}
-          reminderStatus={reminderStatus}
-          onJumpToReminder={handleJumpToReminder}
-          tasks={tasks}
-          completions={completions}
-          tags={tags}
-          frozenDays={allFrozenDays}
-          freezeCandidates={freezeCandidates}
-          freezesRemaining={freezesRemainingThisMonth}
-          onFreezeDay={handleFreezeDay}
-          onUnfreezeDay={handleUnfreezeDay}
-          onStartArranging={handleStartArranging}
-          hiddenWidgets={hiddenWidgets}
-          onHideWidget={handleHideWidget}
-          onShowWidget={handleShowWidget}
-          streak={streak}
-          bestStreak={bestStreak}
-          todayStatus={todayStatus}
-          weekly={weekly}
-          templateBreakdown={templateBreakdown}
-          quote={quote}
-          yourAvatarId={friendStreaks.yourAvatarId}
-          friendStreakEntries={friendStreaks.friends}
-          friendStreaksLoading={friendStreaks.loading}
-          onClose={() => setSettingsOpen(false)}
-          onSignOut={handleSignOut}
-          onAccountDeleted={handleAccountDeleted}
-          onFriendLimitReached={() => setPaywallFeature("More friends")}
-          online={online}
-          onViewFriend={setViewingFriend}
-          membership={membership}
-          onlineFriendIds={onlineFriendIds}
-          supportBadgeCount={supportBadgeCount}
-          onSupportSeen={refreshSupportBadge}
-        />
+        <Suspense fallback={null}>
+          <SettingsModal
+            initialSectionId={settingsSection}
+            theme={theme}
+            onChangeTheme={handleChangeTheme}
+            customThemeColors={customColors}
+            onSetCustomTheme={handleSetCustomTheme}
+            appearanceMode={appearanceMode}
+            onChangeAppearanceMode={handleChangeAppearanceMode}
+            remindersEnabled={remindersEnabled}
+            onChangeRemindersEnabled={handleChangeRemindersEnabled}
+            reminderStatus={reminderStatus}
+            onJumpToReminder={handleJumpToReminder}
+            tasks={tasks}
+            completions={completions}
+            tags={tags}
+            frozenDays={allFrozenDays}
+            freezeCandidates={freezeCandidates}
+            freezesRemaining={freezesRemainingThisMonth}
+            onFreezeDay={handleFreezeDay}
+            onUnfreezeDay={handleUnfreezeDay}
+            onStartArranging={handleStartArranging}
+            hiddenWidgets={hiddenWidgets}
+            onHideWidget={handleHideWidget}
+            onShowWidget={handleShowWidget}
+            streak={streak}
+            bestStreak={bestStreak}
+            todayStatus={todayStatus}
+            weekly={weekly}
+            templateBreakdown={templateBreakdown}
+            quote={quote}
+            yourAvatarId={friendStreaks.yourAvatarId}
+            friendStreakEntries={friendStreaks.friends}
+            friendStreaksLoading={friendStreaks.loading}
+            onClose={() => setSettingsOpen(false)}
+            onSignOut={handleSignOut}
+            onAccountDeleted={handleAccountDeleted}
+            onFriendLimitReached={() => setPaywallFeature("More friends")}
+            online={online}
+            onViewFriend={setViewingFriend}
+            membership={membership}
+            onlineFriendIds={onlineFriendIds}
+            supportBadgeCount={supportBadgeCount}
+            onSupportSeen={refreshSupportBadge}
+          />
+        </Suspense>
       )}
 
       {paywallFeature && (
-        <PremiumPaywallModal feature={paywallFeature} onClose={() => setPaywallFeature(null)} />
+        <Suspense fallback={null}>
+          <PremiumPaywallModal
+            feature={paywallFeature}
+            onClose={() => setPaywallFeature(null)}
+          />
+        </Suspense>
       )}
 
       {phraseModalOpen && (
-        <PhraseModal
-          quote={quote}
-          onClose={() => setPhraseModalOpen(false)}
-        />
+        <PhraseModal quote={quote} onClose={() => setPhraseModalOpen(false)} />
       )}
 
       {viewingTask && (
