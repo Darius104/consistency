@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { PointerEvent, SyntheticEvent } from "react";
 import type { Task } from "../../types";
 import { Checkbox } from "../ui/Checkbox";
@@ -27,6 +27,9 @@ interface TaskItemProps {
   onDragPointerDown: (e: PointerEvent) => void;
   suppressClick: (e: SyntheticEvent) => boolean;
   dragging: boolean;
+  /** Just deleted - plays the exit (slide out, then the gap closes) while
+   *  TaskList keeps it rendered for a moment. */
+  leaving?: boolean;
 }
 
 interface SwipeGesture {
@@ -47,8 +50,35 @@ export function TaskItem({
   onDragPointerDown,
   suppressClick,
   dragging,
+  leaving = false,
 }: TaskItemProps) {
   const rowRef = useRef<HTMLDivElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  // Exit: the row slides off to the left (continuing from wherever a swipe
+  // left it), then the space it took closes so the rows below glide up.
+  // Web Animations rather than CSS so the collapse can start from the row's
+  // real measured height.
+  useLayoutEffect(() => {
+    if (!leaving) return;
+    const row = rowRef.current;
+    const wrap = wrapRef.current;
+    if (!row || !wrap) return;
+    const from = getComputedStyle(row).transform;
+    row.animate(
+      [
+        { transform: from === "none" ? "translateX(0)" : from, opacity: 1 },
+        { transform: "translateX(-105%)", opacity: 0 },
+      ],
+      { duration: 220, easing: "cubic-bezier(0.4, 0, 1, 1)", fill: "forwards" },
+    );
+    wrap.animate([{ height: `${wrap.offsetHeight}px` }, { height: "0px" }], {
+      duration: 220,
+      delay: 140,
+      easing: "cubic-bezier(0.32, 0.72, 0, 1)",
+      fill: "forwards",
+    });
+  }, [leaving]);
   const gestureRef = useRef<SwipeGesture | null>(null);
   const swipedRef = useRef(false);
   const [offset, setOffset] = useState(0);
@@ -125,7 +155,11 @@ export function TaskItem({
   const showMeta = !!task.time || task.priority === "high";
 
   return (
-    <div className={`task-swipe ${open ? "task-swipe--open" : ""}`}>
+    <div
+      ref={wrapRef}
+      className={`task-swipe ${open ? "task-swipe--open" : ""} ${leaving ? "task-swipe--leaving" : ""}`}
+      aria-hidden={leaving || undefined}
+    >
       {!locked && (
         <button
           type="button"

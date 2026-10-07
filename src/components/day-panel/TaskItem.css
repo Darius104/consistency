@@ -179,3 +179,25 @@
 .task-item--completed .task-item__notes {
   opacity: 0.55;
 }
+
+/* A deleted row playing its exit (see TaskItem's `leaving`) - no longer
+   interactive, the red Delete behind it hidden so only the row slides. */
+.task-swipe--leaving {
+  pointer-events: none;
+}
+
+.task-swipe--leaving .task-swipe__delete {
+  visibility: hidden;
+}
+
+/* The divider above a leaving row fades with it rather than lingering as
+   a double line while the gap closes. */
+.task-group__items > *:has(> .task-swipe--leaving) {
+  border-top-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-swipe--leaving {
+    display: none;
+  }
+}

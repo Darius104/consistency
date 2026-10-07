@@ -147,6 +147,19 @@ export function StreakCounter({ streak, best, today }: StreakCounterProps) {
           </li>
         ))}
       </ol>
+
+      {/* Desktop's narrower panel: status and best move down to one quiet
+          line instead of crowding the number (the phone keeps the pill). */}
+      <div className="streak-hero__footer">
+        <span className={`streak-hero__footer-status streak-hero__footer-status--${pill.tone}`}>
+          {pill.text}
+        </span>
+        {best > 0 && (
+          <span className={`streak-hero__footer-best ${isRecordStreak ? "streak-hero__best--record" : ""}`}>
+            {isRecordStreak ? "Personal best" : `Best ${best}`}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

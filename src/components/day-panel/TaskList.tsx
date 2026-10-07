@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useNow } from "../../hooks/useNow";
 import { useReorderDrag } from "../../hooks/useReorderDrag";
 import type { DayNote, Tag, Task } from "../../types";
@@ -19,6 +19,9 @@ const NO_TAG_KEY = "none";
 // even though there'd still be 3 hours left to actually act on it.
 const URGENCY_WINDOW_MS = 3 * 60 * 60 * 1000;
 const AUTO_COLLAPSE_DELAY_MS = 250;
+// How long a deleted task stays on screen playing its exit (see TaskItem's
+// `leaving`) - matches the slide-out + collapse there.
+const LEAVE_MS = 380;
 
 // Tag groups and notes share one combined drag domain (see layoutDrag
 // below) - these prefixes are how a single reordered id array is told
@@ -67,7 +70,7 @@ function sortOccurrences(occurrences: Occurrence[]): Occurrence[] {
 
 export function TaskList({
   selectedDate,
-  occurrences,
+  occurrences: liveOccurrences,
   tags,
   onToggle,
   onView,
@@ -84,6 +87,47 @@ export function TaskList({
   // real) - this just keeps the checkbox and delete button from offering
   // an action that would silently no-op.
   const isPastDay = selectedDate < todayKey();
+
+  // A task that disappears from this day (deleted - by swipe, trash, the
+  // task window or the form, or from another device) stays rendered for a
+  // moment as a "leaving" ghost so it can slide out and collapse, instead
+  // of the rows below jumping up instantly. Detected here rather than at
+  // each delete call site so every path gets it.
+  const [leaving, setLeaving] = useState<Map<string, Occurrence>>(new Map());
+  const prevLiveRef = useRef<{ date: string; occurrences: Occurrence[] }>({
+    date: selectedDate,
+    occurrences: liveOccurrences,
+  });
+  useLayoutEffect(() => {
+    const prev = prevLiveRef.current;
+    prevLiveRef.current = { date: selectedDate, occurrences: liveOccurrences };
+    // Switching days isn't a deletion.
+    if (prev.date !== selectedDate) {
+      setLeaving(new Map());
+      return;
+    }
+    const liveIds = new Set(liveOccurrences.map((o) => o.task.id));
+    const gone = prev.occurrences.filter((o) => !liveIds.has(o.task.id));
+    if (gone.length === 0) return;
+    setLeaving((cur) => {
+      const next = new Map(cur);
+      for (const o of gone) next.set(o.task.id, o);
+      return next;
+    });
+    const ids = gone.map((o) => o.task.id);
+    window.setTimeout(() => {
+      setLeaving((cur) => {
+        const next = new Map(cur);
+        for (const id of ids) next.delete(id);
+        return next;
+      });
+    }, LEAVE_MS);
+  }, [liveOccurrences, selectedDate]);
+
+  const occurrences: Occurrence[] = [
+    ...liveOccurrences,
+    ...[...leaving.values()].filter((o) => !liveOccurrences.some((l) => l.task.id === o.task.id)),
+  ];
 
   // Only today can ever be "urgent" - a future day's own deadline hasn't
   // started counting down yet, and a past day is already locked regardless.
@@ -329,10 +373,11 @@ export function TaskList({
               >
                 {groupOccurrences.map(({ task, completed }) => (
                   <Fragment key={task.id}>
-                    <div ref={taskDrag.registerItemRef(task.id)}>
+                    <div ref={leaving.has(task.id) ? undefined : taskDrag.registerItemRef(task.id)}>
                       <TaskItem
                         task={task}
                         completed={completed}
+                        leaving={leaving.has(task.id)}
                         locked={isPastDay}
                         onToggle={() => onToggle(task)}
                         onView={() => onView(task)}

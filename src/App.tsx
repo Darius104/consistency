@@ -645,8 +645,11 @@ export default function App() {
 
   async function handleConfirmDeleteTask() {
     if (!pendingDeleteTask) return;
-    await handleDeleteTask(pendingDeleteTask);
+    // Close the confirm first, so the row's exit animation (see TaskList's
+    // leaving rows) plays in view rather than behind the closing sheet.
+    const task = pendingDeleteTask;
     setPendingDeleteTask(null);
+    await handleDeleteTask(task);
   }
 
   async function handleReorderTasks(taskIds: string[]) {
