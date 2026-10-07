@@ -1,16 +1,12 @@
 .task-group {
+  --group-color: var(--text-muted);
   display: flex;
   flex-direction: column;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: var(--space-3);
-  transition: border-color 0.15s ease, background-color 0.15s ease;
-}
-
-.task-group--complete {
-  border-color: var(--success);
-  background: var(--success-soft);
+  border-radius: 16px;
+  padding: var(--space-3) var(--space-4);
+  transition: border-color 0.15s ease, background-color 0.15s ease, padding 0.2s ease;
 }
 
 .task-group--urgent {
@@ -25,9 +21,9 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  margin: calc(var(--space-3) * -1) calc(var(--space-3) * -1) var(--space-3);
-  padding: 6px var(--space-3);
-  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  margin: calc(var(--space-3) * -1) calc(var(--space-4) * -1) var(--space-3);
+  padding: 6px var(--space-4);
+  border-radius: 16px 16px 0 0;
   border-bottom: 1px solid rgba(229, 104, 107, 0.35);
   color: var(--danger);
   font-size: var(--text-xs);
@@ -88,46 +84,30 @@
   gap: var(--space-2);
   background: transparent;
   border: none;
-  padding: 0;
-  color: var(--text-secondary);
+  padding: 2px 0;
+  color: var(--text);
   width: 100%;
   font: inherit;
   cursor: pointer;
-}
-
-/* A dedicated handle (rather than grab-anywhere on the whole header) means
-   touch-action:none is scoped to just this small element - everywhere else
-   on the header (and the rest of the panel) keeps ordinary native touch
-   scrolling, with none of the manual scroll/momentum reimplementation
-   grab-anywhere would otherwise require (see useReorderDrag's
-   bindHandlePointerDown). */
-.task-group__handle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  color: var(--text-muted);
-  cursor: grab;
-  touch-action: none;
   -webkit-user-select: none;
   user-select: none;
 }
 
-.task-group--dragging .task-group__handle {
+/* Long-press (touch) or drag (mouse) the header itself to reorder groups -
+   see useReorderDrag's bindLongPress. Vertical scrolling stays native. */
+.task-group__header--draggable {
+  touch-action: pan-y;
+  -webkit-touch-callout: none;
+}
+
+.task-group--dragging .task-group__header {
   cursor: grabbing;
-}
-
-.task-group--complete .task-group__header {
-  color: var(--text);
-}
-
-.task-group__header:hover {
-  color: var(--text);
 }
 
 .task-group__chevron {
   transition: transform 220ms var(--ease-in-out);
   flex: none;
+  color: var(--text-muted);
 }
 
 .task-group__chevron--open {
@@ -135,10 +115,11 @@
 }
 
 .task-group__dot {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   flex: none;
+  background: var(--group-color);
 }
 
 .task-group__label {
@@ -147,8 +128,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: var(--text-sm);
-  font-weight: 600;
+  font-size: var(--text-md);
+  font-weight: 700;
 }
 
 /* Phone-sized screens: template titles read as too small at the desktop
@@ -161,13 +142,65 @@
 
 .task-group__count {
   margin-left: auto;
-  font-size: var(--text-xs);
-  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
 .task-group--complete .task-group__count {
   color: var(--success);
+}
+
+/* Today's progress for this group, in its template color. */
+.task-group__progress {
+  height: 4px;
+  margin-top: var(--space-2);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--group-color) 18%, transparent);
+  overflow: hidden;
+}
+
+.task-group__progress > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--group-color);
+  transition: width 0.35s var(--ease-out);
+}
+
+.task-group--complete .task-group__progress > span {
+  background: var(--success);
+}
+
+/* Finished and folded away: one quiet line (TaskList also moves it below
+   everything still in progress). Tap still unfolds it. */
+.task-group--done-compact {
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border-style: dashed;
+}
+
+.task-group--done-compact .task-group__label {
+  font-size: var(--text-sm);
   font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.task-group--done-compact .task-group__count {
+  font-size: var(--text-xs);
+}
+
+.task-group__done-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--success);
+  color: #0d1a14;
 }
 
 /* Grid-rows trick: animating 1fr -> 0fr smoothly collapses the row without
@@ -191,5 +224,9 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+}
+
+/* Thin lines between rows instead of a box around each one. */
+.task-group__items > * + * {
+  border-top: 1px solid var(--border);
 }

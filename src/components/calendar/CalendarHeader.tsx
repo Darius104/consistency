@@ -1,6 +1,6 @@
 import type { Friend, MembershipTier } from "../../db/friends";
 import { Button } from "../ui/Button";
-import { BookmarkIcon, ChevronLeftIcon, ChevronRightIcon, SettingsIcon, SparklesIcon } from "../ui/icons";
+import { BookmarkIcon, ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, SettingsIcon, SparklesIcon } from "../ui/icons";
 import { FriendAvatarRow } from "./FriendAvatarRow";
 import "./CalendarHeader.css";
 
@@ -36,6 +36,8 @@ interface CalendarHeaderProps {
    *  useSupportBadgeCount. Omitted while viewing a friend's calendar, same
    *  as onOpenSettings itself. */
   settingsBadgeCount?: number;
+  /** Opens the month/year wheel (see MonthYearPicker). */
+  onTitleClick?: () => void;
 }
 
 export function CalendarHeader({
@@ -52,11 +54,19 @@ export function CalendarHeader({
   onlineFriendIds,
   onAddFriend,
   settingsBadgeCount,
+  onTitleClick,
 }: CalendarHeaderProps) {
   return (
     <div className="cal-header">
       <div className="cal-header__title-group">
-        <h1 className="cal-header__title">{monthLabel}</h1>
+        {onTitleClick ? (
+          <button type="button" className="cal-header__title-button" onClick={onTitleClick}>
+            <h1 className="cal-header__title">{monthLabel}</h1>
+            <ChevronDownIcon size={18} className="cal-header__title-chevron" />
+          </button>
+        ) : (
+          <h1 className="cal-header__title">{monthLabel}</h1>
+        )}
         {tier && <span className={`cal-header__tier cal-header__tier--${tier}`}>{TIER_PLAN_LABEL[tier]}</span>}
       </div>
       <div className="cal-header__row">

@@ -13,9 +13,18 @@ import {
   type TodayStatus,
   type WeeklyCompletion as WeeklyCompletionData,
 } from "../../utils/stats";
+import { useMediaQuery } from "../../hooks/useMediaQuery";
 import { ActionSheet } from "../ui/ActionSheet";
+import { Modal } from "../ui/Modal";
 import { Button } from "../ui/Button";
-import { ChevronDownIcon, ChevronUpIcon, GripIcon, MoreIcon, XIcon } from "../ui/icons";
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  GripIcon,
+  MoreIcon,
+  PlusIcon,
+  XIcon,
+} from "../ui/icons";
 import { TemplateBreakdown } from "../stats/TemplateBreakdown";
 import { FreezeSummary } from "../stats/FreezeSummary";
 import { FriendStreakCompare } from "../stats/FriendStreakCompare";
@@ -27,6 +36,7 @@ import { FriendNoteWidget } from "./FriendNoteWidget";
 import { TaskList } from "./TaskList";
 import { TradingResultBadge } from "./TradingResultBadge";
 import { TradingResultModal } from "./TradingResultModal";
+import { WidgetTiles } from "./WidgetTiles";
 import "./DayPanel.css";
 
 // How close the pointer needs to get to the scrollable container's top/
@@ -165,6 +175,10 @@ export function DayPanel({
   // replaces what used to be a single-purpose "Arrange panel?" confirm
   // modal with no idea which block was actually held.
   const [actionSheetFor, setActionSheetFor] = useState<WidgetId | null>(null);
+  // Phone only: widgets show as compact tiles (WidgetTiles) and tapping one
+  // opens the full widget here, in a sheet.
+  const isPhone = useMediaQuery("(max-width: 700px)");
+  const [openWidget, setOpenWidget] = useState<WidgetId | null>(null);
   const [addWidgetSheetOpen, setAddWidgetSheetOpen] = useState(false);
   const blockRefs = useRef<Partial<Record<PanelBlockId, HTMLDivElement>>>({});
 
@@ -462,6 +476,9 @@ export function DayPanel({
             onAddNote={onAddNote}
             disabled={isPastDay}
             openRequest={addMenuOpenRequest}
+            dateKey={selectedDate}
+            onLogResult={() => setTradingModalOpen(true)}
+            hasResult={!!tradingResult}
           />
         </div>
       </div>
@@ -474,6 +491,7 @@ export function DayPanel({
         <TradingResultModal
           value={tradingResult?.value ?? null}
           unit={tradingResult?.unit ?? tradingResultUnit}
+          dateKey={selectedDate}
           onSave={(value, unit) => {
             onSetTradingResult(value, unit);
             setTradingModalOpen(false);
@@ -484,7 +502,7 @@ export function DayPanel({
 
       {arranging && (
         <div className="day-panel__arrange-bar">
-          <span>Drag the handles to reorder</span>
+          <span>{isPhone ? "Drag widgets to move them" : "Drag the handles to reorder"}</span>
           <Button onClick={onFinishArranging}>Done</Button>
         </div>
       )}
@@ -494,7 +512,67 @@ export function DayPanel({
           <FriendNoteWidget key={note.id} note={note} onDismiss={onDismissFriendNote} />
         ))}
 
-      {visibleOrder.map((id) => {
+      {isPhone && (
+        <>
+          <WidgetTiles
+            ids={visibleOrder}
+            tasks={blocks.tasks}
+            streak={streak}
+            bestStreak={bestStreak}
+            todayStatus={todayStatus}
+            weekly={weekly}
+            freezesRemaining={freezesRemaining}
+            freezesTotal={MAX_FREEZES_PER_MONTH}
+            templateBreakdown={templateBreakdown}
+            tags={tags}
+            quote={quote}
+            yourAvatarId={yourAvatarId}
+            friendStreakEntries={friendStreakEntries}
+            onOpen={setOpenWidget}
+            onMenu={setActionSheetFor}
+            arranging={arranging}
+            onStartArranging={onStartArranging}
+            onRemove={onHideWidget}
+            onReorder={(visibleNext) => {
+              // Only the visible slots (tasks + shown widgets) change -
+              // hidden widgets keep their places in the saved order, so
+              // they come back where they were when re-added.
+              const queue = [...visibleNext];
+              onReorder(
+                order.map((id) =>
+                  id === "tasks" || !hiddenWidgets.includes(id as WidgetId) ? (queue.shift() ?? id) : id,
+                ),
+              );
+            }}
+          />
+          {arranging && hiddenWidgets.length > 0 && (
+            <div className="widget-add-list">
+              <span className="widget-section-label">More widgets</span>
+              {hiddenWidgets.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  className="widget-add-row"
+                  onClick={() => onShowWidget(id)}
+                >
+                  <span className="widget-add-row__plus">
+                    <PlusIcon size={14} />
+                  </span>
+                  {WIDGET_LABELS[id]}
+                </button>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {openWidget && (
+        <Modal title={WIDGET_LABELS[openWidget]} onClose={() => setOpenWidget(null)}>
+          {blocks[openWidget]}
+        </Modal>
+      )}
+
+      {!isPhone && visibleOrder.map((id) => {
         const isWidget = id !== "tasks";
         return (
           <Fragment key={id}>

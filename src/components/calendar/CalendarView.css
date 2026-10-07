@@ -81,6 +81,10 @@
   margin-bottom: var(--space-2);
 }
 
+.cal-view__weekday-short {
+  display: none;
+}
+
 .cal-view__weekday {
   font-size: var(--text-xs);
   color: var(--text-muted);
@@ -148,5 +152,51 @@
     top: var(--space-3);
     left: var(--space-2);
     right: var(--space-2);
+  }
+}
+
+.cal-view__sheet {
+  display: contents;
+}
+
+/* Howbout-style phone grid: the weekday row and the month sit on one
+   full-bleed panel with rounded top corners, and weeks are separated by
+   thin lines only - the cells themselves have no box of their own (see
+   CalendarDay.css's matching phone rules). */
+@media (max-width: 700px) {
+  .cal-view__sheet {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    margin: 0 calc(var(--space-2) * -1) calc(var(--space-3) * -1);
+    border-radius: 22px 22px 0 0;
+    background: var(--surface-hover);
+    overflow: hidden;
+  }
+
+  .cal-view__weekdays {
+    margin: 0;
+    padding: var(--space-3) 0 var(--space-2);
+    gap: 0;
+  }
+
+  .cal-view__weekday {
+    font-size: var(--text-md);
+    font-weight: 600;
+    color: var(--text-secondary);
+    letter-spacing: 0;
+  }
+
+  .cal-view__weekday-full {
+    display: none;
+  }
+
+  .cal-view__weekday-short {
+    display: inline;
+  }
+
+  .cal-view__grid {
+    gap: 0;
   }
 }

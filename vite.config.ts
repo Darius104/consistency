@@ -6,7 +6,21 @@ const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
-  plugins: [react()],
+  plugins: [
+    react(),
+    // Dev-only: the phone's console isn't visible from this Mac, so
+    // WriteErrorToast forwards any unhandled error here, into the terminal
+    // running `tauri ios dev`. Never part of a real build (apply: "serve").
+    {
+      name: "forward-app-errors",
+      apply: "serve",
+      configureServer(server) {
+        server.ws.on("app:error", (data: { reason: string; stack?: string }) => {
+          console.log(`\n[APP ERROR] ${data.reason}\n${data.stack ?? ""}\n`);
+        });
+      },
+    },
+  ],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //

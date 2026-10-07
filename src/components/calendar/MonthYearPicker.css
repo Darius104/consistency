@@ -1,0 +1,72 @@
+.month-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: rgba(0, 0, 0, 0.45);
+  animation: month-picker-fade 180ms var(--ease-out);
+}
+
+@keyframes month-picker-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.month-picker__panel {
+  position: relative;
+  display: flex;
+  box-sizing: content-box;
+  padding: calc(env(safe-area-inset-top, 0px) + var(--space-5)) var(--space-5) var(--space-5);
+  background: var(--surface-hover);
+  border-radius: 0 0 28px 28px;
+  box-shadow: var(--shadow-md);
+  animation: month-picker-drop 260ms var(--ease-out);
+}
+
+@keyframes month-picker-drop {
+  from {
+    translate: 0 -100%;
+  }
+}
+
+/* The selection band behind the centered row of both wheels. */
+.month-picker__highlight {
+  position: absolute;
+  left: var(--space-4);
+  right: var(--space-4);
+  bottom: calc(var(--space-5) + 44px * 2);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--text) 9%, transparent);
+  pointer-events: none;
+}
+
+.month-picker__wheel {
+  position: relative;
+  flex: 1;
+  height: 100%;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  /* Two rows of padding top and bottom, so the first and last items can
+     still scroll into the centered selection band. */
+  padding: calc(44px * 2) 0;
+  box-sizing: border-box;
+  overscroll-behavior: contain;
+}
+
+.month-picker__wheel::-webkit-scrollbar {
+  display: none;
+}
+
+.month-picker__item {
+  display: block;
+  width: 100%;
+  height: 44px;
+  background: none;
+  border: none;
+  scroll-snap-align: center;
+  color: var(--text);
+  font-size: 24px;
+  font-weight: 500;
+  text-align: center;
+}

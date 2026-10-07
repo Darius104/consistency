@@ -187,6 +187,10 @@ export function useTaskReminders(
   // dependency array (which would mean tearing down/recreating the interval
   // on every single task edit).
   const tasksRef = useRef(tasks);
+  // The latest reschedule() from the main effect below - lets the window
+  // focus listener be registered once for the hook's whole lifetime instead
+  // of being torn down and re-added on every task/completion change.
+  const rescheduleRef = useRef<(() => Promise<void>) | null>(null);
   tasksRef.current = tasks;
   const completionsRef = useRef(completions);
   completionsRef.current = completions;
@@ -496,8 +500,16 @@ export function useTaskReminders(
       }
     }
 
+    rescheduleRef.current = reschedule;
     void reschedule();
 
+    return () => {
+      cancelled = true;
+      if (fallbackInterval !== null) window.clearInterval(fallbackInterval);
+    };
+  }, [tasks, completions, freezes, enabled]);
+
+  useEffect(() => {
     // Permission can only change from outside the app (System Settings),
     // which this hook has no way to be pushed a notification about - so
     // instead, re-check the moment the user comes back to the app at all,
@@ -506,15 +518,18 @@ export function useTaskReminders(
     // itself once notifications get allowed, and a granted status catching
     // a revoke that happened while the app was in the background.
     const unlistenFocus = getCurrentWindow().onFocusChanged(({ payload: focused }) => {
-      if (focused) void reschedule();
+      if (focused) void rescheduleRef.current?.();
     });
 
     return () => {
-      cancelled = true;
-      if (fallbackInterval !== null) window.clearInterval(fallbackInterval);
-      void unlistenFocus.then((unlisten) => unlisten());
+      // Tauri's unlisten can throw ("listeners[eventId].handlerId") if the
+      // listener's already gone, e.g. after a webview reload - harmless,
+      // but uncaught it surfaced as WriteErrorToast's "didn't save".
+      unlistenFocus
+        .then((unlisten) => unlisten())
+        .catch(() => {});
     };
-  }, [tasks, completions, freezes, enabled]);
+  }, []);
 
   return status;
 }

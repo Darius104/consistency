@@ -209,14 +209,22 @@ export function FriendCalendarView({ friend, isOnline, onBack }: FriendCalendarV
               the Friends-list prop, which can be stale if they've renamed
               themselves since that list was last fetched - falls back to the
               prop only for the brief moment before this view's own fetch resolves. */}
-          Viewing <strong>{data?.displayName ?? friend.displayName}</strong>'s calendar (read-only)
+          <span className="friend-view__bar-extra">Viewing </span>
+          <strong>{data?.displayName ?? friend.displayName}</strong>'s calendar
+          <span className="friend-view__bar-extra"> (read-only)</span>
         </span>
         <div className="friend-view__bar-actions">
-          <Button onClick={() => setSendingNote(true)} className="friend-view__send-note">
-            <NoteIcon size={14} /> Send a note
+          <Button
+            onClick={() => setSendingNote(true)}
+            className="friend-view__send-note"
+            aria-label="Send a note"
+          >
+            <NoteIcon size={14} />
+            <span className="friend-view__btn-label">Send a note</span>
           </Button>
-          <Button onClick={onBack} className="friend-view__back">
-            <ChevronLeftIcon size={14} /> Back to your calendar
+          <Button onClick={onBack} className="friend-view__back" aria-label="Back to your calendar">
+            <ChevronLeftIcon size={14} />
+            <span className="friend-view__btn-label">Back to your calendar</span>
           </Button>
         </div>
       </div>
@@ -255,7 +263,12 @@ export function FriendCalendarView({ friend, isOnline, onBack }: FriendCalendarV
             tradingResults={{}}
             tags={data.tags}
             selectedDate={selectedDate}
-            onSelectDate={setSelectedDate}
+            onSelectDate={(date) => {
+              setSelectedDate(date);
+              // On a phone the grid fills the screen (same as your own
+              // calendar's Calendar tab), so picking a day opens it.
+              if (window.matchMedia("(max-width: 700px)").matches) setExpanded(true);
+            }}
           />
           <div className="friend-view__divider" aria-hidden="true" />
           <div className="friend-view__day">
@@ -325,7 +338,7 @@ function FriendDayContent({
   const todayStatus = computeTodayStatus(data.tasks, data.completions, data.freezes, todayKey());
   const weekStart = startOfWeek(selectedDate);
   const weekly = computeWeeklyCompletion(data.tasks, data.completions, weekStart);
-  const templateBreakdown = computeTemplateBreakdown(data.tasks, data.completions, weekStart);
+  const templateBreakdown = computeTemplateBreakdown(data.tasks, data.completions, weekStart, todayKey());
 
   const groups = groupByTag(occurrences, data.tags);
 

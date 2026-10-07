@@ -33,6 +33,24 @@ fn haptic_impact() {
     }
 }
 
+// The lighter "tick" iOS plays while something being dragged passes over
+// a new slot (UISelectionFeedbackGenerator) - softer than haptic_impact,
+// which is for the bigger moments (picking an item up, pull-to-refresh).
+// No-op on desktop, same as haptic_impact.
+#[tauri::command]
+fn haptic_selection() {
+    #[cfg(target_os = "ios")]
+    unsafe {
+        use objc::runtime::Object;
+        use objc::{class, msg_send, sel, sel_impl};
+
+        let generator: *mut Object = msg_send![class!(UISelectionFeedbackGenerator), alloc];
+        let generator: *mut Object = msg_send![generator, init];
+        let _: () = msg_send![generator, selectionChanged];
+        let _: () = msg_send![generator, release];
+    }
+}
+
 fn migrations() -> Vec<Migration> {
     vec![
         Migration {
@@ -145,6 +163,7 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            haptic_selection,
             haptic_impact,
             native_notifications::native_notifications_available,
             native_notifications::native_request_permission,

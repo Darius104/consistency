@@ -15,6 +15,7 @@ import { tasksScheduledOn } from "../../utils/recurrence";
 import { RefreshIcon } from "../ui/icons";
 import { CalendarDay, type DayChip } from "./CalendarDay";
 import { CalendarHeader } from "./CalendarHeader";
+import { MonthYearPicker } from "./MonthYearPicker";
 import "./CalendarView.css";
 
 // Mobile pull-to-refresh lives here, not in the day panel below - this is
@@ -62,6 +63,9 @@ interface CalendarViewProps {
   onlineFriendIds?: Set<string>;
   onAddFriend?: () => void;
   settingsBadgeCount?: number;
+  /** Bumped by tapping the phone tab bar's Calendar tab while already on
+   *  it - jumps the grid back to the current month (Howbout-style). */
+  resetMonthRequest?: number;
 }
 
 export function CalendarView({
@@ -81,6 +85,7 @@ export function CalendarView({
   syncing,
   onViewFriend,
   settingsBadgeCount,
+  resetMonthRequest = 0,
   onlineFriendIds,
   onAddFriend,
 }: CalendarViewProps) {
@@ -175,13 +180,18 @@ export function CalendarView({
   const { weeks, monthLabel } = buildMonthGrid(cursor.year, cursor.monthIndex);
   const tagColorById = new Map(tags.map((t) => [t.id, t.color]));
 
+  // Unfinished tasks first (stable sort, so each group keeps your own task
+  // order) - a cell only has room for a couple of chips, and what's still
+  // left to do matters more at a glance than what's already done.
   function chipsFor(scheduled: Task[], dateKey: string): DayChip[] {
-    return scheduled.map((t) => ({
-      id: t.id,
-      title: t.title,
-      color: (t.tagId && tagColorById.get(t.tagId)) || null,
-      done: completions.has(`${t.id}:${dateKey}`),
-    }));
+    return scheduled
+      .map((t) => ({
+        id: t.id,
+        title: t.title,
+        color: (t.tagId && tagColorById.get(t.tagId)) || null,
+        done: completions.has(`${t.id}:${dateKey}`),
+      }))
+      .sort((a, b) => Number(a.done) - Number(b.done));
   }
 
   function shiftMonth(delta: number) {
@@ -190,6 +200,14 @@ export function CalendarView({
       return { year: d.getFullYear(), monthIndex: d.getMonth() };
     });
   }
+
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+
+  useEffect(() => {
+    if (resetMonthRequest === 0) return;
+    const d = new Date();
+    setCursor({ year: d.getFullYear(), monthIndex: d.getMonth() });
+  }, [resetMonthRequest]);
 
   function goToday() {
     const d = new Date();
@@ -234,11 +252,27 @@ export function CalendarView({
           onlineFriendIds={onlineFriendIds}
           onAddFriend={onAddFriend}
           settingsBadgeCount={settingsBadgeCount}
+          onTitleClick={() => setMonthPickerOpen(true)}
         />
+        {monthPickerOpen && (
+          <MonthYearPicker
+            year={cursor.year}
+            monthIndex={cursor.monthIndex}
+            onChange={(year, monthIndex) => setCursor({ year, monthIndex })}
+            onClose={() => setMonthPickerOpen(false)}
+          />
+        )}
+        {/* Only a styled panel on phone widths (rounded-top "sheet" holding the
+            weekday row + grid) - display: contents on desktop, so the layout
+            there is exactly as if this wrapper didn't exist. */}
+        <div className="cal-view__sheet">
         <div className="cal-view__weekdays">
           {WEEKDAY_LABELS.map((label) => (
             <div key={label} className="cal-view__weekday">
-              {label}
+              <span className="cal-view__weekday-full">{label}</span>
+              <span className="cal-view__weekday-short" aria-hidden="true">
+                {label[0]}
+              </span>
             </div>
           ))}
         </div>
@@ -262,6 +296,7 @@ export function CalendarView({
               />
             );
           })}
+        </div>
         </div>
       </div>
     </div>

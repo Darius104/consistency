@@ -1,16 +1,50 @@
+/* Rows are plain lines inside their group's card (like iOS Reminders), not
+   cards of their own - a bordered box per task inside a bordered box per
+   group was a lot of chrome for very little content. */
+
+/* Holds the row plus the red Delete it slides over (swipe left - see
+   TaskItem.tsx). Clips the slide so nothing pokes outside the group. */
+.task-swipe {
+  position: relative;
+  overflow: hidden;
+}
+
+/* A lifted (dragged) row's shadow and scale must not be clipped. */
+.task-swipe:has(.task-item--dragging) {
+  overflow: visible;
+}
+
+.task-swipe__delete {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: none;
+  background: var(--danger);
+  color: #fff;
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
 .task-item {
+  position: relative;
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-3);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  padding: var(--space-3) 2px;
+  /* Opaque, so the Delete button behind stays hidden until swiped to. */
+  background: var(--bg-elevated);
   cursor: pointer;
-  transition: border-color 0.12s ease, background-color 0.12s ease,
-    transform 120ms var(--ease-out);
+  /* Native vertical scrolling stays on everywhere on the row - sideways
+     moves come to us for the swipe, and a long press picks the row up
+     (see useReorderDrag's bindLongPress). */
+  touch-action: pan-y;
+  -webkit-touch-callout: none;
+  transition: transform 260ms cubic-bezier(0.32, 0.72, 0, 1), background-color 0.12s ease;
 }
 
 .task-item:not(.task-item--readonly) {
@@ -18,38 +52,15 @@
   user-select: none;
 }
 
+/* Follows the finger 1:1 while swiping - no easing lag. */
+.task-item--swiping {
+  transition: none;
+}
+
 .task-item:focus-visible {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-/* Grabbing anywhere on the row used to permanently disable native touch
-   scrolling here (WebKit locks in scroll permission at the very first touch
-   of a gesture and never reconsiders it mid-gesture), which meant every
-   scroll starting on a task had to be reimplemented by hand in JS - fragile,
-   and the source of several rounds of scroll/drag conflicts. A dedicated
-   handle removes the ambiguity instead: touch-action:none is scoped to just
-   this small element (see useReorderDrag's bindHandlePointerDown), so
-   everywhere else on the row keeps ordinary, fully native scrolling and
-   momentum, with zero custom scroll code. */
-.task-item__handle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  align-self: stretch;
-  margin: calc(var(--space-3) * -1) 0;
-  padding: 0 2px;
-  color: var(--text-muted);
-  cursor: grab;
-  touch-action: none;
-  -webkit-user-select: none;
-  user-select: none;
-}
-
-.task-item--dragging .task-item__handle {
-  cursor: grabbing;
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: var(--radius-sm);
 }
 
 /* Touch-only devices never get any :hover rule on .task-item at all - not
@@ -57,43 +68,33 @@
    it delivers a real click to a nested element (the checkbox) when the
    ancestor has :hover styles, so a tap on the checkbox first "selected" the
    whole row (this component's own onClick) and only a second tap actually
-   reached the checkbox. Scoping these to real pointer devices removes that
-   requirement entirely, on top of the checkbox's own enlarged tap target
-   (see Checkbox.css) which only reduced how often a tap missed. */
+   reached the checkbox. */
 @media (hover: hover) {
   .task-item:hover {
-    border-color: var(--border-strong);
     background: var(--surface-hover);
   }
 }
 
-.task-item:active {
-  transform: scale(0.99);
-}
-
 /* The dragged task visually lifts and follows the pointer 1:1 (see
-   TaskList.tsx's onMove, which sets style.transform directly) instead of
-   just sitting dimmed in place. `transition: none` matters here - the base
-   rule above transitions `transform` for the :active press effect, which
-   would otherwise turn the live per-frame transform into a laggy eased
-   animation instead of tracking the finger/cursor exactly. `scale` is a
-   separate CSS property from `transform`, so it composes with the JS-driven
+   useReorderDrag, which sets style.transform on its wrapper). `scale` is a
+   separate CSS property from `transform`, so it composes with that
    translateY instead of fighting it. */
 .task-item--dragging {
-  position: relative;
   z-index: 5;
-  transition: none;
-  background: var(--bg-elevated);
+  /* Grows into the group card's own side padding (equal padding back, so
+     the checkbox and title don't move) - the lifted row reads as a card of
+     its own while staying inside the group. A scale-up instead pushed its
+     left edge out past the group. */
+  margin-inline: calc(-1 * var(--space-3));
+  padding-inline: calc(var(--space-3) + 2px);
+  border-radius: var(--radius-md);
+  background: var(--surface);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
-  scale: 1.02;
   cursor: grabbing;
 }
 
 /* A friend's calendar is read-only - no click handler, no drag/delete
-   affordances - so it shouldn't look or act clickable either.
-   pointer-events:none is simpler than overriding :hover/:active per state
-   (including --completed's own hover colors) - it stops the browser from
-   ever entering those states on this element at all. */
+   affordances - so it shouldn't look or act clickable either. */
 .task-item--readonly {
   cursor: default;
   pointer-events: none;
@@ -102,6 +103,8 @@
 .task-item__main {
   flex: 1;
   min-width: 0;
+  /* Lines the title up with the checkbox's vertical center. */
+  padding-top: 1px;
 }
 
 .task-item__title {
@@ -109,52 +112,49 @@
   font-weight: 500;
   line-height: 1.35;
   overflow-wrap: break-word;
-  transition: opacity 0.15s ease;
+  transition: opacity 0.15s ease, color 0.15s ease;
 }
 
 .task-item__meta-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-top: 4px;
-  transition: opacity 0.15s ease;
+  margin-top: 3px;
 }
 
 .task-item__time {
   font-size: var(--text-xs);
   color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
   flex: none;
 }
 
 .task-item__notes {
   font-size: var(--text-sm);
-  color: var(--text-secondary);
+  color: var(--text-muted);
   margin-top: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+/* Desktop: a small trash that appears on hover. Touch: none at all -
+   swipe left instead (the inline button was too easy to hit by accident). */
 .task-item__delete {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: none;
   background: transparent;
   border: none;
   color: var(--text-muted);
   padding: var(--space-1);
   border-radius: var(--radius-sm);
-  transition: opacity 0.12s ease, color 0.12s ease, background-color 0.12s ease;
+  opacity: 0;
+  transition: opacity 0.12s ease, color 0.12s ease;
 }
 
-/* Touch has no hover to reveal this, so it stays visible there instead -
-   same pattern used for note rows and template rows. Hidden-until-hover
-   only applies where hover actually exists (desktop). */
 @media (hover: hover) {
-  .task-item__delete {
-    opacity: 0;
-  }
-
   .task-item:hover .task-item__delete {
     opacity: 1;
   }
@@ -164,25 +164,18 @@
   }
 }
 
-.task-item--completed {
-  border-left-color: var(--success);
-  background: var(--success-soft);
-}
-
-@media (hover: hover) {
-  .task-item--completed:hover {
-    background: var(--success-soft);
-    border-left-color: var(--success);
+@media (hover: none) {
+  .task-item__delete {
+    display: none;
   }
 }
 
-.task-item--completed .task-item__title,
-.task-item--completed .task-item__notes {
+.task-item--completed .task-item__title {
   text-decoration: line-through;
   color: var(--text-muted);
 }
 
-.task-item--completed .task-item__title,
-.task-item--completed .task-item__meta-row {
-  opacity: 0.7;
+.task-item--completed .task-item__meta-row,
+.task-item--completed .task-item__notes {
+  opacity: 0.55;
 }

@@ -189,3 +189,142 @@
 .add-menu__review-confirm {
   margin-top: var(--space-2);
 }
+
+/* Two-line options (name + what it does) - the subtitle only shows in the
+   phone sheet; the desktop dropdown stays a compact one-line menu. */
+.add-menu__option-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.add-menu__option-sub {
+  display: none;
+}
+
+.add-menu__option-icon--task {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.add-menu__option-icon--template {
+  background: rgba(167, 139, 250, 0.16);
+  color: #a78bfa;
+}
+
+.add-menu__option-icon--note {
+  background: rgba(245, 196, 66, 0.16);
+  color: #f5c442;
+}
+
+/* --- Phone: bottom sheet (rendered inside Modal, see AddMenu.tsx) --- */
+
+.add-menu__sheet .add-menu__step {
+  gap: 4px;
+}
+
+.add-menu__sheet .add-menu__option {
+  gap: var(--space-3);
+  min-height: 58px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  font-size: var(--text-md);
+}
+
+.add-menu__sheet .add-menu__option:active {
+  background: var(--surface-hover);
+}
+
+.add-menu__sheet .add-menu__option-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+.add-menu__sheet .add-menu__option-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.add-menu__sheet .add-menu__option-sub {
+  display: block;
+  margin-top: 1px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.add-menu__sheet .add-menu__option-meta {
+  font-size: var(--text-sm);
+}
+
+/* Back is a plain text link here - the sheet's title already says where
+   you are, so it doesn't need a full row + divider. */
+.add-menu__sheet .add-menu__back-row {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: var(--space-1);
+}
+
+.add-menu__sheet .add-menu__option--back {
+  align-self: flex-start;
+  min-height: 36px;
+  padding: 0 var(--space-2) 0 0;
+  background: none;
+  color: var(--accent);
+  font-size: var(--text-sm);
+}
+
+.add-menu__sheet .add-menu__review-header {
+  padding: 0 var(--space-1);
+  margin: var(--space-1) 0 var(--space-2);
+}
+
+/* The checklist gets real height on a phone - and 44px rows. */
+.add-menu__sheet .add-menu__review-list {
+  max-height: 50dvh;
+  gap: 0;
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-1);
+}
+
+.add-menu__sheet .add-menu__review-list .checkbox-row {
+  min-height: 46px;
+  padding: 0 var(--space-2);
+  border-radius: 0;
+}
+
+.add-menu__sheet .add-menu__review-list .checkbox-row + .checkbox-row {
+  border-top: 1px solid var(--border);
+}
+
+/* Always reachable, however long the list. */
+.add-menu__sheet .add-menu__review-confirm {
+  position: sticky;
+  bottom: 0;
+  height: 48px;
+  margin-top: var(--space-3);
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+/* Phone: the tab bar's "+" is the way in (it opens the sheet through
+   openRequest), so the panel's own "+ Add" button would just be a second
+   copy of it. The menu itself stays mounted for that. */
+@media (max-width: 700px) {
+  .add-menu > .btn {
+    display: none;
+  }
+}
+
+.add-menu__option-icon--result {
+  background: rgba(29, 215, 91, 0.14);
+  color: var(--trading-profit);
+}
+
+.add-menu__option-icon--result {
+  background: rgba(29, 215, 91, 0.14);
+  color: var(--trading-profit);
+}

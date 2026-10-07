@@ -32,10 +32,13 @@ export function FriendTaskRow({ task, completed }: FriendTaskRowProps) {
       </span>
       <div className="task-item__main">
         <span className="task-item__title">{task.title}</span>
-        <div className="task-item__meta-row">
-          <PriorityDot priority={task.priority} />
-          <span className="task-item__time">{task.time || "All day"}</span>
-        </div>
+        {/* Same rule as TaskItem: only when it says something. */}
+        {(task.time || task.priority === "high") && (
+          <div className="task-item__meta-row">
+            {task.priority === "high" && <PriorityDot priority="high" />}
+            {task.time && <span className="task-item__time">{task.time}</span>}
+          </div>
+        )}
         {task.notes && <div className="task-item__notes">{task.notes}</div>}
       </div>
     </div>

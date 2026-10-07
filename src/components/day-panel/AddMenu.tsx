@@ -3,6 +3,7 @@ import { getTemplateTasks } from "../../db/queries";
 import type { Template, TemplateTaskBlueprint } from "../../types";
 import { Button } from "../ui/Button";
 import { Checkbox } from "../ui/Checkbox";
+import { Modal } from "../ui/Modal";
 import { Skeleton } from "../ui/Skeleton";
 import {
   BookmarkIcon,
@@ -10,7 +11,10 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   NoteIcon,
+  TrendingUpIcon,
 } from "../ui/icons";
+import { useMediaQuery } from "../../hooks/useMediaQuery";
+import { addDays, parseDateKey, todayKey } from "../../utils/dates";
 import "./AddMenu.css";
 
 interface AddMenuProps {
@@ -27,6 +31,23 @@ interface AddMenuProps {
    *  outside - a counter rather than a boolean so the same request can be
    *  made again after the menu's been closed. */
   openRequest?: number;
+  /** The day new things get added to - named in the phone sheet's title. */
+  dateKey: string;
+  /** Phone sheet only: open the day's trading result (on desktop it has
+   *  its own button right next to "+ Add"). */
+  onLogResult?: () => void;
+  hasResult?: boolean;
+}
+
+function dayName(dateKey: string): string {
+  const today = todayKey();
+  if (dateKey === today) return "Today";
+  if (dateKey === addDays(today, 1)) return "Tomorrow";
+  return parseDateKey(dateKey).toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
 }
 
 type Step = "main" | "templates" | "review";
@@ -46,24 +67,35 @@ export function AddMenu({
   onAddNote,
   disabled = false,
   openRequest = 0,
+  dateKey,
+  onLogResult,
+  hasResult = false,
 }: AddMenuProps) {
+  // Phone: a bottom sheet under the thumb (the tab bar's "+") instead of a
+  // small dropdown at the top of the panel.
+  const isPhone = useMediaQuery("(max-width: 700px)");
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (openRequest > 0 && !disabled) setOpen(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openRequest]);
   const [step, setStep] = useState<Step>("main");
-  const [reviewingTemplate, setReviewingTemplate] = useState<Template | null>(null);
+  const [reviewingTemplate, setReviewingTemplate] = useState<Template | null>(
+    null,
+  );
   const [reviewTasks, setReviewTasks] = useState<TemplateTaskBlueprint[]>([]);
   const [reviewTasksLoading, setReviewTasksLoading] = useState(false);
-  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
+  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(
+    new Set(),
+  );
   const rootRef = useRef<HTMLDivElement>(null);
   // Guards against a slow getTemplateTasks() call for one template landing
   // after the user has already picked a different one (or closed the menu).
   const reviewRequestRef = useRef(0);
 
   useEffect(() => {
-    if (!open) return;
+    // The phone sheet is portaled outside rootRef and has its own backdrop.
+    if (!open || isPhone) return;
     // Pointer, not mouse - on touch, compat mouse events fire ~300ms after
     // (or sometimes not at all for a touch that moved, e.g. into a scroll)
     // touchend, so a tap/scroll starting on a row underneath this popup
@@ -78,7 +110,7 @@ export function AddMenu({
     }
     document.addEventListener("pointerdown", onOutside);
     return () => document.removeEventListener("pointerdown", onOutside);
-  }, [open]);
+  }, [open, isPhone]);
 
   useEffect(() => {
     if (!open) return;
@@ -126,15 +158,190 @@ export function AddMenu({
 
   function toggleSelectAll() {
     setSelectedIndices((prev) =>
-      prev.size === reviewTasks.length ? new Set() : new Set(reviewTasks.map((_, i) => i)),
+      prev.size === reviewTasks.length
+        ? new Set()
+        : new Set(reviewTasks.map((_, i) => i)),
     );
   }
 
   function confirmReview() {
     if (!reviewingTemplate || selectedIndices.size === 0) return;
-    onApplyTemplate(reviewingTemplate.id, [...selectedIndices].sort((a, b) => a - b));
+    onApplyTemplate(
+      reviewingTemplate.id,
+      [...selectedIndices].sort((a, b) => a - b),
+    );
     close();
   }
+
+  const sheetTitle =
+    step === "main"
+      ? `Add to ${dayName(dateKey)}`
+      : step === "templates"
+        ? "Use a template"
+        : (reviewingTemplate?.name ?? "");
+
+  const content =
+    step === "review" && reviewingTemplate ? (
+      <div className="add-menu__step" key="review">
+        <div className="add-menu__back-row">
+          <button
+            type="button"
+            className="add-menu__option add-menu__option--back"
+            onClick={() => setStep("templates")}
+          >
+            <ChevronLeftIcon size={13} />
+            Back
+          </button>
+        </div>
+        <div className="add-menu__review-header">
+          <span className="add-menu__review-title">
+            {reviewingTemplate.name}
+          </span>
+          {!reviewTasksLoading && reviewTasks.length > 0 && (
+            <button
+              type="button"
+              className="add-menu__review-select-all"
+              onClick={toggleSelectAll}
+            >
+              {selectedIndices.size === reviewTasks.length
+                ? "Clear"
+                : "Select all"}
+            </button>
+          )}
+        </div>
+        {reviewTasksLoading ? (
+          <div className="add-menu__review-list">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} height={28} radius="var(--radius-sm)" />
+            ))}
+          </div>
+        ) : (
+          <div className="add-menu__review-list">
+            {reviewTasks.map((t, i) => (
+              <Checkbox
+                key={i}
+                checked={selectedIndices.has(i)}
+                onChange={() => toggleTask(i)}
+                label={t.title}
+                ariaLabel={t.title}
+              />
+            ))}
+          </div>
+        )}
+        <Button
+          variant="primary"
+          className="add-menu__review-confirm"
+          onClick={confirmReview}
+          disabled={reviewTasksLoading || selectedIndices.size === 0}
+        >
+          {selectedIndices.size > 0
+            ? `Add ${selectedIndices.size} ${selectedIndices.size === 1 ? "task" : "tasks"}`
+            : "Select tasks to add"}
+        </Button>
+      </div>
+    ) : step === "templates" ? (
+      <div className="add-menu__step" key="templates">
+        <div className="add-menu__back-row">
+          <button
+            type="button"
+            className="add-menu__option add-menu__option--back"
+            onClick={() => setStep("main")}
+          >
+            <ChevronLeftIcon size={13} />
+            Back
+          </button>
+        </div>
+        {templates.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            className="add-menu__option"
+            onClick={() => openTemplateReview(t)}
+          >
+            <span className="add-menu__option-icon">
+              <BookmarkIcon size={13} />
+            </span>
+            <span className="add-menu__option-name">{t.name}</span>
+            <span className="add-menu__option-meta">
+              {t.taskCount} {t.taskCount === 1 ? "task" : "tasks"}
+            </span>
+            <ChevronRightIcon size={13} className="add-menu__option-chevron" />
+          </button>
+        ))}
+      </div>
+    ) : (
+      <div className="add-menu__step" key="main">
+        <button
+          type="button"
+          className="add-menu__option"
+          onClick={() => {
+            onAddTask();
+            close();
+          }}
+        >
+          <span className="add-menu__option-icon add-menu__option-icon--task">
+            <CheckIcon size={14} />
+          </span>
+          <span className="add-menu__option-text">
+            <span className="add-menu__option-name">Add task</span>
+            <span className="add-menu__option-sub">One-off or repeating</span>
+          </span>
+        </button>
+        {templates.length > 0 && (
+          <button
+            type="button"
+            className="add-menu__option"
+            onClick={() => setStep("templates")}
+          >
+            <span className="add-menu__option-icon add-menu__option-icon--template">
+              <BookmarkIcon size={14} />
+            </span>
+            <span className="add-menu__option-text">
+              <span className="add-menu__option-name">Use a template</span>
+              <span className="add-menu__option-sub">
+                {templates.length}{" "}
+                {templates.length === 1 ? "template" : "templates"}
+              </span>
+            </span>
+            <ChevronRightIcon size={13} className="add-menu__option-chevron" />
+          </button>
+        )}
+        <button
+          type="button"
+          className="add-menu__option"
+          onClick={() => {
+            onAddNote();
+            close();
+          }}
+        >
+          <span className="add-menu__option-icon add-menu__option-icon--note">
+            <NoteIcon size={14} />
+          </span>
+          <span className="add-menu__option-text">
+            <span className="add-menu__option-name">Add note</span>
+            <span className="add-menu__option-sub">Just for this day</span>
+          </span>
+        </button>
+        {isPhone && onLogResult && (
+          <button
+            type="button"
+            className="add-menu__option"
+            onClick={() => {
+              close();
+              onLogResult();
+            }}
+          >
+            <span className="add-menu__option-icon add-menu__option-icon--result">
+              <TrendingUpIcon size={14} />
+            </span>
+            <span className="add-menu__option-text">
+              <span className="add-menu__option-name">{hasResult ? "Edit result" : "Log result"}</span>
+              <span className="add-menu__option-sub">Profit or loss for this day</span>
+            </span>
+          </button>
+        )}
+      </div>
+    );
 
   return (
     <div className="add-menu" ref={rootRef}>
@@ -147,133 +354,18 @@ export function AddMenu({
       >
         + Add
       </Button>
-      {open && (
-        <div className={`add-menu__popup ${step === "review" ? "add-menu__popup--wide" : ""}`}>
-          {step === "review" && reviewingTemplate ? (
-            <div className="add-menu__step" key="review">
-              <div className="add-menu__back-row">
-                <button
-                  type="button"
-                  className="add-menu__option add-menu__option--back"
-                  onClick={() => setStep("templates")}
-                >
-                  <ChevronLeftIcon size={13} />
-                  Back
-                </button>
-              </div>
-              <div className="add-menu__review-header">
-                <span className="add-menu__review-title">{reviewingTemplate.name}</span>
-                {!reviewTasksLoading && reviewTasks.length > 0 && (
-                  <button type="button" className="add-menu__review-select-all" onClick={toggleSelectAll}>
-                    {selectedIndices.size === reviewTasks.length ? "Clear" : "Select all"}
-                  </button>
-                )}
-              </div>
-              {reviewTasksLoading ? (
-                <div className="add-menu__review-list">
-                  {[0, 1, 2].map((i) => (
-                    <Skeleton key={i} height={28} radius="var(--radius-sm)" />
-                  ))}
-                </div>
-              ) : (
-                <div className="add-menu__review-list">
-                  {reviewTasks.map((t, i) => (
-                    <Checkbox
-                      key={i}
-                      checked={selectedIndices.has(i)}
-                      onChange={() => toggleTask(i)}
-                      label={t.title}
-                      ariaLabel={t.title}
-                    />
-                  ))}
-                </div>
-              )}
-              <Button
-                variant="primary"
-                className="add-menu__review-confirm"
-                onClick={confirmReview}
-                disabled={reviewTasksLoading || selectedIndices.size === 0}
-              >
-                {selectedIndices.size > 0
-                  ? `Add ${selectedIndices.size} ${selectedIndices.size === 1 ? "task" : "tasks"}`
-                  : "Select tasks to add"}
-              </Button>
-            </div>
-          ) : step === "templates" ? (
-            <div className="add-menu__step" key="templates">
-              <div className="add-menu__back-row">
-                <button
-                  type="button"
-                  className="add-menu__option add-menu__option--back"
-                  onClick={() => setStep("main")}
-                >
-                  <ChevronLeftIcon size={13} />
-                  Back
-                </button>
-              </div>
-              {templates.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  className="add-menu__option"
-                  onClick={() => openTemplateReview(t)}
-                >
-                  <span className="add-menu__option-icon">
-                    <BookmarkIcon size={13} />
-                  </span>
-                  <span className="add-menu__option-name">{t.name}</span>
-                  <span className="add-menu__option-meta">
-                    {t.taskCount} {t.taskCount === 1 ? "task" : "tasks"}
-                  </span>
-                  <ChevronRightIcon size={13} className="add-menu__option-chevron" />
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="add-menu__step" key="main">
-              <button
-                type="button"
-                className="add-menu__option"
-                onClick={() => {
-                  onAddTask();
-                  close();
-                }}
-              >
-                <span className="add-menu__option-icon">
-                  <CheckIcon size={14} />
-                </span>
-                <span className="add-menu__option-name">Add task</span>
-              </button>
-              {templates.length > 0 && (
-                <button
-                  type="button"
-                  className="add-menu__option"
-                  onClick={() => setStep("templates")}
-                >
-                  <span className="add-menu__option-icon">
-                    <BookmarkIcon size={14} />
-                  </span>
-                  <span className="add-menu__option-name">Use a template</span>
-                  <ChevronRightIcon size={13} className="add-menu__option-chevron" />
-                </button>
-              )}
-              <button
-                type="button"
-                className="add-menu__option"
-                onClick={() => {
-                  onAddNote();
-                  close();
-                }}
-              >
-                <span className="add-menu__option-icon">
-                  <NoteIcon size={14} />
-                </span>
-                <span className="add-menu__option-name">Add note</span>
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+      {open &&
+        (isPhone ? (
+          <Modal title={sheetTitle} onClose={close}>
+            <div className="add-menu__sheet">{content}</div>
+          </Modal>
+        ) : (
+          <div
+            className={`add-menu__popup ${step === "review" ? "add-menu__popup--wide" : ""}`}
+          >
+            {content}
+          </div>
+        ))}
     </div>
   );
 }

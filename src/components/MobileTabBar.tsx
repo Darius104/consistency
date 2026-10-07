@@ -1,6 +1,6 @@
 import type { AvatarId } from "../utils/avatars";
 import { AvatarBadge } from "./stats/AvatarBadge";
-import { CalendarIcon, PlusSquareIcon, ProfileIcon, TodayIcon, UsersIcon } from "./ui/icons";
+import { CalendarIcon, PlusIcon, ProfileIcon, TodayIcon, UsersIcon } from "./ui/icons";
 import "./MobileTabBar.css";
 
 export type MobileTab = "calendar" | "today";
@@ -49,7 +49,10 @@ export function MobileTabBar({
         <TodayIcon size={24} />
       </button>
       <button type="button" className="mobile-tab-bar__item" onClick={onAdd} aria-label="Add">
-        <PlusSquareIcon size={26} />
+        {/* The app's main action - filled, so it stands apart from the tabs. */}
+        <span className="mobile-tab-bar__add">
+          <PlusIcon size={22} />
+        </span>
       </button>
       <button type="button" className="mobile-tab-bar__item" onClick={onOpenFriends} aria-label="Friends">
         <UsersIcon size={24} />

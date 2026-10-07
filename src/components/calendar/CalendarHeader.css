@@ -184,3 +184,19 @@
     display: none;
   }
 }
+
+.cal-header__title-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+}
+
+.cal-header__title-chevron {
+  flex: none;
+  color: var(--text-secondary);
+}

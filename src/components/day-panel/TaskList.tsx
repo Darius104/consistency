@@ -315,9 +315,9 @@ export function TaskList({
                 onToggle={() => toggleGroup(scopedKey)}
                 draggable={isDraggable}
                 dragging={draggedGroupKey === key}
-                onHandlePointerDown={
+                onDragPointerDown={
                   isDraggable
-                    ? layoutDrag.bindHandlePointerDown(entry.itemId, () =>
+                    ? layoutDrag.bindLongPress(entry.itemId, () =>
                         draggableLayout.map((e) => e.itemId),
                       )
                     : undefined
@@ -337,7 +337,7 @@ export function TaskList({
                         onToggle={() => onToggle(task)}
                         onView={() => onView(task)}
                         onDelete={() => onDelete(task)}
-                        onHandlePointerDown={taskDrag.bindHandlePointerDown(
+                        onDragPointerDown={taskDrag.bindLongPress(
                           task.id,
                           () => groupOccurrences.map((o) => o.task.id),
                         )}

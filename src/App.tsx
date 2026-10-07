@@ -22,6 +22,7 @@ import { WriteErrorToast } from "./components/WriteErrorToast";
 import { FriendCalendarView } from "./components/friends/FriendCalendarView";
 import { TemplatesModal } from "./components/settings/TemplatesModal";
 import { SettingsModal } from "./components/settings/SettingsModal";
+import { isCurrentMonth } from "./components/settings/StreakFreezeManager";
 import { TaskForm } from "./components/task-form/TaskForm";
 import { ConfirmModal } from "./components/ui/ConfirmModal";
 import {
@@ -159,6 +160,7 @@ export default function App() {
   const [mobileTab, setMobileTab] = useState<MobileTab>("calendar");
   // See AddMenu's openRequest - bumped by the tab bar's "+" button.
   const [addMenuOpenRequest, setAddMenuOpenRequest] = useState(0);
+  const [resetMonthRequest, setResetMonthRequest] = useState(0);
   const [theme, setTheme] = useState<ThemeId>(DEFAULT_THEME);
   // Guards handleChangeTheme/handleSetCustomTheme against rapid repeated
   // calls (switching themes quickly) completing out of order - each
@@ -579,6 +581,7 @@ export default function App() {
   }
 
   async function handleUnfreezeDay(date: string) {
+    if (!isCurrentMonth(date)) return;
     setFreezes((prev) => {
       const next = new Set(prev);
       next.delete(date);
@@ -830,6 +833,7 @@ export default function App() {
     tasks,
     completions,
     startOfWeek(selectedDate),
+    todayKey(),
   );
 
   return (
@@ -888,6 +892,7 @@ export default function App() {
           setSettingsOpen(true);
         }}
         settingsBadgeCount={supportBadgeCount}
+        resetMonthRequest={resetMonthRequest}
       />
       <DayPanel
         selectedDate={selectedDate}
@@ -937,13 +942,16 @@ export default function App() {
         activeTab={mobileTab}
         onSelectTab={(tab) => {
           if (tab === "today") setSelectedDate(todayKey());
+          if (tab === "calendar" && mobileTab === "calendar") setResetMonthRequest((n) => n + 1);
           setMobileTab(tab);
         }}
         onAdd={() => {
           // A past day can't take new tasks (see AddMenu's disabled), so
           // "+" lands on today instead of opening a menu that can't add.
+          // The sheet opens over whichever tab you're on, for the day
+          // selected there - only a past day (which can't take new tasks)
+          // falls back to today.
           if (selectedDate < todayKey()) setSelectedDate(todayKey());
-          setMobileTab("today");
           setAddMenuOpenRequest((n) => n + 1);
         }}
         onOpenFriends={() => {
@@ -1054,7 +1062,18 @@ export default function App() {
         <TaskViewModal
           task={viewingTask}
           tag={tags.find((t) => t.id === viewingTask.tagId)}
+          dateKey={selectedDate}
+          completed={completions.has(`${viewingTask.id}:${selectedDate}`)}
+          completions={completions}
+          freezes={freezes}
+          locked={selectedDate < todayKey()}
+          onToggle={() => void handleToggle(viewingTask)}
           onEdit={handleEditFromView}
+          onDelete={() => {
+            const task = viewingTask;
+            setViewingTask(null);
+            handleRequestDeleteTask(task);
+          }}
           onClose={() => setViewingTask(null)}
         />
       )}

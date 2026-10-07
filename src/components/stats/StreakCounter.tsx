@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { streakTier, type TodayStatus } from "../../utils/stats";
-import { FrostIcon } from "../ui/icons";
+import { streakTier, type TodayStatus, type WeekDayState } from "../../utils/stats";
+import { CheckIcon, FrostIcon } from "../ui/icons";
 import { Flame } from "./Flame";
 import "./stats.css";
 
@@ -11,34 +11,43 @@ interface StreakCounterProps {
   today: TodayStatus;
 }
 
-function statusModifier(today: TodayStatus): string {
-  if (today.frozen || !today.hasTasks) return "";
-  if (today.allDone) return "streak-hero__status--complete";
-  return "streak-hero__status--pending";
-}
+const WEEK_LETTERS = ["M", "T", "W", "T", "F", "S", "S"];
 
-function statusMessage(streak: number, today: TodayStatus): ReactNode {
+const WEEK_STATE_LABELS: Record<WeekDayState, string> = {
+  done: "done",
+  frozen: "frozen",
+  missed: "missed",
+  today: "in progress",
+  rest: "nothing scheduled",
+  future: "upcoming",
+};
+
+/** One short line - the old full sentence was too much for a widget. */
+function statusPill(today: TodayStatus): { text: ReactNode; tone: string } {
   if (today.frozen) {
-    return (
-      <>
-        <FrostIcon size={12} className="streak-hero__inline-icon" />
-        Today is frozen - streak protected either way.
-      </>
-    );
+    return {
+      text: (
+        <>
+          <FrostIcon size={12} />
+          Frozen today
+        </>
+      ),
+      tone: "frozen",
+    };
   }
-  if (!today.hasTasks) {
-    return streak > 0 ? "Nothing scheduled today - streak is safe." : "Nothing scheduled today.";
-  }
+  if (!today.hasTasks) return { text: "Rest day", tone: "quiet" };
   if (today.allDone) {
-    return "All done for today. Streak secured.";
+    return {
+      text: (
+        <>
+          <CheckIcon size={12} />
+          Done today
+        </>
+      ),
+      tone: "complete",
+    };
   }
-  const noun = today.remaining === 1 ? "task" : "tasks";
-  return (
-    <>
-      <span className="streak-hero__status-number">{today.remaining}</span>
-      {` ${noun} left today to ${streak > 0 ? "keep the streak alive" : "start a streak"}.`}
-    </>
-  );
+  return { text: `${today.remaining} left today`, tone: "pending" };
 }
 
 export function StreakCounter({ streak, best, today }: StreakCounterProps) {
@@ -92,50 +101,52 @@ export function StreakCounter({ streak, best, today }: StreakCounterProps) {
     prevAllDone.current = today.allDone;
   }, [today.allDone]);
 
-  const progressState = today.allDone ? "complete" : today.frozen ? "frozen" : "pending";
+  const pill = statusPill(today);
 
   return (
     <div className={`streak-hero streak-hero--${t}`}>
       <div className="streak-hero__main">
         <div className="streak-hero__primary">
           <Flame power={power} />
-          <div className={`streak-hero__value ${pop ? "streak-hero__value--pop" : ""}`}>
-            {streak}
-            <span className="streak-hero__unit">day streak</span>
+          <div className="streak-hero__text">
+            <span className={`streak-hero__value ${pop ? "streak-hero__value--pop" : ""}`}>
+              {streak}
+            </span>
+            <span className="streak-hero__unit">
+              day streak
+              {best > 0 &&
+                (isRecordStreak ? (
+                  <span className="streak-hero__best streak-hero__best--record"> · Personal best</span>
+                ) : (
+                  <span className="streak-hero__best"> · Best {best}</span>
+                ))}
+            </span>
           </div>
         </div>
-        {best > 0 && (
-          <div className="streak-hero__stats">
-            <div className="streak-hero__stat">
-              <span className="streak-hero__stat-value">{best}</span>
-              <span
-                className={`streak-hero__stat-label ${
-                  isRecordStreak ? "streak-hero__stat-label--record" : ""
-                }`}
-              >
-                {isRecordStreak ? "New best!" : "Best"}
-              </span>
-            </div>
-          </div>
-        )}
-      </div>
-      <div className="streak-hero__secondary">
-        <div
-          className={`streak-hero__progress streak-hero__progress--${progressState} ${
-            barPop ? "streak-hero__progress--pop" : ""
+        <span
+          className={`streak-hero__pill streak-hero__pill--${pill.tone} ${
+            barPop ? "streak-hero__pill--pop" : ""
           }`}
-          role="progressbar"
-          aria-valuenow={Math.round(power * 100)}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label="Today's progress"
         >
-          <div className="streak-hero__progress-fill" style={{ width: `${power * 100}%` }} />
-        </div>
-        <div className={`streak-hero__status ${statusModifier(today)}`}>
-          {statusMessage(streak, today)}
-        </div>
+          {pill.text}
+        </span>
       </div>
+
+      <ol className="streak-hero__week" aria-label="This week">
+        {today.week.map((day, i) => (
+          <li
+            key={day.date}
+            className={`streak-hero__day streak-hero__day--${day.state}`}
+            aria-label={`${day.date}: ${WEEK_STATE_LABELS[day.state]}`}
+          >
+            <span className="streak-hero__day-dot">
+              {day.state === "done" && <CheckIcon size={10} />}
+              {day.state === "frozen" && <FrostIcon size={10} />}
+            </span>
+            <span className="streak-hero__day-letter">{WEEK_LETTERS[i]}</span>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }

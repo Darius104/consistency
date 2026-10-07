@@ -12,7 +12,7 @@ export interface DayChip {
   done: boolean;
 }
 
-const MAX_CHIPS = 3;
+const MAX_CHIPS = 2;
 
 interface CalendarDayProps {
   dateKey: string;

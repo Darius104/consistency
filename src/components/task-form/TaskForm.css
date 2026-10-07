@@ -110,3 +110,11 @@
   gap: var(--space-2);
   margin-left: auto;
 }
+
+/* A phone sheet is too narrow for Time and the three Priority buttons side
+   by side - stack them. */
+@media (max-width: 700px) {
+  .task-form__row {
+    flex-direction: column;
+  }
+}

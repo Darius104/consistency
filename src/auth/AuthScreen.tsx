@@ -90,7 +90,8 @@ export function AuthScreen() {
 
     return () => {
       cancelled = true;
-      void unlisten.then((fn) => fn());
+      // Same harmless Tauri unlisten throw as useTaskReminders' focus listener.
+      unlisten.then((fn) => fn()).catch(() => {});
     };
   }, []);
 

@@ -213,6 +213,31 @@ export function TagIcon({ size = 16, ...props }: IconProps) {
   );
 }
 
+export function PlusIcon({ size = 16, ...props }: IconProps) {
+  return (
+    <svg {...base(size, props)}>
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+export function TrendingUpIcon({ size = 16, ...props }: IconProps) {
+  return (
+    <svg {...base(size, props)}>
+      <path d="M3 17l6-6 4 4 8-8" />
+      <path d="M15 7h6v6" />
+    </svg>
+  );
+}
+
+export function MinusIcon({ size = 16, ...props }: IconProps) {
+  return (
+    <svg {...base(size, props)}>
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+
 export function CalendarIcon({ size = 16, ...props }: IconProps) {
   return (
     <svg {...base(size, props)}>

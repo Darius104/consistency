@@ -35,3 +35,11 @@
 .trading-result--negative {
   color: var(--trading-loss);
 }
+
+/* Phone: logging a result lives in the tab bar's "+" sheet (see AddMenu),
+   and the result itself shows in the calendar cell. */
+@media (max-width: 700px) {
+  .trading-result {
+    display: none;
+  }
+}

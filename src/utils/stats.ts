@@ -1,5 +1,5 @@
 import type { Task } from "../types";
-import { addDays, isBefore } from "./dates";
+import { addDays, isBefore, startOfWeek } from "./dates";
 import { tasksScheduledOn } from "./recurrence";
 
 export type StreakTier = "cold" | "low" | "warm" | "hot" | "blazing";
@@ -127,7 +127,23 @@ export function computeLongestStreak(
   return longest;
 }
 
+/** One day in the streak widget's "this week" row. */
+export type WeekDayState =
+  | "done" // everything finished
+  | "frozen" // protected by a freeze
+  | "missed" // over, and not everything finished
+  | "today" // still in progress
+  | "rest" // nothing was scheduled
+  | "future";
+
+export interface WeekDay {
+  date: string;
+  state: WeekDayState;
+}
+
 export interface TodayStatus {
+  /** Monday-Sunday of the current week. */
+  week: WeekDay[];
   hasTasks: boolean;
   scheduled: number;
   completed: number;
@@ -149,7 +165,24 @@ export function computeTodayStatus(
   ).length;
   const scheduled = scheduledTasks.length;
 
+  const monday = startOfWeek(todayKey);
+  const week: WeekDay[] = [];
+  for (let i = 0; i < 7; i++) {
+    const date = addDays(monday, i);
+    let state: WeekDayState;
+    if (date > todayKey) state = "future";
+    else {
+      const rate = dayCompletionRate(tasks, completions, date);
+      if (rate === 1) state = "done";
+      else if (frozen.has(date)) state = "frozen";
+      else if (rate === null) state = date === todayKey ? "today" : "rest";
+      else state = date === todayKey ? "today" : "missed";
+    }
+    week.push({ date, state });
+  }
+
   return {
+    week,
     hasTasks: scheduled > 0,
     scheduled,
     completed,
@@ -247,38 +280,54 @@ export function computeWeeklyCompletion(
 export interface TemplateBreakdownItem {
   /** null = tasks with no template assigned. */
   tagId: string | null;
+  /** Counted only up to and including today - see computeTemplateBreakdown. */
   scheduled: number;
   completed: number;
-  percent: number; // 0..100
+  percent: number; // 0..100, of `scheduled` so far
+  /** Still to come later this week (after today) - shown, not scored. */
+  upcoming: number;
 }
 
 /** Per-template completion for the Mon-Sun week starting `weekStartKey`,
- *  most-scheduled template first - the same week window as
- *  computeWeeklyCompletion, just split out by tag instead of summed. */
+ *  scored only on the days up to and including `today` - counting days
+ *  that haven't happened yet made a perfect Monday read as 14% and nothing
+ *  ever reach 100% before Sunday night. Later days are reported separately
+ *  as `upcoming`. A week entirely in the past scores all 7 days; one
+ *  entirely in the future is all upcoming. Most-left-to-do first. */
 export function computeTemplateBreakdown(
   tasks: Task[],
   completions: Set<string>,
   weekStartKey: string,
+  today: string,
 ): TemplateBreakdownItem[] {
-  const byTag = new Map<string | null, { scheduled: number; completed: number }>();
+  const byTag = new Map<string | null, { scheduled: number; completed: number; upcoming: number }>();
 
   for (let i = 0; i < 7; i++) {
     const day = addDays(weekStartKey, i);
+    const isFuture = isBefore(today, day);
     for (const task of tasksScheduledOn(tasks, day)) {
-      const entry = byTag.get(task.tagId) ?? { scheduled: 0, completed: 0 };
-      entry.scheduled += 1;
-      if (completions.has(`${task.id}:${day}`)) entry.completed += 1;
+      const entry = byTag.get(task.tagId) ?? { scheduled: 0, completed: 0, upcoming: 0 };
+      if (isFuture) {
+        entry.upcoming += 1;
+      } else {
+        entry.scheduled += 1;
+        if (completions.has(`${task.id}:${day}`)) entry.completed += 1;
+      }
       byTag.set(task.tagId, entry);
     }
   }
 
   return Array.from(byTag.entries())
-    .map(([tagId, { scheduled, completed }]) => ({
+    .map(([tagId, { scheduled, completed, upcoming }]) => ({
       tagId,
       scheduled,
       completed,
+      upcoming,
       percent: scheduled === 0 ? 0 : Math.round((completed / scheduled) * 100),
     }))
-    .sort((a, b) => b.scheduled - a.scheduled);
+    .sort(
+      (a, b) =>
+        b.scheduled - b.completed - (a.scheduled - a.completed) || b.upcoming - a.upcoming,
+    );
 }
 

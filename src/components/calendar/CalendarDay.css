@@ -245,3 +245,25 @@
     font-size: 11px;
   }
 }
+
+@media (max-width: 700px) {
+  .cal-day,
+  .cal-day:hover,
+  .cal-day--complete,
+  .cal-day--frozen {
+    border: none;
+    border-top: 1px solid var(--border);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .cal-day--selected {
+    border: none;
+    border-top: 1px solid var(--border);
+    box-shadow: none;
+    /* The sheet itself is --surface-hover now (see CalendarView.css), so
+       the selected day needs to be a step lighter than that. */
+    background: color-mix(in srgb, var(--text) 9%, var(--surface-hover));
+  }
+}

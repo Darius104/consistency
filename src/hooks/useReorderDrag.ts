@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
+import { hapticImpact, hapticSelection } from "../utils/haptics";
 
 // Long-press on touch (matches iOS's own long-press-to-reorder convention -
 // Reminders, Notes checklists, Home Screen icons all use ~450-500ms), a
@@ -33,7 +35,16 @@ const MOMENTUM_DECAY_PER_MS = 0.998;
 // bottom edge before auto-scroll kicks in, and the fastest it'll scroll
 // right at that edge.
 const AUTO_SCROLL_EDGE_PX = 56;
+// px per 60Hz-frame's worth of time - scaled by real elapsed time below, so
+// a 120Hz ProMotion iPhone doesn't auto-scroll twice as fast as a 60Hz one.
 const AUTO_SCROLL_MAX_SPEED = 14;
+const FRAME_MS = 1000 / 60;
+
+// On release the dragged item glides into its slot (instead of snapping
+// there) before the new order is committed - same curve as the app's
+// sheets (see Modal.css).
+const SETTLE_MS = 200;
+const SETTLE_EASE = "cubic-bezier(0.32, 0.72, 0, 1)";
 
 /** Nearest scrollable ancestor, walking up from an element inside the list. */
 function findScrollParent(el: HTMLElement | null): HTMLElement | null {
@@ -63,6 +74,14 @@ interface PendingHold {
 // on a group header instead, since that instance's stop only ever knew
 // about its own (never-started) momentum.
 const activeMomentum = new Map<HTMLElement, number>();
+
+/** Module-level on purpose - one stable function. A per-render function
+ *  can't be removed by a later render (removeEventListener needs the very
+ *  same function that was added), which left this permanently attached
+ *  and froze all scrolling after a long-press drag. */
+function blockTouchScroll(e: TouchEvent) {
+  if (e.cancelable) e.preventDefault();
+}
 
 function stopMomentumFor(container: HTMLElement | null) {
   if (!container) return;
@@ -160,6 +179,33 @@ export function useReorderDrag(onReorder: (nextIds: string[]) => void) {
   const suppressClickRef = useRef(false);
   const pendingRef = useRef<PendingHold | null>(null);
 
+  // See bindLongPress: a drag that began from a long press on a row that
+  // still allows native vertical scrolling (touch-action: pan-y) has to
+  // stop the browser from scrolling under it for the rest of the gesture.
+  // touchmove is still cancelable at that point - the finger was held
+  // still for the press, so no native scroll has started yet.
+  const blockingScrollRef = useRef(false);
+  function startBlockingScroll() {
+    if (blockingScrollRef.current) return;
+    blockingScrollRef.current = true;
+    window.addEventListener("touchmove", blockTouchScroll, { passive: false });
+    // Fail-safe: blocking only ever matters while a finger is down, so the
+    // lift always ends it - even one that lands before the drag effect
+    // below has attached its own pointerup listener.
+    window.addEventListener("touchend", releaseTouchBlock, { once: true });
+    window.addEventListener("touchcancel", releaseTouchBlock, { once: true });
+  }
+  function releaseTouchBlock() {
+    stopBlockingScrollRef.current();
+  }
+  function stopBlockingScroll() {
+    if (!blockingScrollRef.current) return;
+    blockingScrollRef.current = false;
+    window.removeEventListener("touchmove", blockTouchScroll);
+  }
+  const stopBlockingScrollRef = useRef(stopBlockingScroll);
+  stopBlockingScrollRef.current = stopBlockingScroll;
+
   function cancelPending() {
     const pending = pendingRef.current;
     if (pending) {
@@ -173,7 +219,14 @@ export function useReorderDrag(onReorder: (nextIds: string[]) => void) {
   // active drag's own effect below already cleans itself up, and any
   // in-progress momentum (see startMomentum/stopMomentumFor above) belongs
   // to the scroll container rather than this instance, so it's left alone.
-  useEffect(() => cancelPending, []);
+  useEffect(
+    () => () => {
+      cancelPending();
+      stopBlockingScroll();
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
   useEffect(() => {
     if (draggedId === null) return;
@@ -185,6 +238,7 @@ export function useReorderDrag(onReorder: (nextIds: string[]) => void) {
 
     const draggedEl = itemRefs.current[draggedId];
     draggedHeightRef.current = draggedEl?.getBoundingClientRect().height ?? 0;
+    let settling = false;
     // Snapshotted once, before any shift is ever applied - reading rects
     // live later on would see *shifted* items (a translateY doesn't move a
     // box in the layout, but it does move where getBoundingClientRect()
@@ -205,6 +259,22 @@ export function useReorderDrag(onReorder: (nextIds: string[]) => void) {
       if (id !== draggedId && el) el.style.transition = "transform 180ms ease";
     }
 
+    // The space between neighbouring rows - every shift (and the final
+    // settle) moves things by a row's height PLUS this, so rows sliding out
+    // of the way keep their normal spacing instead of overlapping into it.
+    const gap = (() => {
+      const ids = idsRef.current;
+      const from = ids.indexOf(draggedId);
+      const self = originalRectsRef.current.get(draggedId);
+      const next = originalRectsRef.current.get(ids[from + 1]);
+      const prev = originalRectsRef.current.get(ids[from - 1]);
+      let g = 0;
+      if (self && next) g = next.top - (self.top + self.height);
+      else if (self && prev) g = self.top - (prev.top + prev.height);
+      return g > 0 && g < 48 ? g : 0;
+    })();
+    draggedHeightRef.current += gap;
+
     // Slides every other item out of the dragged one's way as it passes
     // over them - shifted by the dragged item's own height (see
     // draggedHeightRef above), in the direction it's coming from, so the
@@ -212,6 +282,9 @@ export function useReorderDrag(onReorder: (nextIds: string[]) => void) {
     // drop-line with everything else sitting still until release.
     function applyShifts(dropIdx: number) {
       if (lastAppliedDropIndexRef.current === dropIdx) return;
+      // The light iOS "tick" each time it passes into a new slot (not on the
+      // very first placement, which is just where it started).
+      if (lastAppliedDropIndexRef.current !== null) hapticSelection();
       lastAppliedDropIndexRef.current = dropIdx;
       const ids = idsRef.current;
       const from = ids.indexOf(draggedId as string);
@@ -277,9 +350,15 @@ export function useReorderDrag(onReorder: (nextIds: string[]) => void) {
       const scrollDelta = container ? container.scrollTop - initialScrollTopRef.current : 0;
       const pointerDelta = lastPointerYRef.current - dragStartYRef.current;
       el.style.transform = `translateY(${pointerDelta + scrollDelta}px)`;
+      // The transform makes this wrapper its own stacking context, so the
+      // row's own z-index can't lift it above later siblings - without this
+      // the picked-up row slid *under* the rows below it.
+      el.style.position = "relative";
+      el.style.zIndex = "20";
     }
 
     function onMove(e: PointerEvent) {
+      if (settling) return;
       // Stops the browser from also trying to scroll the page/list from
       // this same touch gesture once a drag is under way - safe to call
       // every time since, by the time a drag has actually started (either
@@ -308,49 +387,87 @@ export function useReorderDrag(onReorder: (nextIds: string[]) => void) {
     }
 
     function onUp(e: PointerEvent) {
+      if (settling) return;
+      settling = true;
       scrollSpeedRef.current = 0;
-      const el = itemRefs.current[draggedId as string];
-      if (el) el.style.transform = "";
-      clearShifts();
       dragStartYRef.current = null;
       lastPointerYRef.current = null;
 
       const ids = idsRef.current;
       const from = ids.indexOf(draggedId as string);
       const to = indexForY(e.clientY);
+
+      // Where the dragged item's slot ends up, relative to where it started:
+      // past every row it overtook, each one row-plus-gap tall.
+      let target = 0;
       if (from !== -1) {
-        const next = [...ids];
-        const [moved] = next.splice(from, 1);
-        next.splice(to > from ? to - 1 : to, 0, moved);
-        if (next.some((v, i) => v !== ids[i])) {
-          onReorderRef.current(next);
+        if (to > from + 1) {
+          for (let i = from + 1; i < to; i++) target += (originalRectsRef.current.get(ids[i])?.height ?? 0) + gap;
+        } else if (to < from) {
+          for (let i = to; i < from; i++) target -= (originalRectsRef.current.get(ids[i])?.height ?? 0) + gap;
         }
       }
-      suppressClickRef.current = true;
-      setDraggedId(null);
+      const el = itemRefs.current[draggedId as string];
+      if (el) {
+        el.style.transition = `transform ${SETTLE_MS}ms ${SETTLE_EASE}`;
+        el.style.transform = target ? `translateY(${target}px)` : "";
+      }
+
+      window.setTimeout(() => {
+        // flushSync: the new order and the cleared transforms land in the
+        // same frame - otherwise one frame could paint the reordered list
+        // still wearing its old drag offsets.
+        flushSync(() => {
+          if (from !== -1) {
+            const next = [...ids];
+            const [moved] = next.splice(from, 1);
+            next.splice(to > from ? to - 1 : to, 0, moved);
+            if (next.some((v, i) => v !== ids[i])) onReorderRef.current(next);
+          }
+          suppressClickRef.current = true;
+          setDraggedId(null);
+        });
+        if (el) {
+          el.style.transition = "";
+          el.style.transform = "";
+        }
+        clearShifts();
+      }, SETTLE_MS);
     }
 
-    let rafId = window.requestAnimationFrame(function tick() {
+    let lastFrame = performance.now();
+    let rafId = window.requestAnimationFrame(function tick(now) {
+      const dt = Math.min(now - lastFrame, 50);
+      lastFrame = now;
       const container = scrollContainerRef.current;
-      if (container && scrollSpeedRef.current !== 0) {
-        container.scrollTop += scrollSpeedRef.current;
+      if (!settling) {
+        if (container && scrollSpeedRef.current !== 0) {
+          container.scrollTop += scrollSpeedRef.current * (dt / FRAME_MS);
+        }
+        applyDragTransform();
       }
-      applyDragTransform();
       rafId = window.requestAnimationFrame(tick);
     });
 
     window.addEventListener("pointermove", onMove, { passive: false });
     window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
     return () => {
       document.body.classList.remove("is-dragging");
+      stopBlockingScroll();
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
       window.cancelAnimationFrame(rafId);
       scrollSpeedRef.current = 0;
       scrollContainerRef.current = null;
       lastPointerYRef.current = null;
       const el = itemRefs.current[draggedId as string];
-      if (el) el.style.transform = "";
+      if (el) {
+        el.style.transform = "";
+        el.style.position = "";
+        el.style.zIndex = "";
+      }
       clearShifts();
     };
     // Deliberately only draggedId - see onReorderRef above for why onReorder
@@ -359,6 +476,7 @@ export function useReorderDrag(onReorder: (nextIds: string[]) => void) {
   }, [draggedId]);
 
   function beginDrag(id: string, ids: string[], startY: number) {
+    hapticImpact();
     idsRef.current = ids;
     dragStartYRef.current = startY;
     lastPointerYRef.current = startY;
@@ -505,6 +623,75 @@ export function useReorderDrag(onReorder: (nextIds: string[]) => void) {
     };
   }
 
+  /** Grab-anywhere for rows that must ALSO keep fully native scrolling and
+   *  allow a horizontal swipe (the day panel's tasks and group headers -
+   *  give them touch-action: pan-y). Touch: hold still ~450ms to pick it up
+   *  (the iOS Reminders convention); any real movement first means it's a
+   *  scroll or a swipe and the hold is abandoned - the browser keeps the
+   *  scroll entirely native. Once picked up, native scrolling is blocked
+   *  for the rest of the gesture (see startBlockingScroll). Mouse: drag a
+   *  few pixels from anywhere, no hold. */
+  function bindLongPress(id: string, getIds: () => string[]) {
+    return (e: React.PointerEvent) => {
+      if (pendingRef.current || draggedId !== null) return;
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      if ((e.target as HTMLElement).closest("button, input, a, [data-no-drag]")) return;
+
+      const isTouch = e.pointerType !== "mouse";
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const pointerId = e.pointerId;
+      const targetEl = e.currentTarget as HTMLElement;
+
+      function capture() {
+        try {
+          targetEl.setPointerCapture(pointerId);
+        } catch {
+          // Window-level listeners in the drag effect still work without it.
+        }
+      }
+
+      function onPendingMove(ev: PointerEvent) {
+        if (ev.pointerId !== pointerId) return;
+        const dist = Math.hypot(ev.clientX - startX, ev.clientY - startY);
+        if (isTouch) {
+          if (dist > 8) cancelPending();
+        } else if (dist > MOUSE_DRAG_THRESHOLD_PX) {
+          ev.preventDefault();
+          cancelPending();
+          capture();
+          beginDrag(id, getIds(), startY);
+        }
+      }
+
+      function onPendingEnd(ev: PointerEvent) {
+        if (ev.pointerId === pointerId) cancelPending();
+      }
+
+      function cleanup() {
+        window.removeEventListener("pointermove", onPendingMove);
+        window.removeEventListener("pointerup", onPendingEnd);
+        window.removeEventListener("pointercancel", onPendingEnd);
+      }
+
+      window.addEventListener("pointermove", onPendingMove, { passive: false });
+      window.addEventListener("pointerup", onPendingEnd);
+      window.addEventListener("pointercancel", onPendingEnd);
+
+      const timer = isTouch
+        ? window.setTimeout(() => {
+            cleanup();
+            pendingRef.current = null;
+            capture();
+            startBlockingScroll();
+            beginDrag(id, getIds(), startY);
+          }, LONG_PRESS_MS)
+        : null;
+
+      pendingRef.current = { pointerId, timer, cleanup };
+    };
+  }
+
   /** Attach to a small, dedicated grab-handle element instead of the whole
    *  row (day-panel tasks/groups/notes use this; Settings' TemplateManager
    *  still uses grab-anywhere via bindPointerDown above). A press here is
@@ -550,6 +737,7 @@ export function useReorderDrag(onReorder: (nextIds: string[]) => void) {
     registerItemRef,
     bindPointerDown,
     bindHandlePointerDown,
+    bindLongPress,
     suppressClick,
   };
 }

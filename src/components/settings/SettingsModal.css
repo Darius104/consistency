@@ -192,6 +192,17 @@
 
   .settings-detail__back {
     display: inline-flex;
+    width: 36px;
+    height: 36px;
+    margin-left: -8px;
+  }
+
+  .settings-detail__header {
+    padding: var(--space-3) var(--space-4) 0;
+  }
+
+  .settings-detail__body {
+    padding: var(--space-4);
   }
 }
 

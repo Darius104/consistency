@@ -223,6 +223,17 @@ button {
   cursor: pointer;
 }
 
+/* iOS zooms the whole page in whenever a text field under 16px is focused
+   (and doesn't zoom back out) - on a phone every text-entry field is at
+   least 16px, whatever its component asked for. */
+@media (max-width: 700px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
+  textarea,
+  select {
+    font-size: max(16px, 1em) !important;
+  }
+}
+
 /* Visible keyboard focus everywhere - mouse users never see this,
    keyboard/VoiceOver users always do. */
 :focus-visible {

@@ -88,3 +88,10 @@
     display: none;
   }
 }
+
+/* Phone: full-width list rows at Apple's ~44px minimum touch height. */
+@media (max-width: 700px) {
+  .settings-nav__item {
+    padding: 13px 14px;
+  }
+}

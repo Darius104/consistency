@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { MAX_FREEZES_PER_MONTH, type FreezeCandidate } from "../../utils/stats";
-import { parseDateKey } from "../../utils/dates";
+import { parseDateKey, todayKey } from "../../utils/dates";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
 import { EmptyState } from "../ui/EmptyState";
@@ -25,6 +25,13 @@ function formatDate(dateKey: string): string {
     month: "short",
     day: "numeric",
   });
+}
+
+/** A past month's freezes are locked in - removing one would let a closed
+ *  month's streak record be rewritten after the fact, and its freeze
+ *  allowance can't be spent again anyway. */
+export function isCurrentMonth(dateKey: string): boolean {
+  return dateKey.slice(0, 7) === todayKey().slice(0, 7);
 }
 
 export function StreakFreezeManager({
@@ -88,14 +95,16 @@ export function StreakFreezeManager({
                   <FrostIcon size={13} />
                   {formatDate(date)}
                 </span>
-                <button
-                  type="button"
-                  className="freeze-manager__unfreeze"
-                  aria-label={`Unfreeze ${formatDate(date)}`}
-                  onClick={() => onUnfreeze(date)}
-                >
-                  <TrashIcon size={13} />
-                </button>
+                {isCurrentMonth(date) && (
+                  <button
+                    type="button"
+                    className="freeze-manager__unfreeze"
+                    aria-label={`Unfreeze ${formatDate(date)}`}
+                    onClick={() => onUnfreeze(date)}
+                  >
+                    <TrashIcon size={13} />
+                  </button>
+                )}
               </div>
             ))}
           </div>

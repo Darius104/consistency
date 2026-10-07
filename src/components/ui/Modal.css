@@ -59,14 +59,17 @@
 /* Phone-sized screens: the wide variant (Settings) takes over the whole
    screen instead of floating as a centered card with margins around it -
    there's more to see in there (nav list + a detail pane) than a small
-   floating card comfortably fits. */
+   floating card comfortably fits. Padded below the notch / status bar. */
 @media (max-width: 700px) {
   .modal-panel--wide {
     width: 100%;
     height: 100%;
     max-width: 100%;
     max-height: 100%;
+    border: none;
     border-radius: 0;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 
@@ -117,4 +120,89 @@
   padding: 0;
   overflow: hidden;
   display: flex;
+}
+
+/* Only shown on phone bottom sheets (below). */
+.modal-grabber {
+  display: none;
+}
+
+/* Phone-sized screens: every regular modal is an iOS-style bottom sheet -
+   full width, anchored to the bottom edge, rounded top corners, sliding
+   up from below (and back down the same way when closed - see Modal.tsx's
+   drag-to-dismiss on the header). The dimmed page stays visible above it.
+   The extra .modal-overlay ancestor in each selector out-ranks
+   per-component width overrides like PhraseModal's 560px. */
+@media (max-width: 700px) {
+  /* Lifted above the on-screen keyboard while it's up (see Modal.tsx). */
+  .modal-overlay {
+    align-items: flex-end;
+    padding-bottom: var(--keyboard-inset, 0px);
+    transition:
+      opacity 200ms var(--ease-out),
+      padding-bottom 250ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .modal-overlay .modal-panel:not(.modal-panel--wide) {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(
+      100dvh - env(safe-area-inset-top, 0px) - 24px - var(--keyboard-inset, 0px)
+    );
+    border: none;
+    border-radius: 22px 22px 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    transform: translateY(0);
+    opacity: 1;
+    transition: transform 260ms cubic-bezier(0.32, 0.72, 0, 1);
+
+    @starting-style {
+      transform: translateY(100%);
+      opacity: 1;
+    }
+  }
+
+  .modal-overlay .modal-panel--closing:not(.modal-panel--wide) {
+    transform: translateY(100%);
+    opacity: 1;
+  }
+
+  .modal-overlay .modal-panel--wide {
+    transform: translateY(0);
+    transition: transform 260ms cubic-bezier(0.32, 0.72, 0, 1);
+
+    @starting-style {
+      transform: translateY(100%);
+    }
+  }
+
+  .modal-overlay .modal-panel--wide.modal-panel--closing {
+    transform: translateY(100%);
+    opacity: 1;
+  }
+
+  .modal-panel:not(.modal-panel--wide) .modal-header {
+    position: relative;
+    padding-top: var(--space-5);
+    touch-action: none;
+  }
+
+  .modal-panel:not(.modal-panel--wide) .modal-grabber {
+    display: block;
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    translate: -50% 0;
+    width: 36px;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--border-strong);
+  }
+
+  /* ~44px touch target, the Apple minimum - the icon stays the same size. */
+  .modal-close {
+    width: 36px;
+    height: 36px;
+    margin: -6px -8px -6px 0;
+  }
 }

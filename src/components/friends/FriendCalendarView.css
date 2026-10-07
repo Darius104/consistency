@@ -223,9 +223,75 @@
     white-space: normal;
   }
 
-  /* The calendar above has collapsed away entirely (see CalendarView.css) -
-     nothing left for the divider to divide from. */
-  .friend-view--day-expanded .friend-view__divider {
+  /* Same two-view layout as your own calendar on a phone: the month grid
+     fills the screen, tapping a day swaps it for that day's panel (whose
+     collapse handle brings the grid back) - never both at once. */
+  .friend-view__divider {
+    display: none;
+  }
+
+  .friend-view:not(.friend-view--day-expanded) .friend-view__day {
+    display: none;
+  }
+
+  .friend-view:not(.friend-view--day-expanded) .cal-view {
+    flex: 1;
+    height: auto;
+    min-height: 0;
+  }
+}
+
+/* Phone: an iOS-style navigation bar - back arrow on the left, whose
+   calendar it is in the middle, send-note icon on the right - instead of
+   a sentence plus two full-width text buttons squeezed onto one line. */
+@media (max-width: 700px) {
+  .friend-view__bar {
+    display: grid;
+    grid-template-columns: 44px 1fr 44px;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .friend-view__bar-actions {
+    display: contents;
+  }
+
+  .friend-view__back {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .friend-view__bar-text {
+    grid-column: 2;
+    grid-row: 1;
+    text-align: center;
+    font-size: var(--text-md);
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  .friend-view__send-note {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .friend-view__back,
+  .friend-view__send-note {
+    justify-content: center;
+    width: 40px;
+    height: 36px;
+    padding: 0;
+  }
+
+  .friend-view__back svg,
+  .friend-view__send-note svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .friend-view__bar-extra,
+  .friend-view__btn-label {
     display: none;
   }
 }

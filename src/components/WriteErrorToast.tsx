@@ -26,6 +26,13 @@ export function WriteErrorToast() {
   useEffect(() => {
     function handleRejection(event: PromiseRejectionEvent) {
       console.error("[app] unhandled promise rejection", event.reason);
+      // Dev only (import.meta.hot doesn't exist in a real build) - see the
+      // forward-app-errors plugin in vite.config.ts.
+      const reason = event.reason as { message?: string; stack?: string } | undefined;
+      import.meta.hot?.send("app:error", {
+        reason: reason?.message ?? String(event.reason),
+        stack: reason?.stack,
+      });
       setMessage("Something didn't save - please try that again.");
     }
     window.addEventListener("unhandledrejection", handleRejection);
