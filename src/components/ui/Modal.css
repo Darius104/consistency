@@ -206,3 +206,39 @@
     margin: -6px -8px -6px 0;
   }
 }
+
+/* Phone: a tab's page (Settings, Profile) - fills the screen above the
+   bottom tab bar, which stays visible and is how you leave it. No dimmed
+   backdrop, no slide-up, no close button: switching tabs is instant, like
+   any iPhone tab bar. --tabbar-h is measured by MobileTabBar. */
+@media (max-width: 700px) {
+  .modal-overlay--tab {
+    bottom: var(--tabbar-h, 0px);
+    background: none;
+    transition: none;
+    opacity: 1;
+
+    @starting-style {
+      opacity: 1;
+    }
+  }
+
+  /* No fade, no drop shadow - it's a page, not a window floating on top
+     (those showed as a dark shadow flashing in when switching tabs). */
+  .modal-overlay--tab .modal-panel--wide {
+    padding-bottom: 0;
+    box-shadow: none;
+    transition: none;
+    transform: none;
+    opacity: 1;
+
+    @starting-style {
+      transform: none;
+      opacity: 1;
+    }
+  }
+
+  .modal-overlay--tab .modal-close {
+    display: none;
+  }
+}

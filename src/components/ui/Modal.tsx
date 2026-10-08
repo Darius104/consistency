@@ -11,6 +11,10 @@ interface ModalProps {
   /** "wide" is for content with its own internal layout (e.g. a nav +
    *  detail pane) that needs more room and manages its own padding. */
   size?: "default" | "wide";
+  /** Phone: shown as a tab's page - sits above the bottom tab bar (which
+   *  stays visible) with no close button, instead of covering everything.
+   *  The tab bar is how you leave it. No effect on desktop. */
+  asTab?: boolean;
 }
 
 // Matches the CSS transition duration below - the actual unmount (calling
@@ -31,7 +35,7 @@ interface DragState {
   velocity: number;
 }
 
-export function Modal({ title, onClose, children, size = "default" }: ModalProps) {
+export function Modal({ title, onClose, children, size = "default", asTab = false }: ModalProps) {
   const [closing, setClosing] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -137,7 +141,7 @@ export function Modal({ title, onClose, children, size = "default" }: ModalProps
   return createPortal(
     <div
       ref={overlayRef}
-      className={`modal-overlay ${closing ? "modal-overlay--closing" : ""}`}
+      className={`modal-overlay ${closing ? "modal-overlay--closing" : ""} ${asTab ? "modal-overlay--tab" : ""}`}
       onMouseDown={requestClose}
     >
       <div

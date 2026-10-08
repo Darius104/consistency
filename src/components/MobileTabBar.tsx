@@ -1,12 +1,16 @@
+import { useEffect, useRef } from "react";
 import type { AvatarId } from "../utils/avatars";
 import { AvatarBadge } from "./stats/AvatarBadge";
 import { CalendarIcon, PlusIcon, ProfileIcon, SettingsIcon, TodayIcon } from "./ui/icons";
 import "./MobileTabBar.css";
 
 export type MobileTab = "calendar" | "today";
+/** Which tab is highlighted - Settings and Profile are tabs too, shown as
+ *  pages above the bar (see Modal's asTab). */
+export type ActiveTab = MobileTab | "settings" | "profile";
 
 interface MobileTabBarProps {
-  activeTab: MobileTab;
+  activeTab: ActiveTab;
   onSelectTab: (tab: MobileTab) => void;
   onAdd: () => void;
   onOpenProfile: () => void;
@@ -28,8 +32,25 @@ export function MobileTabBar({
   avatarId,
   profileBadgeCount,
 }: MobileTabBarProps) {
+  // Publishes the bar's real height (incl. the home-indicator inset) so tab
+  // pages like Settings can stop right above it.
+  const navRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = navRef.current;
+    if (!el) return;
+    const root = document.documentElement;
+    const update = () => root.style.setProperty("--tabbar-h", `${el.offsetHeight}px`);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      root.style.removeProperty("--tabbar-h");
+    };
+  }, []);
+
   return (
-    <nav className="mobile-tab-bar" aria-label="Main">
+    <nav className="mobile-tab-bar" aria-label="Main" ref={navRef}>
       <button
         type="button"
         className={`mobile-tab-bar__item ${activeTab === "calendar" ? "mobile-tab-bar__item--active" : ""}`}
@@ -54,13 +75,25 @@ export function MobileTabBar({
           <PlusIcon size={22} />
         </span>
       </button>
-      <button type="button" className="mobile-tab-bar__item" onClick={onOpenSettings} aria-label="Settings">
+      <button
+        type="button"
+        className={`mobile-tab-bar__item ${activeTab === "settings" ? "mobile-tab-bar__item--active" : ""}`}
+        onClick={onOpenSettings}
+        aria-label="Settings"
+        aria-current={activeTab === "settings" ? "page" : undefined}
+      >
         <span className="mobile-tab-bar__avatar">
           <SettingsIcon size={24} />
           {!!profileBadgeCount && <span className="mobile-tab-bar__badge" aria-hidden="true" />}
         </span>
       </button>
-      <button type="button" className="mobile-tab-bar__item" onClick={onOpenProfile} aria-label="Profile">
+      <button
+        type="button"
+        className={`mobile-tab-bar__item ${activeTab === "profile" ? "mobile-tab-bar__item--active" : ""}`}
+        onClick={onOpenProfile}
+        aria-label="Profile"
+        aria-current={activeTab === "profile" ? "page" : undefined}
+      >
         <span className="mobile-tab-bar__avatar">
           {avatarId ? <AvatarBadge avatarId={avatarId} size={28} /> : <ProfileIcon size={24} />}
         </span>

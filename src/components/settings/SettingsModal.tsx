@@ -284,7 +284,7 @@ export function SettingsModal({
   ].map((group) => group.filter((r): r is SettingsHomeRow => r !== null));
 
   return (
-    <Modal title="Settings" onClose={onClose} size="wide">
+    <Modal title="Settings" onClose={onClose} size="wide" asTab>
       <div
         className="settings"
         data-mobile-pane={showingDetail ? "detail" : "list"}

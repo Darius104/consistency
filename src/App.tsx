@@ -252,6 +252,10 @@ export default function App() {
   // the "+ Friends" shortcut in the calendar header so that one jumps
   // straight there instead of always opening to the top.
   const [settingsSection, setSettingsSection] = useState("profile");
+  // Phone: Settings and Profile are tabs - which one is showing, and a key
+  // bumped to reopen it at its top level (tapping the active tab again).
+  const [settingsTab, setSettingsTab] = useState<"settings" | "profile">("settings");
+  const [settingsKey, setSettingsKey] = useState(0);
   const [createTemplateOpen, setCreateTemplateOpen] = useState(false);
   const [phraseModalOpen, setPhraseModalOpen] = useState(false);
   const [lastPhraseViewDate, setLastPhraseViewDate] = useState<string | null>(
@@ -1286,11 +1290,17 @@ export default function App() {
         addMenuOpenRequest={addMenuOpenRequest}
       />
       <MobileTabBar
-        activeTab={mobileTab}
+        activeTab={settingsOpen ? settingsTab : mobileTab}
         onSelectTab={(tab) => {
+          // Leaving the Settings/Profile tab just closes it - the re-tap
+          // shortcuts below only apply when already on that tab.
+          if (settingsOpen) {
+            setSettingsOpen(false);
+          } else {
+            if (tab === "calendar" && mobileTab === "calendar")
+              setResetMonthRequest((n) => n + 1);
+          }
           if (tab === "today") setSelectedDate(todayKey());
-          if (tab === "calendar" && mobileTab === "calendar")
-            setResetMonthRequest((n) => n + 1);
           setMobileTab(tab);
         }}
         onAdd={() => {
@@ -1303,11 +1313,18 @@ export default function App() {
           setAddMenuOpenRequest((n) => n + 1);
         }}
         onOpenProfile={() => {
+          // Opening it, switching to it from Settings, or tapping it again
+          // all land on the Profile page.
           setSettingsSection("profile");
+          setSettingsTab("profile");
+          setSettingsKey((k) => k + 1);
           setSettingsOpen(true);
         }}
         onOpenSettings={() => {
+          // Same for Settings: always its top-level list.
           setSettingsSection("home");
+          setSettingsTab("settings");
+          setSettingsKey((k) => k + 1);
           setSettingsOpen(true);
         }}
         avatarId={friendStreaks.yourAvatarId}
@@ -1355,6 +1372,7 @@ export default function App() {
       {settingsOpen && (
         <Suspense fallback={null}>
           <SettingsModal
+            key={settingsKey}
             initialSectionId={settingsSection}
             theme={theme}
             onChangeTheme={handleChangeTheme}
