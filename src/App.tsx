@@ -249,6 +249,9 @@ export default function App() {
   const [arranging, setArranging] = useState(false);
   const [loading, setLoading] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Settings' Widgets page is open - the only place in Settings that needs
+  // friends' streaks (see useFriendStreaks).
+  const [settingsWidgetsOpen, setSettingsWidgetsOpen] = useState(false);
   // Which Settings section to land on next time it opens - reset to
   // "profile" on the ordinary gear-icon path, overridden to "friends" by
   // the "+ Friends" shortcut in the calendar header so that one jumps
@@ -404,10 +407,12 @@ export default function App() {
   // gallery's live preview has real data the moment someone switches to it,
   // even before they've turned the widget on.
   const friendStreaks = useFriendStreaks(
-    !hiddenWidgets.includes("friendStreaks") || settingsOpen,
+    !hiddenWidgets.includes("friendStreaks") ||
+      (settingsOpen && settingsWidgetsOpen),
+    `${session?.user.id ?? ""}:${settingsOpen}`,
   );
 
-  const membership = useMembership();
+  const membership = useMembership(session?.user.id ?? null);
   const { count: supportBadgeCount, refresh: refreshSupportBadge } =
     useSupportBadgeCount(membership.effectiveTier === "admin");
   const { notes: friendNotes, dismiss: dismissFriendNote } = useFriendNotes();
@@ -1449,6 +1454,8 @@ export default function App() {
             yourAvatarId={friendStreaks.yourAvatarId}
             friendStreakEntries={friendStreaks.friends}
             friendStreaksLoading={friendStreaks.loading}
+            friendIds={friendStreaks.friendIds}
+            onWidgetsPageChange={setSettingsWidgetsOpen}
             onClose={() => setSettingsOpen(false)}
             onSignOut={handleSignOut}
             onAccountDeleted={handleAccountDeleted}

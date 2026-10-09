@@ -28,18 +28,26 @@ export interface MembershipState {
 /** Single source of truth for "what tier does this session act as" -
  *  fetched once here (not per-component) so App.tsx's feature gates and
  *  Settings > Membership's own display never disagree with each other. */
-export function useMembership(): MembershipState {
+export function useMembership(userId: string | null): MembershipState {
   const [actualTier, setActualTier] = useState<MembershipTier | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [previewTier, setPreviewTier] = useState<"free" | "premium" | null>(loadPreview);
 
+  // Re-run whenever the signed-in account changes - checked only at
+  // launch, a fresh sign-in kept "Not signed in." until a restart.
   useEffect(() => {
     let cancelled = false;
+    setActualTier(null);
+    setError(null);
+    if (!userId) return;
 
     function refetch() {
       getMyMembership()
         .then((result) => {
-          if (!cancelled) setActualTier(result);
+          if (!cancelled) {
+            setActualTier(result);
+            setError(null);
+          }
         })
         .catch((err) => {
           if (!cancelled) setError(err instanceof Error ? err.message : String(err));
@@ -70,7 +78,7 @@ export function useMembership(): MembershipState {
       cancelled = true;
       if (channel) void supabase.removeChannel(channel);
     };
-  }, []);
+  }, [userId]);
 
   function setPreview(next: "admin" | "free" | "premium") {
     const value = next === "admin" ? null : next;

@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import type { Friend } from "../../db/friends";
@@ -102,6 +102,11 @@ interface SettingsModalProps {
   yourAvatarId: AvatarId | null;
   friendStreakEntries: FriendStreakEntry[];
   friendStreaksLoading: boolean;
+  /** All your friends' ids - for the "N online" count. */
+  friendIds: string[];
+  /** Tells App whether the Widgets page is open (it loads friends'
+   *  streaks for its preview only then). */
+  onWidgetsPageChange: (open: boolean) => void;
   onClose: () => void;
   onSignOut: () => void;
   onAccountDeleted: () => void;
@@ -169,6 +174,8 @@ export function SettingsModal({
   yourAvatarId,
   friendStreakEntries,
   friendStreaksLoading,
+  friendIds,
+  onWidgetsPageChange,
   onClose,
   onSignOut,
   onAccountDeleted,
@@ -203,6 +210,11 @@ export function SettingsModal({
   );
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [previewWidget, setPreviewWidget] = useState<WidgetId | null>(null);
+
+  useEffect(() => {
+    onWidgetsPageChange(activeId === "widgets");
+  }, [activeId, onWidgetsPageChange]);
+  useEffect(() => () => onWidgetsPageChange(false), [onWidgetsPageChange]);
 
   function selectSection(id: string) {
     setActiveId(id);
@@ -257,6 +269,12 @@ export function SettingsModal({
     const section = SECTIONS.find((sec) => sec.id === id);
     return section ? { ...section, color, value } : null;
   };
+  // Presence lists every signed-in account (you included), so only count
+  // the ones that are actually your friends.
+  const onlineFriendCount = friendIds.filter((id) =>
+    onlineFriendIds.has(id),
+  ).length;
+
   const homeGroups = [
     [
       homeRow("appearance", "#8b5cf6"),
@@ -268,7 +286,7 @@ export function SettingsModal({
       homeRow(
         "friends",
         "#22c55e",
-        onlineFriendIds.size > 0 ? `${onlineFriendIds.size} online` : undefined,
+        onlineFriendCount > 0 ? `${onlineFriendCount} online` : undefined,
       ),
       homeRow("support", "#3b82f6"),
     ],

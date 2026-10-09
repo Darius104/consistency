@@ -20,7 +20,9 @@
   align-items: center;
   gap: var(--space-3);
   width: 100%;
-  padding: var(--space-3) var(--space-4);
+  /* Same left inset as the rows below, so the avatar lines up with their
+     icons. */
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-3);
   border: none;
   border-radius: 16px;
   background: var(--surface);
@@ -190,7 +192,7 @@
   }
 
   .settings-home__profile {
-    padding: var(--space-2) var(--space-3);
+    padding: var(--space-2) var(--space-3) var(--space-2) var(--space-2);
     border-radius: 12px;
   }
 

@@ -95,19 +95,23 @@
 
 .cal-day__badges {
   position: absolute;
-  top: 3px;
-  right: 3px;
+  /* Same inset as the day number, on the same line as it. */
+  top: var(--space-2);
+  right: var(--space-2);
+  height: 18px;
   display: flex;
   align-items: center;
   gap: 3px;
 }
 
 .cal-day__check {
+  /* Quiet on purpose: it's on most days, so it marks them without
+     competing with the day's result. */
   width: 13px;
   height: 13px;
   border-radius: 50%;
-  background: var(--success);
-  color: #0d1a14;
+  background: transparent;
+  color: color-mix(in srgb, var(--success) 70%, var(--text-muted));
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -140,16 +144,22 @@
   animation: cal-day-check-in 260ms var(--ease-out);
 }
 
-/* Centered over the whole cell, not tucked into the corner badge cluster -
-   this is the actual number (not just a dot), so it gets to be the visual
-   focal point the heat tint already makes room for. */
+/* The day's result: a small tinted pill along the bottom of the cell -
+   the one strong color in it. */
 .cal-day__result-center {
   position: absolute;
-  top: 50%;
+  bottom: 6px;
   left: 50%;
-  translate: -50% -50%;
-  font-size: 15px;
-  font-weight: 800;
+  translate: -50% 0;
+  max-width: calc(100% - 8px);
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--text-muted) 18%, transparent);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
   color: var(--text-secondary);
   pointer-events: none;
   animation: cal-day-check-in 260ms var(--ease-out);
@@ -157,10 +167,12 @@
 
 .cal-day__result-center--positive {
   color: var(--trading-profit);
+  background: color-mix(in srgb, var(--trading-profit) 16%, transparent);
 }
 
 .cal-day__result-center--negative {
   color: var(--trading-loss);
+  background: color-mix(in srgb, var(--trading-loss) 16%, transparent);
 }
 
 .cal-day__indicator {
@@ -236,13 +248,11 @@
     text-align: left;
   }
 
-  /* Centered over the cell it would sit on top of the chips - anchored to
-     the bottom edge instead, below them. */
+  /* Smaller pill on the phone's narrow cells, below the chips. */
   .cal-day__result-center {
-    top: auto;
     bottom: 3px;
-    translate: -50% 0;
-    font-size: 11px;
+    padding: 1px 4px;
+    font-size: 9px;
   }
 }
 

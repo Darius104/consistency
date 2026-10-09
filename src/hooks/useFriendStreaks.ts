@@ -17,25 +17,48 @@ export interface FriendStreakEntry {
 // leaderboard nobody's watching second-to-second.
 const POLL_MS = 3 * 60 * 1000;
 
-/** Backs the "Friend comparison" widget - your own streak is already
- *  computed in App.tsx from local state, so this only fetches what isn't:
- *  your avatar (for the leaderboard row) and each friend's current streak.
- *  Only runs while the widget is actually visible (see `enabled`), since a
- *  hidden widget shouldn't be paying for a per-friend network fetch. */
-export function useFriendStreaks(enabled: boolean): {
+/** Backs the "Friend comparison" widget, in two parts:
+ *  - light (your avatar + your friends' ids): loaded on mount and again
+ *    whenever `refreshKey` changes (App passes the signed-in user + "Settings
+ *    is open"), for the
+ *    profile card, the tab bar avatar and the "N online" count;
+ *  - heavy (each friend's full calendar, to compute their streak): only
+ *    while `streaksEnabled` - the widget is visible, or Settings' Widgets
+ *    page (where its preview lives) is open. */
+export function useFriendStreaks(
+  streaksEnabled: boolean,
+  refreshKey: string,
+): {
   yourAvatarId: AvatarId | null;
+  friendIds: string[];
   friends: FriendStreakEntry[];
   loading: boolean;
 } {
   const [yourAvatarId, setYourAvatarId] = useState<AvatarId | null>(null);
+  const [friendIds, setFriendIds] = useState<string[]>([]);
   const [friends, setFriends] = useState<FriendStreakEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([getMyProfile(), listFriends()])
+      .then(([profile, friendList]) => {
+        if (cancelled) return;
+        setYourAvatarId(profile.avatarId);
+        setFriendIds(friendList.map((f) => f.userId));
+      })
+      .catch(() => {
+        // Leave whatever was last successfully loaded.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
+
+  const loadStreaks = useCallback(async () => {
     try {
       const today = todayKey();
-      const [profile, friendList] = await Promise.all([getMyProfile(), listFriends()]);
-      setYourAvatarId(profile.avatarId);
+      const friendList = await listFriends();
       const results = await Promise.all(
         friendList.map(async (f): Promise<FriendStreakEntry | null> => {
           try {
@@ -60,11 +83,11 @@ export function useFriendStreaks(enabled: boolean): {
   }, []);
 
   useEffect(() => {
-    if (!enabled) return;
-    void load();
-    const id = window.setInterval(() => void load(), POLL_MS);
+    if (!streaksEnabled) return;
+    void loadStreaks();
+    const id = window.setInterval(() => void loadStreaks(), POLL_MS);
     return () => window.clearInterval(id);
-  }, [enabled, load]);
+  }, [streaksEnabled, loadStreaks]);
 
-  return { yourAvatarId, friends, loading };
+  return { yourAvatarId, friendIds, friends, loading };
 }

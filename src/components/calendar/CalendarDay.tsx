@@ -72,7 +72,7 @@ export function CalendarDay({
       <span className="cal-day__badges">
         {isFullyCompleted && (
           <span className="cal-day__check" aria-label="All tasks completed">
-            <svg viewBox="0 0 16 16" width="8" height="8">
+            <svg viewBox="0 0 16 16" width="10" height="10">
               <path
                 d="M2 8.5L6 12.5L14 3.5"
                 stroke="currentColor"
@@ -105,7 +105,9 @@ export function CalendarDay({
       )}
       {/* Only on days still ahead - on past days it was on nearly every
           cell and said nothing (their fill/check already tell the story). */}
-      {hasTasks && !isPast && <span className="cal-day__indicator" />}
+      {hasTasks && !isPast && tradingResult === null && (
+        <span className="cal-day__indicator" />
+      )}
       {chips.length > 0 && (
         <span className="cal-day__chips">
           {chips.slice(0, MAX_CHIPS).map((chip) => (
