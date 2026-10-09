@@ -55,6 +55,7 @@ export function TemplatesModal({
   const [justAddedIndex, setJustAddedIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState<string | null>(null);
+  const [colorsOpen, setColorsOpen] = useState(false);
 
   const editRequestRef = useRef(0);
   // Guards against a double-tap (or a task-add landing before the name's
@@ -69,6 +70,7 @@ export function TemplatesModal({
   }
 
   function startCreate() {
+    setColorsOpen(false);
     setEditingKey("__new__");
     setLiveTag(null);
     setDraftName("");
@@ -81,6 +83,7 @@ export function TemplatesModal({
   }
 
   function startEdit(tag: Tag) {
+    setColorsOpen(false);
     setEditingKey(tag.id);
     setLiveTag(tag);
     setDraftName(tag.name);
@@ -188,57 +191,80 @@ export function TemplatesModal({
         <div className="templates-modal-edit">
           <button type="button" className="templates-modal-edit__back" onClick={() => setEditingKey(null)}>
             <ChevronLeftIcon size={16} />
-            All templates
+            Templates
           </button>
 
-          <div
-            className="templates-modal-edit__hero"
-            style={{ "--hero-color": draftColor } as CSSProperties}
-          >
-            <span className="templates-modal-edit__field-label">Name</span>
-            <input
-              className="templates-modal-edit__hero-name"
-              placeholder="Template name"
-              aria-label="Template name"
-              value={draftName}
-              onChange={(e) => {
-                setDraftName(e.target.value);
-                setError(null);
-              }}
-              onBlur={commitName}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  commitName();
-                  (e.target as HTMLInputElement).blur();
-                }
-              }}
-              autoFocus
-            />
-            <span className="templates-modal-edit__field-label">Color</span>
-            <div className="templates-modal-edit__colors">
-              {PRESET_COLORS.map((c) => (
-                <button
-                  type="button"
-                  key={c}
-                  className={`templates-modal-edit__swatch ${
-                    draftColor === c ? "templates-modal-edit__swatch--active" : ""
-                  }`}
-                  style={{ background: c }}
-                  onClick={() => selectColor(c)}
-                  aria-label={`Choose color ${c}`}
+          {/* Name and color as plain settings rows - the same grouped look
+              as the rest of Settings. Tapping Color opens the color circles
+              underneath. */}
+          <div className="settings-group-wrap">
+            <div className="settings-group">
+              <label className="settings-group__row">
+                <span className="settings-group__label templates-modal-edit__row-label">Name</span>
+                <input
+                  className="settings-group__input templates-modal-edit__name-input"
+                  placeholder="e.g. Morning routine"
+                  aria-label="Template name"
+                  value={draftName}
+                  onChange={(e) => {
+                    setDraftName(e.target.value);
+                    setError(null);
+                  }}
+                  onBlur={commitName}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      commitName();
+                      (e.target as HTMLInputElement).blur();
+                    }
+                  }}
+                  autoFocus={!liveTag}
                 />
-              ))}
+              </label>
+              <button
+                type="button"
+                className="settings-group__row"
+                aria-expanded={colorsOpen}
+                onClick={() => setColorsOpen((v) => !v)}
+              >
+                <span className="settings-group__label">Color</span>
+                <span
+                  className="templates-modal-edit__color-dot"
+                  style={{ background: draftColor }}
+                  aria-hidden="true"
+                />
+                <ChevronRightIcon
+                  size={15}
+                  className={`settings-group__chevron ${colorsOpen ? "settings-group__chevron--open" : ""}`}
+                />
+              </button>
+              {colorsOpen && (
+                <div className="settings-group__expand templates-modal-edit__colors" role="radiogroup" aria-label="Color">
+                  {PRESET_COLORS.map((c) => (
+                    <button
+                      type="button"
+                      key={c}
+                      role="radio"
+                      aria-checked={draftColor === c}
+                      className={`templates-modal-edit__swatch ${
+                        draftColor === c ? "templates-modal-edit__swatch--active" : ""
+                      }`}
+                      style={{ background: c } as CSSProperties}
+                      onClick={() => selectColor(c)}
+                      aria-label={`Choose color ${c}`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
+            {error ? (
+              <span className="settings-footnote settings-footnote--warning">{error}</span>
+            ) : (
+              <span className="settings-footnote">
+                {liveTag ? "Changes save automatically." : "Name it first - it's saved as soon as it has a name."}
+              </span>
+            )}
           </div>
-
-          {error ? (
-            <div className="templates-modal-edit__error">{error}</div>
-          ) : (
-            <span className="settings-footnote templates-modal-edit__autosave">
-              {liveTag ? "Changes save automatically." : "Name it first - it's saved as soon as it has a name."}
-            </span>
-          )}
 
           <div className="settings-group-wrap">
             <span className="settings-group__title">
@@ -282,6 +308,9 @@ export function TemplatesModal({
                     </div>
                   ))}
               <div className="settings-group__row">
+                <span className="templates-modal-edit__add-plus" aria-hidden="true">
+                  +
+                </span>
                 <input
                   className="settings-group__input templates-modal-edit__add-input"
                   placeholder="Add a starter task"

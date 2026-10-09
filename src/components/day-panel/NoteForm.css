@@ -4,22 +4,145 @@
   gap: var(--space-3);
 }
 
-.note-form__textarea {
-  width: 100%;
-  min-height: 110px;
-  resize: vertical;
+/* Formatting toolbar - acts on the selected text (see NoteForm). */
+.note-form__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--surface);
+  flex-wrap: wrap;
+}
+
+.note-form__tool {
+  min-width: 36px;
+  height: 34px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-md);
+  font-weight: 600;
+  line-height: 1;
+}
+
+.note-form__tool--bold {
+  font-weight: 800;
+}
+.note-form__tool--italic {
+  font-style: italic;
+  font-family: Georgia, serif;
+}
+.note-form__tool--strikeThrough {
+  text-decoration: line-through;
+}
+
+.note-form__tool--active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.note-form__color-wrap {
+  position: relative;
+}
+
+.note-form__color-icon {
+  font-weight: 800;
+  border-bottom: 3px solid #ef4444;
+  padding: 0 2px;
+}
+
+.note-form__colors {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 2;
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 12px;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-3);
-  font-family: inherit;
+  box-shadow: var(--shadow-md);
+}
+
+.note-form__swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-elevated);
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.note-form__swatch--default {
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+/* The editor itself - looks like the old text box, edits like Notes. */
+.note-form__editor {
+  min-height: 130px;
+  max-height: 50dvh;
+  overflow-y: auto;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
   font-size: var(--text-md);
   line-height: 1.5;
   color: var(--text);
+  outline: none;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.note-form__editor:focus {
+  border-color: var(--accent);
+}
+
+.note-form__editor--empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+@media (max-width: 700px) {
+  .note-form__editor {
+    font-size: 16px;
+  }
 }
 
 .note-form__actions {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-2);
+}
+
+.note-form__delete {
+  align-self: center;
+  padding: var(--space-2) var(--space-3);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--danger);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+/* Phone: one big Save, no Cancel (swipe the sheet down) - same as the
+   other forms. */
+@media (max-width: 700px) {
+  .note-form__actions .btn:first-child {
+    display: none;
+  }
+
+  .note-form__actions .btn--primary {
+    flex: 1;
+    height: 46px;
+    font-size: var(--text-md);
+    font-weight: 600;
+  }
 }

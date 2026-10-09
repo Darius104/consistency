@@ -1,0 +1,8 @@
+{
+  "$schema": "../gen/schemas/mobile-schema.json",
+  "identifier": "mobile-push",
+  "description": "Push registration for server-sent reminders - iOS only (the plugin is only compiled in for iOS, see Cargo.toml).",
+  "windows": ["main"],
+  "platforms": ["iOS"],
+  "permissions": ["mobile-push:default"]
+}

@@ -110,6 +110,7 @@ interface DayPanelProps {
   onAddNote: () => void;
   onEditNote: (note: DayNote) => void;
   onDeleteNote: (id: string) => void;
+  onChangeNoteContent: (id: string, content: string) => void;
   onReorderNotePositions: (
     updates: { id: string; afterGroupKey: string | null; sortOrder: number }[],
   ) => void;
@@ -117,6 +118,8 @@ interface DayPanelProps {
    * sharing it with the compact calendar above. Ignored on wider screens. */
   expanded: boolean;
   onToggleExpanded: () => void;
+  /** See TaskList's dataFresh. */
+  dataFresh?: boolean;
   /** Phone: swipe left/right across the panel for the next/previous day. */
   onSwipeDay: (delta: 1 | -1) => void;
   /** Phone: pull down from the top to sync now. */
@@ -167,11 +170,13 @@ export function DayPanel({
   onAddNote,
   onEditNote,
   onDeleteNote,
+  onChangeNoteContent,
   onReorderNotePositions,
   expanded,
   onToggleExpanded,
   onSwipeDay,
   onRefresh,
+  dataFresh = true,
   tradingResult,
   tradingResultUnit,
   onSetTradingResult,
@@ -455,8 +460,10 @@ export function DayPanel({
         onReorderTags={onReorderTags}
         notes={notes}
         dayFrozen={selectedDate === todayKey() && todayStatus.frozen}
+        dataFresh={dataFresh}
         onEditNote={onEditNote}
         onDeleteNote={onDeleteNote}
+        onChangeNoteContent={onChangeNoteContent}
         onReorderNotePositions={onReorderNotePositions}
       />
     ),

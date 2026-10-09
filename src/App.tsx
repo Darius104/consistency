@@ -13,6 +13,7 @@ import { onSyncComplete, trySync } from "./sync";
 import { useOnlineStatus } from "./hooks/useOnlineStatus";
 import { useRealtimeSync } from "./hooks/useRealtimeSync";
 import { usePresence } from "./hooks/usePresence";
+import { unregisterPushDevice, usePushRegistration } from "./hooks/usePushRegistration";
 import { FreezeSuggestionModal } from "./components/FreezeSuggestionModal";
 import { MobileTabBar, type MobileTab } from "./components/MobileTabBar";
 import { OfflineBanner } from "./components/OfflineBanner";
@@ -77,6 +78,7 @@ import {
   getFreezeCandidates,
 } from "./utils/stats";
 import { DEFAULT_THEME, THEMES, type AppearanceMode } from "./utils/themes";
+import { noteToPlainText } from "./utils/richNote";
 import {
   generateCustomThemeColors,
   hexToOklch,
@@ -304,7 +306,28 @@ export default function App() {
   // device hasn't downloaded anything yet (see the welcome sheet below).
   const [syncedOnce, setSyncedOnce] = useState(false);
   const [welcomeDismissed, setWelcomeDismissed] = useState(false);
+  // On opening the app: wait (briefly) for the first sync before showing
+  // anything, so you never see this device's out-of-date copy flash by
+  // before what you did on another device arrives. Opens after the sync,
+  // or after 2s at most (slow connection - then "Syncing..." shows instead).
+  const [openGateOpen, setOpenGateOpen] = useState(false);
   const { online, syncing, syncNow } = useOnlineStatus(!!session);
+  // Data confirmed current with the server (or there's no server to ask).
+  // "Attention" signals - the phrase dot, deadline strips, the freeze
+  // suggestion - wait for this, so they never appear and then vanish.
+  const dataFresh = syncedOnce || !online;
+  useEffect(() => {
+    if (!session) {
+      setOpenGateOpen(false);
+      return;
+    }
+    if (syncedOnce || !online) {
+      setOpenGateOpen(true);
+      return;
+    }
+    const timer = window.setTimeout(() => setOpenGateOpen(true), 2000);
+    return () => window.clearTimeout(timer);
+  }, [session, syncedOnce, online]);
   useRealtimeSync(session?.user.id ?? null);
   const onlineFriendIds = usePresence(session?.user.id ?? null);
 
@@ -366,12 +389,16 @@ export default function App() {
     document.documentElement.setAttribute("data-mode", appearanceMode);
   }, [appearanceMode]);
 
+  // iPhone: reminders come from the server once registered (see
+  // usePushRegistration) - then the phone stops scheduling its own.
+  const serverPush = usePushRegistration(session?.user.id ?? null, remindersEnabled);
   const reminderStatus = useTaskReminders(
     tasks,
     tags,
     completions,
     freezes,
     remindersEnabled,
+    serverPush,
   );
   // Also enabled while Settings is open (regardless of tab) so the Widgets
   // gallery's live preview has real data the moment someone switches to it,
@@ -585,6 +612,9 @@ export default function App() {
   }
 
   async function handleSignOut() {
+    // Before signing out - this device must stop getting this account's
+    // reminders (needs the session to still be valid to delete its row).
+    await unregisterPushDevice();
     await supabase.auth.signOut();
     // A different account signing in on this same device must never see
     // this account's cached rows or replay its queued writes.
@@ -1090,7 +1120,7 @@ export default function App() {
     return <AuthScreen />;
   }
 
-  if (loading) {
+  if (loading || !openGateOpen) {
     return (
       <div className="app-loading">
         <img className="app-loading__icon" src="/app-icon.png" alt="" />
@@ -1155,7 +1185,7 @@ export default function App() {
     (membership.isPremium ? freezesRemainingThisMonth > 0 : true)
       ? yesterdayKey
       : null;
-  const phraseUnseen = lastPhraseViewDate !== todayKey();
+  const phraseUnseen = dataFresh && lastPhraseViewDate !== todayKey();
   const quote = getQuoteOfDay(todayKey());
 
   const templateBreakdown = computeTemplateBreakdown(
@@ -1191,7 +1221,7 @@ export default function App() {
       {showWelcome && (
         <WelcomeModal onStart={handleStartWithPacks} onClose={dismissWelcome} />
       )}
-      {freezeSuggestionDate && (
+      {freezeSuggestionDate && dataFresh && (
         <FreezeSuggestionModal
           date={freezeSuggestionDate}
           isPremium={membership.isPremium}
@@ -1242,6 +1272,7 @@ export default function App() {
       <DayPanel
         selectedDate={selectedDate}
         onSwipeDay={(delta) => setSelectedDate((d) => addDays(d, delta))}
+        dataFresh={dataFresh}
         onRefresh={syncNow}
         occurrences={occurrences}
         tags={tags}
@@ -1277,6 +1308,10 @@ export default function App() {
         onAddNote={() => setNoteFormState({ open: true })}
         onEditNote={(note) => setNoteFormState({ open: true, note })}
         onDeleteNote={handleRequestDeleteNote}
+        onChangeNoteContent={(id, content) => {
+          setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, content } : n)));
+          void updateNote(id, content);
+        }}
         onReorderNotePositions={handleReorderNotePositions}
         expanded={mobileTab === "today"}
         onToggleExpanded={() =>
@@ -1336,6 +1371,15 @@ export default function App() {
           note={noteFormState.note}
           onSave={handleSaveNote}
           onClose={() => setNoteFormState({ open: false })}
+          onDelete={
+            noteFormState.note
+              ? () => {
+                  const id = noteFormState.note!.id;
+                  setNoteFormState({ open: false });
+                  handleRequestDeleteNote(id);
+                }
+              : undefined
+          }
         />
       )}
 
@@ -1465,9 +1509,9 @@ export default function App() {
         <ConfirmModal
           title="Delete note"
           message={`Delete "${
-            pendingDeleteNote.content.length > 80
-              ? `${pendingDeleteNote.content.slice(0, 80)}…`
-              : pendingDeleteNote.content
+            noteToPlainText(pendingDeleteNote.content).length > 80
+              ? `${noteToPlainText(pendingDeleteNote.content).slice(0, 80)}…`
+              : noteToPlainText(pendingDeleteNote.content)
           }"? This can't be undone.`}
           onConfirm={handleConfirmDeleteNote}
           onClose={() => setPendingDeleteNote(null)}

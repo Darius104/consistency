@@ -3,7 +3,7 @@ import type { PointerEvent, SyntheticEvent } from "react";
 import type { Task } from "../../types";
 import { Checkbox } from "../ui/Checkbox";
 import { PriorityDot } from "../ui/PriorityDot";
-import { TrashIcon } from "../ui/icons";
+import { AlarmClockIcon, TrashIcon } from "../ui/icons";
 import "./TaskItem.css";
 
 // Swipe left reveals a Delete button this wide; swiping past most of the
@@ -227,21 +227,22 @@ export function TaskItem({
         />
         <div className="task-item__main">
           {/* One line: title, then High priority and the time on the right -
-              each used to take a line of its own, doubling the row height.
-              Only shown when they say something ("All day" and Low/Medium
-              badges on every row were noise). */}
+              each used to take a line of its own, doubling the row height. */}
           <div className="task-item__line">
             <span className="task-item__title">
               {task.title}
               {/* Right after the title - it's about this task, not a
                   floating badge out at the edge of the row. */}
-              {task.priority === "high" && (
-                <span className="task-item__priority">
-                  <PriorityDot priority="high" />
-                </span>
-              )}
+              <span className="task-item__priority">
+                <PriorityDot priority={task.priority} />
+              </span>
             </span>
-            {task.time && <span className="task-item__time">{task.time}</span>}
+            {task.time && (
+              <span className="task-item__time">
+                <AlarmClockIcon size={12} className="task-item__time-icon" />
+                {task.time}
+              </span>
+            )}
           </div>
           {task.notes && <div className="task-item__notes">{task.notes}</div>}
         </div>

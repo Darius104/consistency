@@ -1,6 +1,7 @@
 import type { Task } from "../../types";
 import "../day-panel/TaskItem.css";
 import "../ui/Checkbox.css";
+import { AlarmClockIcon } from "../ui/icons";
 import { PriorityDot } from "../ui/PriorityDot";
 
 interface FriendTaskRowProps {
@@ -31,14 +32,21 @@ export function FriendTaskRow({ task, completed }: FriendTaskRowProps) {
         </span>
       </span>
       <div className="task-item__main">
-        <span className="task-item__title">{task.title}</span>
-        {/* Same rule as TaskItem: only when it says something. */}
-        {(task.time || task.priority === "high") && (
-          <div className="task-item__meta-row">
-            {task.priority === "high" && <PriorityDot priority="high" />}
-            {task.time && <span className="task-item__time">{task.time}</span>}
-          </div>
-        )}
+        {/* Same layout as TaskItem: title + priority, time on the right. */}
+        <div className="task-item__line">
+          <span className="task-item__title">
+            {task.title}
+            <span className="task-item__priority">
+              <PriorityDot priority={task.priority} />
+            </span>
+          </span>
+          {task.time && (
+            <span className="task-item__time">
+              <AlarmClockIcon size={12} className="task-item__time-icon" />
+              {task.time}
+            </span>
+          )}
+        </div>
         {task.notes && <div className="task-item__notes">{task.notes}</div>}
       </div>
     </div>

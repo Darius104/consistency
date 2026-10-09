@@ -71,10 +71,19 @@ export function useOnlineStatus(ready: boolean) {
     function handleVisibilityChange() {
       if (document.visibilityState === "visible") void attempt();
     }
+    // On the Mac, bringing the window back to the front doesn't change
+    // visibility - focus does. Throttled, since focus can bounce.
+    let lastFocusSync = 0;
+    function handleFocus() {
+      if (Date.now() - lastFocusSync < 10_000) return;
+      lastFocusSync = Date.now();
+      void attempt();
+    }
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
     document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
 
     void attempt();
     const timer = window.setInterval(() => {
@@ -85,6 +94,7 @@ export function useOnlineStatus(ready: boolean) {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
       window.clearInterval(timer);
     };
   }, [ready, attempt]);

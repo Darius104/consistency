@@ -160,6 +160,12 @@ pub fn run() {
                 app.handle().plugin(tauri_plugin_updater::Builder::new().build())?;
                 app.handle().plugin(tauri_plugin_process::init())?;
             }
+            // iPhone only: push registration for server-sent reminders
+            // (only compiled in for iOS - see Cargo.toml).
+            #[cfg(target_os = "ios")]
+            {
+                app.handle().plugin(tauri_plugin_mobile_push::init())?;
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

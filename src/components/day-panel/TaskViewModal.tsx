@@ -31,6 +31,8 @@ interface HistoryEntry {
   status: HistoryStatus;
 }
 
+const PRIORITY_LABEL = { low: "Low", medium: "Medium", high: "High" } as const;
+
 const HISTORY_SIZE = 7;
 // How far back to look for the last 7 occurrences - a once-a-week task
 // needs 7 weeks; a year covers anything sparser without scanning forever.
@@ -128,16 +130,13 @@ export function TaskViewModal({
               </dd>
             </div>
           )}
-          {/* Only High is worth a line - the same rule as the task rows. */}
-          {task.priority === "high" && (
-            <div className="task-view__row">
-              <dt>Priority</dt>
-              <dd>
-                <PriorityDot priority="high" />
-                High
-              </dd>
-            </div>
-          )}
+          <div className="task-view__row">
+            <dt>Priority</dt>
+            <dd>
+              <PriorityDot priority={task.priority} />
+              {PRIORITY_LABEL[task.priority]}
+            </dd>
+          </div>
         </dl>
 
         {task.notes && <p className="task-view__notes">{task.notes}</p>}

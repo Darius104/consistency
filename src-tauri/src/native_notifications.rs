@@ -44,6 +44,14 @@ mod macos {
     };
     use std::sync::mpsc;
 
+    /// The app's own reminder sound (bundled as a resource - see
+    /// tauri.conf.json's bundle.resources), the same one the server's
+    /// iPhone pushes use. macOS falls back to the default sound by itself
+    /// if the file can't be found.
+    fn reminder_sound() -> Retained<UNNotificationSound> {
+        UNNotificationSound::soundNamed(&NSString::from_str("consistency_reminder.caf"))
+    }
+
     fn center() -> Retained<UNUserNotificationCenter> {
         UNUserNotificationCenter::currentNotificationCenter()
     }
@@ -120,7 +128,7 @@ mod macos {
         let content = UNMutableNotificationContent::new();
         content.setTitle(&NSString::from_str(&title));
         content.setBody(&NSString::from_str(&body));
-        content.setSound(Some(&UNNotificationSound::defaultSound()));
+        content.setSound(Some(&reminder_sound()));
 
         let trigger =
             UNTimeIntervalNotificationTrigger::triggerWithTimeInterval_repeats(
@@ -162,7 +170,7 @@ mod macos {
         let content = UNMutableNotificationContent::new();
         content.setTitle(&NSString::from_str(&title));
         content.setBody(&NSString::from_str(&body));
-        content.setSound(Some(&UNNotificationSound::defaultSound()));
+        content.setSound(Some(&reminder_sound()));
 
         let components = NSDateComponents::new();
         components.setYear(year);

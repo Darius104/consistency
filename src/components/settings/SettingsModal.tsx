@@ -506,6 +506,12 @@ export function SettingsModal({
                       At each task's time, plus a 9 PM nudge if anything's still
                       left today.
                     </span>
+                    {remindersEnabled && reminderStatus.usesServerPush && (
+                      <span className="settings-footnote settings-footnote--success">
+                        Sent by the server - tick a task on any device and its
+                        reminder won't come.
+                      </span>
+                    )}
                     {remindersEnabled &&
                       reminderStatus.permission === "denied" && (
                         <span className="settings-footnote settings-footnote--warning">

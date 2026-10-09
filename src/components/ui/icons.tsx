@@ -241,6 +241,20 @@ export function PaletteIcon({ size = 16, ...props }: IconProps) {
   );
 }
 
+/** Classic alarm clock (bells + feet) - "this task has a reminder". */
+export function AlarmClockIcon({ size = 16, ...props }: IconProps) {
+  return (
+    <svg {...base(size, props)}>
+      <circle cx="12" cy="13" r="7" />
+      <path d="M12 9.5V13l2.5 1.5" />
+      <path d="M4.5 5.5 7 3" />
+      <path d="M19.5 5.5 17 3" />
+      <path d="M7 19.5 5.5 21" />
+      <path d="M17 19.5l1.5 1.5" />
+    </svg>
+  );
+}
+
 export function MinusIcon({ size = 16, ...props }: IconProps) {
   return (
     <svg {...base(size, props)}>

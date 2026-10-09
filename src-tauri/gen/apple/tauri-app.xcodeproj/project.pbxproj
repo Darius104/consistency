@@ -19,6 +19,7 @@
 		824033B5A7F94F13A4C63E6E /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CF0F15D9837DA9743995496A /* WebKit.framework */; };
 		8A272DD02B0D36ACBCE73E26 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CFDCAF660F4CA93110C8FB02 /* Assets.xcassets */; };
 		CA00951E60FA3594F396EEEC /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC56A11F310BBFF30CCFEB63 /* CoreGraphics.framework */; };
+		EED6CBA73524455DBA1DE62F /* consistency_reminder.caf in Resources */ = {isa = PBXBuildFile; fileRef = 8768B5580D6EC07F1E396988 /* consistency_reminder.caf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -31,6 +32,7 @@
 		7A62F8DA3ACF6DA66CB9785D /* tauri-app_iOS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "tauri-app_iOS.entitlements"; sourceTree = "<group>"; };
 		81596E9B4C378559BB3102DB /* native_notifications.rs */ = {isa = PBXFileReference; path = native_notifications.rs; sourceTree = "<group>"; };
 		84E625C1ABDB2D39CB77BF29 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		8768B5580D6EC07F1E396988 /* consistency_reminder.caf */ = {isa = PBXFileReference; path = consistency_reminder.caf; sourceTree = "<group>"; };
 		9B11C2C873FB5A7B97B0605A /* tauri-app_iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "tauri-app_iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AC56A11F310BBFF30CCFEB63 /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = System/Library/Frameworks/CoreGraphics.framework; sourceTree = SDKROOT; };
 		B8DBF813DB5FCB214283D94D /* MetalKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = MetalKit.framework; path = System/Library/Frameworks/MetalKit.framework; sourceTree = SDKROOT; };
@@ -124,6 +126,7 @@
 		A17B869C1C261C5F8DF765C9 /* tauri-app_iOS */ = {
 			isa = PBXGroup;
 			children = (
+				8768B5580D6EC07F1E396988 /* consistency_reminder.caf */,
 				6B62CCFCDED0CBE851A51E4F /* Info.plist */,
 				7A62F8DA3ACF6DA66CB9785D /* tauri-app_iOS.entitlements */,
 			);
@@ -209,6 +212,7 @@
 				8A272DD02B0D36ACBCE73E26 /* Assets.xcassets in Resources */,
 				5DCFDCE0989E0655641185BE /* LaunchScreen.storyboard in Resources */,
 				74C25A7912AFE30DBE96B590 /* assets in Resources */,
+				EED6CBA73524455DBA1DE62F /* consistency_reminder.caf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -1,119 +1,93 @@
-/* Dashed border (vs. every task row's solid one) is the one visual cue that
-   distinguishes "this is just context, not something to check off". Reorders
-   via a dedicated grab handle (see .note-row__handle below), not grab-
-   anywhere, so the row itself keeps ordinary native touch scrolling. */
+/* Same card as a task group (TaskGroup.css), so notes sit naturally among
+   them; the yellow note icon is what says "just a note, nothing to tick". */
 .note-row {
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-3);
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-elevated);
+  cursor: pointer;
+  /* Native vertical scrolling stays on; a long press picks it up (see
+     useReorderDrag's bindLongPress). */
+  touch-action: pan-y;
+  -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
   transition: box-shadow 140ms var(--ease-out), background-color 140ms var(--ease-out),
-    scale 140ms var(--ease-out);
-}
-
-/* Scoped to just this small element (see useReorderDrag's
-   bindHandlePointerDown) rather than the whole row - see the row's own
-   comment above for why that matters for scrolling. */
-.note-row__handle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  margin-top: 2px;
-  color: var(--text-muted);
-  cursor: grab;
-  touch-action: none;
-  -webkit-user-select: none;
-  user-select: none;
-}
-
-.note-row--dragging .note-row__handle {
-  cursor: grabbing;
+    border-color 140ms var(--ease-out);
 }
 
 @media (hover: hover) {
   .note-row:hover {
     border-color: var(--border-strong);
-    background: var(--surface-hover);
   }
 }
 
-/* The dragged note visually lifts off the list and follows the pointer 1:1
-   (see useReorderDrag), same "you're holding this" read used everywhere
-   else in the app. */
+.note-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Picked up: lifts and follows the finger, like a dragged group. */
 .note-row--dragging {
   position: relative;
   z-index: 5;
-  background: var(--bg-elevated);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
-  scale: 1.02;
+  cursor: grabbing;
   transition: none;
 }
 
 .note-row__icon {
   flex: none;
-  margin-top: 2px;
-  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: rgba(245, 196, 66, 0.16);
+  color: #f5c442;
 }
 
 .note-row__text {
   flex: 1;
   min-width: 0;
+  padding-top: 3px;
   font-size: var(--text-sm);
-  color: var(--text-secondary);
-  white-space: pre-wrap;
+  line-height: 1.45;
+  color: var(--text);
   overflow-wrap: break-word;
 }
 
-.note-row__actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
+/* Desktop: a trash on hover. Touch: none - delete from the edit sheet. */
+.note-row__delete {
   flex: none;
+  display: inline-flex;
+  padding: 4px;
+  margin: -2px -6px 0 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 0.12s ease, color 0.12s ease;
 }
 
-/* Touch has no hover to reveal these, so they stay visible there instead -
-   same pattern used for task rows and template rows. */
 @media (hover: hover) {
-  .note-row__actions {
-    opacity: 0;
-    transition: opacity 0.12s ease;
-  }
-
-  .note-row:hover .note-row__actions,
-  .note-row__actions:focus-within {
+  .note-row:hover .note-row__delete,
+  .note-row__delete:focus-visible {
     opacity: 1;
   }
+
+  .note-row__delete:hover {
+    color: var(--danger);
+  }
 }
 
-.note-row__icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  padding: 6px;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  transition: color 0.12s ease, background-color 0.12s ease,
-    transform 120ms var(--ease-out);
-}
-
-.note-row__icon-btn:hover {
-  color: var(--text);
-  background: var(--surface-hover);
-}
-
-.note-row__icon-btn:active {
-  transform: scale(0.88);
-}
-
-.note-row__icon-btn--danger:hover {
-  color: var(--danger);
+@media (hover: none) {
+  .note-row__delete {
+    display: none;
+  }
 }

@@ -10,7 +10,11 @@ import {
 } from "@tauri-apps/plugin-notification";
 import type { Tag, Task } from "../types";
 import { addDays, todayKey } from "../utils/dates";
-import { occurrenceDateTime, tasksScheduledOn, upcomingReminders } from "../utils/recurrence";
+import {
+  occurrenceDateTime,
+  tasksScheduledOn,
+  upcomingReminders,
+} from "../utils/recurrence";
 import { computeTodayStatus } from "../utils/stats";
 
 // How far ahead reminders get scheduled with the OS - re-run in full every
@@ -49,11 +53,17 @@ const END_OF_DAY_LOOKAHEAD_DAYS = 7;
 // later ones get scheduled as earlier ones pass. A little under 64 for slack.
 const MAX_SCHEDULED = 60;
 
-function endOfDayNudgeContent(remaining: number | null): { title: string; body: string } {
+function endOfDayNudgeContent(remaining: number | null): {
+  title: string;
+  body: string;
+} {
   // Today's count is known; a future day's isn't (it can still change by
   // then), so those get a count-free line.
   if (remaining === null) {
-    return { title: "Day's almost over", body: "Finish today's tasks to keep your streak alive." };
+    return {
+      title: "Day's almost over",
+      body: "Finish today's tasks to keep your streak alive.",
+    };
   }
   const noun = remaining === 1 ? "task" : "tasks";
   return {
@@ -156,6 +166,9 @@ export interface ReminderStatus {
    *  fallback-appropriate message instead of a literal "0 reminders
    *  confirmed" that reads like a failure. */
   usesLiveFallback: boolean;
+  /** This device gets its reminders from the server (iPhone, see
+   *  usePushRegistration) - nothing is scheduled locally here. */
+  usesServerPush: boolean;
 }
 
 /** One reminder the OS should have pending. `key` is stable per task+day
@@ -185,7 +198,12 @@ function desiredReminders(
   const tagName = new Map(tags.map((t) => [t.id, t.name]));
   const out: DesiredReminder[] = [];
 
-  for (const { taskId, date } of upcomingReminders(tasks, completions, today, REMINDER_LOOKAHEAD_DAYS)) {
+  for (const { taskId, date } of upcomingReminders(
+    tasks,
+    completions,
+    today,
+    REMINDER_LOOKAHEAD_DAYS,
+  )) {
     const task = tasks.find((t) => t.id === taskId);
     if (!task?.time) continue;
     const group = task.tagId ? tagName.get(task.tagId) : undefined;
@@ -207,7 +225,13 @@ function desiredReminders(
     const status = computeTodayStatus(tasks, completions, freezes, date);
     if (!status.hasTasks || status.allDone || status.frozen) continue;
     const content = endOfDayNudgeContent(i === 0 ? status.remaining : null);
-    out.push({ key: `eod:${date}`, date, time: END_OF_DAY_REMINDER_TIME, ...content, at });
+    out.push({
+      key: `eod:${date}`,
+      date,
+      time: END_OF_DAY_REMINDER_TIME,
+      ...content,
+      at,
+    });
   }
 
   return out
@@ -251,6 +275,7 @@ export function useTaskReminders(
   completions: Set<string>,
   freezes: Set<string>,
   enabled: boolean,
+  serverPush = false,
 ): ReminderStatus {
   const [status, setStatus] = useState<ReminderStatus>({
     permission: "unknown",
@@ -258,6 +283,7 @@ export function useTaskReminders(
     attemptedCount: 0,
     confirmedCount: 0,
     usesLiveFallback: false,
+    usesServerPush: false,
   });
 
   // Latest inputs, read by each pass when it starts (passes are queued, so
@@ -273,6 +299,8 @@ export function useTaskReminders(
   freezesRef.current = freezes;
   const enabledRef = useRef(enabled);
   enabledRef.current = enabled;
+  const serverPushRef = useRef(serverPush);
+  serverPushRef.current = serverPush;
 
   // What this app session last handed to the OS, per key - lets a pass skip
   // reminders that are already pending unchanged. Empty at launch, so the
@@ -315,7 +343,7 @@ export function useTaskReminders(
             id: reminderNotificationId(task.id, today),
             title: task.title,
             body: task.notes || `Scheduled for ${task.time}`,
-            sound: "default",
+            sound: "consistency_reminder.caf",
           });
         } catch {
           // Best-effort on this fallback path - try again next tick.
@@ -326,19 +354,31 @@ export function useTaskReminders(
     async function checkEndOfDayNudge() {
       const today = todayKey();
       if (eodNotifiedDateRef.current === today) return;
-      if (new Date() < occurrenceDateTime(today, END_OF_DAY_REMINDER_TIME)) return;
-      const st = computeTodayStatus(tasksRef.current, completionsRef.current, freezesRef.current, today);
+      if (new Date() < occurrenceDateTime(today, END_OF_DAY_REMINDER_TIME))
+        return;
+      const st = computeTodayStatus(
+        tasksRef.current,
+        completionsRef.current,
+        freezesRef.current,
+        today,
+      );
       if (!st.hasTasks || st.allDone || st.frozen) return;
       eodNotifiedDateRef.current = today;
       try {
         const content = endOfDayNudgeContent(st.remaining);
-        await notify({ id: reminderNotificationId("eod", today), ...content, sound: "default" });
+        await notify({
+          id: reminderNotificationId("eod", today),
+          ...content,
+          sound: "consistency_reminder.caf",
+        });
       } catch {
         // Best-effort, same as checkDueRightNow above.
       }
     }
 
-    const isNativeMacOS = await invoke<boolean>("native_notifications_available").catch(() => false);
+    const isNativeMacOS = await invoke<boolean>(
+      "native_notifications_available",
+    ).catch(() => false);
 
     if (!enabled) {
       if (fallbackIntervalRef.current !== null) {
@@ -347,7 +387,8 @@ export function useTaskReminders(
       }
       if (isNativeMacOS) {
         const ids = await invoke<string[]>("native_pending_notification_ids");
-        if (ids.length > 0) await invoke("native_cancel_notifications", { ids });
+        if (ids.length > 0)
+          await invoke("native_cancel_notifications", { ids });
       } else {
         try {
           const owned = await pending();
@@ -363,6 +404,29 @@ export function useTaskReminders(
         attemptedCount: 0,
         confirmedCount: 0,
         usesLiveFallback: false,
+        usesServerPush: false,
+      });
+      return;
+    }
+
+    // The server sends this device's reminders - clear any local ones so
+    // nothing arrives twice (and stale local ones can't fire after a tick
+    // made elsewhere).
+    if (serverPushRef.current) {
+      try {
+        const owned = await pending();
+        if (owned.length > 0) await cancel(owned.map((n) => n.id));
+      } catch {
+        // Not a mobile platform - nothing local to clear.
+      }
+      scheduledRef.current.clear();
+      setStatus({
+        permission: "granted",
+        lastError: null,
+        attemptedCount: 0,
+        confirmedCount: 0,
+        usesLiveFallback: false,
+        usesServerPush: true,
       });
       return;
     }
@@ -383,20 +447,26 @@ export function useTaskReminders(
           attemptedCount: 0,
           confirmedCount: 0,
           usesLiveFallback: false,
+          usesServerPush: false,
         });
         return;
       }
 
       // Remove what's pending but no longer wanted (done, deleted, moved,
       // or changed - a changed one is re-added below).
-      const pendingIds = await invoke<string[]>("native_pending_notification_ids");
+      const pendingIds = await invoke<string[]>(
+        "native_pending_notification_ids",
+      );
       const stale = pendingIds.filter((id) => {
         const want = desiredByKey.get(id);
         return !want || scheduledRef.current.get(id) !== signature(want);
       });
-      if (stale.length > 0) await invoke("native_cancel_notifications", { ids: stale });
+      if (stale.length > 0)
+        await invoke("native_cancel_notifications", { ids: stale });
       for (const id of stale) scheduledRef.current.delete(id);
-      const stillPending = new Set(pendingIds.filter((id) => !stale.includes(id)));
+      const stillPending = new Set(
+        pendingIds.filter((id) => !stale.includes(id)),
+      );
 
       for (const r of desired) {
         if (stillPending.has(r.key)) continue;
@@ -422,13 +492,16 @@ export function useTaskReminders(
       // Scheduling is fire-and-forget natively - ask the OS what it really
       // has, to tell "dropped" apart from "scheduled, not fired yet".
       await new Promise((resolve) => setTimeout(resolve, 500));
-      const confirmedIds = await invoke<string[]>("native_pending_notification_ids");
+      const confirmedIds = await invoke<string[]>(
+        "native_pending_notification_ids",
+      );
       setStatus({
         permission: "granted",
         lastError: firstError,
         attemptedCount: desired.length,
         confirmedCount: confirmedIds.length,
         usesLiveFallback: false,
+        usesServerPush: false,
       });
       return;
     }
@@ -441,6 +514,7 @@ export function useTaskReminders(
         attemptedCount: 0,
         confirmedCount: 0,
         usesLiveFallback: false,
+        usesServerPush: false,
       });
       return;
     }
@@ -465,6 +539,7 @@ export function useTaskReminders(
         attemptedCount: 0,
         confirmedCount: 0,
         usesLiveFallback: true,
+        usesServerPush: false,
       });
       return;
     }
@@ -482,7 +557,9 @@ export function useTaskReminders(
         return !want || scheduledRef.current.get(want.key) !== signature(want);
       });
     if (staleIds.length > 0) await cancel(staleIds);
-    const stillPending = new Set(owned.map((n) => n.id).filter((id) => !staleIds.includes(id)));
+    const stillPending = new Set(
+      owned.map((n) => n.id).filter((id) => !staleIds.includes(id)),
+    );
 
     for (const r of desired) {
       const id = idFor(r.key);
@@ -492,7 +569,7 @@ export function useTaskReminders(
           id,
           title: r.title,
           body: r.body,
-          sound: "default",
+          sound: "consistency_reminder.caf",
           schedule: scheduleForOccurrence(r.date, r.time),
         });
         scheduledRef.current.set(r.key, signature(r));
@@ -509,6 +586,7 @@ export function useTaskReminders(
       attemptedCount: desired.length,
       confirmedCount: confirmed.length,
       usesLiveFallback: false,
+      usesServerPush: false,
     });
   };
 
@@ -527,7 +605,10 @@ export function useTaskReminders(
           await passRef.current();
         } catch (err) {
           if (!unmountedRef.current) {
-            setStatus((st) => ({ ...st, lastError: err instanceof Error ? err.message : String(err) }));
+            setStatus((st) => ({
+              ...st,
+              lastError: err instanceof Error ? err.message : String(err),
+            }));
           }
         }
       } while (rerunRef.current && !unmountedRef.current);
@@ -538,7 +619,7 @@ export function useTaskReminders(
 
   useEffect(() => {
     void runPass();
-  }, [tasks, tags, completions, freezes, enabled, runPass]);
+  }, [tasks, tags, completions, freezes, enabled, serverPush, runPass]);
 
   useEffect(() => {
     // Things only noticed when the app comes back: a new day (tomorrow's
@@ -546,9 +627,11 @@ export function useTaskReminders(
     // in System Settings. Window focus covers the Mac; the page becoming
     // visible again covers the iPhone, where window focus doesn't fire.
     unmountedRef.current = false;
-    const unlistenFocus = getCurrentWindow().onFocusChanged(({ payload: focused }) => {
-      if (focused) void runPass();
-    });
+    const unlistenFocus = getCurrentWindow().onFocusChanged(
+      ({ payload: focused }) => {
+        if (focused) void runPass();
+      },
+    );
     const onVisible = () => {
       if (document.visibilityState === "visible") void runPass();
     };
@@ -557,7 +640,8 @@ export function useTaskReminders(
     return () => {
       unmountedRef.current = true;
       document.removeEventListener("visibilitychange", onVisible);
-      if (fallbackIntervalRef.current !== null) window.clearInterval(fallbackIntervalRef.current);
+      if (fallbackIntervalRef.current !== null)
+        window.clearInterval(fallbackIntervalRef.current);
       // Tauri's unlisten can throw ("listeners[eventId].handlerId") if the
       // listener's already gone, e.g. after a webview reload - harmless,
       // but uncaught it surfaced as WriteErrorToast's "didn't save".

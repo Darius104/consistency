@@ -39,6 +39,9 @@ targets:
       path: tauri-app_iOS/Info.plist
       properties:
         LSRequiresIPhoneOS: true
+        # Standard HTTPS only - lets TestFlight builds skip the export
+        # compliance question.
+        ITSAppUsesNonExemptEncryption: false
         UILaunchStoryboardName: LaunchScreen
         UIRequiredDeviceCapabilities: [arm64, metal]
         UISupportedInterfaceOrientations:
@@ -54,6 +57,10 @@ targets:
         CFBundleVersion: "0.1.0"
     entitlements:
       path: tauri-app_iOS/tauri-app_iOS.entitlements
+      properties:
+        # Push notifications (server-sent reminders). "development" here;
+        # an App Store/TestFlight export switches it to production.
+        aps-environment: development
     scheme:
       environmentVariables:
         RUST_BACKTRACE: full

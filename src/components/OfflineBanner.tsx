@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { lastSyncedAt } from "../sync";
 import { CheckIcon } from "./ui/icons";
 import "./OfflineBanner.css";
 
@@ -18,6 +19,19 @@ const SUCCESS_MS = 1600;
 // animation has time to actually play instead of the node vanishing
 // instantly underneath it.
 const EXIT_MS = 200;
+
+/** "Offline - showing what this device last synced at 14:32" (or on an
+ *  earlier day, with the date) - so a list that may be behind what you
+ *  did on another device says so. */
+function offlineText(): string {
+  const at = lastSyncedAt();
+  if (!at) return "Offline — changes will sync automatically";
+  const sameDay = at.toDateString() === new Date().toDateString();
+  const when = sameDay
+    ? at.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+    : at.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+  return `Offline — showing what this device last synced ${sameDay ? "at" : "on"} ${when}`;
+}
 
 export function OfflineBanner({ online, syncing }: OfflineBannerProps) {
   const [visible, setVisible] = useState(false);
@@ -90,7 +104,7 @@ export function OfflineBanner({ online, syncing }: OfflineBannerProps) {
       ) : (
         <span className="offline-banner__dot" aria-hidden="true" />
       )}
-      {phase === "offline" && "Offline — changes will sync automatically"}
+      {phase === "offline" && offlineText()}
       {phase === "syncing" && "Syncing…"}
       {phase === "success" && "Synced"}
     </div>

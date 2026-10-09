@@ -3,39 +3,3 @@
   flex-direction: column;
   gap: var(--space-4);
 }
-
-/* "✓ 2 completed ›" at the bottom of a group - done tasks folded away so
-   what's left to do stays on top (see TaskList). */
-.task-list__done-fold {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: var(--space-3) 2px;
-  border: none;
-  background: none;
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  text-align: left;
-}
-
-@media (hover: hover) {
-  .task-list__done-fold:hover {
-    color: var(--text-secondary);
-  }
-}
-
-.task-list__done-fold-check {
-  flex: none;
-  color: var(--success);
-}
-
-.task-list__done-fold-chevron {
-  margin-left: auto;
-  transition: transform 0.2s ease;
-}
-
-.task-list__done-fold-chevron--open {
-  transform: rotate(90deg);
-}

@@ -1,0 +1,79 @@
+/* Formatted note text - shared by the editor (NoteForm) and the note card
+   (NoteRow), so a note looks the same while writing it and afterwards. */
+.note-rich {
+  overflow-wrap: break-word;
+}
+
+.note-rich b {
+  font-weight: 700;
+}
+
+.note-rich ul,
+.note-rich ol {
+  margin: 4px 0;
+  padding-left: 22px;
+}
+
+.note-rich li {
+  margin: 2px 0;
+}
+
+/* Checklist: the bullet becomes a tickable box. */
+.note-rich ul[data-checklist] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.note-rich ul[data-checklist] > li {
+  position: relative;
+  padding-left: 26px;
+  min-height: 20px;
+}
+
+.note-rich ul[data-checklist] > li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 2px;
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.note-rich ul[data-checklist] > li[data-checked="true"]::before {
+  background: var(--success);
+  border-color: var(--success);
+}
+
+.note-rich ul[data-checklist] > li[data-checked="true"]::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 4px;
+  width: 4px;
+  height: 8px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.note-rich ul[data-checklist] > li[data-checked="true"] {
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.note-rich .note-c-red {
+  color: #ef4444;
+}
+.note-rich .note-c-orange {
+  color: #f59e0b;
+}
+.note-rich .note-c-green {
+  color: #22c55e;
+}
+.note-rich .note-c-blue {
+  color: #3b82f6;
+}

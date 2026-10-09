@@ -361,11 +361,29 @@ export function onSyncComplete(fn: SyncListener): () => void {
 let inFlightSync: Promise<boolean> | null = null;
 let rerunQueued = false;
 
+export const LAST_SYNC_KEY = "consistency:lastSyncAt";
+
+/** When this device last finished a sync with the server, if ever. */
+export function lastSyncedAt(): Date | null {
+  try {
+    const v = Number(localStorage.getItem(LAST_SYNC_KEY));
+    return v ? new Date(v) : null;
+  } catch {
+    return null;
+  }
+}
+
 async function runSyncOnce(): Promise<boolean> {
   try {
     const { failed } = await pushPendingOps();
     if (failed) return false;
     await pullFromServer();
+    try {
+      // Shown in the offline notice ("last synced at 14:32").
+      localStorage.setItem(LAST_SYNC_KEY, String(Date.now()));
+    } catch {
+      // Not critical.
+    }
     listeners.forEach((fn) => fn());
     return true;
   } catch (err) {

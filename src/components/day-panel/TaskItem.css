@@ -250,3 +250,15 @@
 .task-item--completed .task-item__line .task-item__time {
   opacity: 0.55;
 }
+
+/* The time reads as "you'll get a reminder at…" - clock icon in front. */
+.task-item__time {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.task-item__time-icon {
+  flex: none;
+  opacity: 0.8;
+}
