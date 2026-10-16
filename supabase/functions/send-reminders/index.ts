@@ -223,33 +223,67 @@ Deno.serve(async (req) => {
   }
   const dates = [...new Set([...now.values()].map((n) => n.date))];
 
-  const [{ data: tasks }, { data: freezes }, { data: tags }] = await Promise.all([
-    db
+  // Only tasks that can fall on today's date(s): anything repeating, plus
+  // one-off tasks dated today - not every task ever created. Fetched a page
+  // at a time, since a single request stops at 1000 rows.
+  const tasks: Task[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await db
       .from("tasks")
       .select(
         "id, user_id, title, notes, time, tag_id, recurrence_type, recurrence_days, start_date, end_date",
       )
-      .in("user_id", activeUsers),
+      .in("user_id", activeUsers)
+      .or(`recurrence_type.neq.none,start_date.in.(${dates.join(",")})`)
+      .order("id")
+      .range(from, from + 999);
+    if (error) return new Response(error.message, { status: 500 });
+    const rows = (data ?? []) as Task[];
+    tasks.push(...rows);
+    if (rows.length < 1000) break;
+  }
+
+  const [{ data: freezes, error: freezeErr }, { data: tags, error: tagErr }] = await Promise.all([
     db.from("streak_freezes").select("user_id, date").in("user_id", activeUsers).in("date", dates),
     db.from("tags").select("id, name").in("user_id", activeUsers),
   ]);
-  // Ticks for these users' tasks on today's date(s) - looked up by task, so
-  // it doesn't matter which device (or user column) wrote them.
-  const taskIds = (tasks ?? []).map((t) => t.id);
-  const { data: completions } = taskIds.length
-    ? await db.from("task_completions").select("task_id, date").in("task_id", taskIds).in("date", dates)
-    : { data: [] as { task_id: string; date: string }[] };
+  if (freezeErr || tagErr) {
+    return new Response((freezeErr ?? tagErr)!.message, { status: 500 });
+  }
 
-  const done = new Set((completions ?? []).map((c) => `${c.task_id}:${c.date}`));
+  // Each user's tasks for their own today.
+  const todaysByUser = new Map<string, Task[]>();
+  for (const u of activeUsers) {
+    const n = now.get(u)!;
+    todaysByUser.set(
+      u,
+      tasks.filter((t) => t.user_id === u && isScheduledOn(t, n.date, n.weekday)),
+    );
+  }
+
+  // Ticks for just those tasks - looked up by task, so it doesn't matter
+  // which device (or user column) wrote them. In batches, so the request
+  // stays short. If this fails, nothing is sent: without the ticks every
+  // task would look unfinished (wrong "N left", reminders for done tasks).
+  const todayIds = [...todaysByUser.values()].flat().map((t) => t.id);
+  const done = new Set<string>();
+  for (let i = 0; i < todayIds.length; i += 100) {
+    const { data, error } = await db
+      .from("task_completions")
+      .select("task_id, date")
+      .in("task_id", todayIds.slice(i, i + 100))
+      .in("date", dates);
+    if (error) return new Response(error.message, { status: 500 });
+    for (const c of data ?? []) done.add(`${c.task_id}:${c.date}`);
+  }
+
   const frozen = new Set((freezes ?? []).map((f) => `${f.user_id}:${f.date}`));
   const tagName = new Map((tags ?? []).map((t) => [t.id, t.name]));
 
   const due: Due[] = [];
   for (const u of activeUsers) {
     const n = now.get(u)!;
-    const todays = (tasks as Task[] | null ?? []).filter(
-      (t) => t.user_id === u && isScheduledOn(t, n.date, n.weekday),
-    );
+    const todays = todaysByUser.get(u)!;
 
     for (const t of todays) {
       if (!t.time || !justDue(t.time, n.minutes)) continue;

@@ -57,8 +57,10 @@ function endOfDayNudgeContent(remaining: number | null): {
   title: string;
   body: string;
 } {
-  // Today's count is known; a future day's isn't (it can still change by
-  // then), so those get a count-free line.
+  // A count is only given when it's worked out at the moment the
+  // notification shows (the live poll). One scheduled hours ahead would
+  // keep the count from back then - ticks made on another device while
+  // this app is closed never reach it - so those get a count-free line.
   if (remaining === null) {
     return {
       title: "Day's almost over",
@@ -224,7 +226,7 @@ function desiredReminders(
     if (at <= now) continue;
     const status = computeTodayStatus(tasks, completions, freezes, date);
     if (!status.hasTasks || status.allDone || status.frozen) continue;
-    const content = endOfDayNudgeContent(i === 0 ? status.remaining : null);
+    const content = endOfDayNudgeContent(null);
     out.push({
       key: `eod:${date}`,
       date,
