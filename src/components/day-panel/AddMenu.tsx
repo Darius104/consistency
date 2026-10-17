@@ -31,6 +31,10 @@ interface AddMenuProps {
    *  outside - a counter rather than a boolean so the same request can be
    *  made again after the menu's been closed. */
   openRequest?: number;
+  /** Called once a request has opened the menu, so the owner can clear it -
+   *  otherwise remounting this (e.g. coming back from a friend's calendar)
+   *  would see the old request and pop the menu open by itself. */
+  onOpenRequestHandled?: () => void;
   /** The day new things get added to - named in the phone sheet's title. */
   dateKey: string;
   /** Phone sheet only: open the day's trading result (on desktop it has
@@ -57,6 +61,7 @@ export function AddMenu({
   onAddNote,
   disabled = false,
   openRequest = 0,
+  onOpenRequestHandled,
   dateKey,
   onLogResult,
   hasResult = false,
@@ -67,6 +72,7 @@ export function AddMenu({
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (openRequest > 0 && !disabled) setOpen(true);
+    if (openRequest > 0) onOpenRequestHandled?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openRequest]);
   const [step, setStep] = useState<Step>("main");

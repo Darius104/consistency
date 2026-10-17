@@ -37,6 +37,48 @@ fn haptic_impact() {
 // a new slot (UISelectionFeedbackGenerator) - softer than haptic_impact,
 // which is for the bigger moments (picking an item up, pull-to-refresh).
 // No-op on desktop, same as haptic_impact.
+// The clock/battery at the top follow the app's own light/dark mode (the
+// app runs under them - see edge_to_edge below), not the phone's: a dark
+// app on a phone set to light mode would otherwise get dark icons on a dark
+// background. Sets the window's interface style, which the status bar
+// follows. Runs on the main thread (with_webview). No-op on desktop.
+#[tauri::command]
+fn set_native_appearance(webview: tauri::Webview, dark: bool) {
+    #[cfg(target_os = "ios")]
+    let _ = webview.with_webview(move |wv| unsafe {
+        use objc::runtime::Object;
+        use objc::{msg_send, sel, sel_impl};
+
+        // UIUserInterfaceStyleLight = 1, UIUserInterfaceStyleDark = 2
+        let style: i64 = if dark { 2 } else { 1 };
+        let view = wv.inner() as *mut Object;
+        let window: *mut Object = msg_send![view, window];
+        if !window.is_null() {
+            let _: () = msg_send![window, setOverrideUserInterfaceStyle: style];
+        }
+    });
+    #[cfg(not(target_os = "ios"))]
+    let _ = (webview, dark);
+}
+
+// iPhone: let the page fill the whole screen, under the status bar and the
+// home bar. By default the web view keeps the page out of those edges, and
+// what shows there instead is the system background (white in light mode).
+// With this, plus viewport-fit=cover in index.html, the page reaches the
+// edges and steps its own content clear of them with env(safe-area-inset-*).
+#[cfg(target_os = "ios")]
+fn edge_to_edge(window: &tauri::WebviewWindow) {
+    let _ = window.with_webview(|wv| unsafe {
+        use objc::runtime::Object;
+        use objc::{msg_send, sel, sel_impl};
+
+        let view = wv.inner() as *mut Object;
+        let scroll_view: *mut Object = msg_send![view, scrollView];
+        // UIScrollViewContentInsetAdjustmentNever = 2
+        let _: () = msg_send![scroll_view, setContentInsetAdjustmentBehavior: 2i64];
+    });
+}
+
 #[tauri::command]
 fn haptic_selection() {
     #[cfg(target_os = "ios")]
@@ -164,13 +206,18 @@ pub fn run() {
             // (only compiled in for iOS - see Cargo.toml).
             #[cfg(target_os = "ios")]
             {
+                use tauri::Manager;
                 app.handle().plugin(tauri_plugin_mobile_push::init())?;
+                for window in app.webview_windows().values() {
+                    edge_to_edge(window);
+                }
             }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             haptic_selection,
             haptic_impact,
+            set_native_appearance,
             native_notifications::native_notifications_available,
             native_notifications::native_request_permission,
             native_notifications::native_schedule_notification,

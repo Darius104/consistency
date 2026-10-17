@@ -35,7 +35,7 @@ import { TemplateBreakdown } from "../stats/TemplateBreakdown";
 import { WeeklyCompletion } from "../stats/WeeklyCompletion";
 import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
-import { CheckIcon, ChevronDownIcon, ChevronLeftIcon, ChevronUpIcon, NoteIcon } from "../ui/icons";
+import { CheckIcon, ChevronLeftIcon, NoteIcon } from "../ui/icons";
 import { Skeleton } from "../ui/Skeleton";
 import { FriendPresenceStatus } from "./FriendPresenceStatus";
 import { FriendTaskRow } from "./FriendTaskRow";
@@ -109,9 +109,8 @@ export function FriendCalendarView({ friend, isOnline, onBack }: FriendCalendarV
   const [error, setError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(todayKey());
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
-  // Mobile-only, mirrors the same expand/collapse toggle on your own day
-  // panel (see App.tsx's dayPanelExpanded) - lets this panel take over the
-  // whole screen instead of always sharing it with the compact calendar.
+  // Phone only: showing one day's screen (picked from the month grid) -
+  // the top bar's "‹ Month" button goes back to the grid.
   const [expanded, setExpanded] = useState(false);
   const [sendingNote, setSendingNote] = useState(false);
   const [friendOfFriendStreaks, setFriendOfFriendStreaks] = useState<FriendOfFriendStreakData[]>(
@@ -192,6 +191,10 @@ export function FriendCalendarView({ friend, isOnline, onBack }: FriendCalendarV
     };
   }, [data]);
 
+  const monthName = parseDateKey(selectedDate).toLocaleDateString(undefined, {
+    month: "long",
+  });
+
   function toggleGroup(key: string) {
     setCollapsed((prev) => {
       const next = new Set(prev);
@@ -210,8 +213,8 @@ export function FriendCalendarView({ friend, isOnline, onBack }: FriendCalendarV
               themselves since that list was last fetched - falls back to the
               prop only for the brief moment before this view's own fetch resolves. */}
           <span className="friend-view__bar-extra">Viewing </span>
-          <strong>{data?.displayName ?? friend.displayName}</strong>'s calendar
-          <span className="friend-view__bar-extra"> (read-only)</span>
+          <strong>{data?.displayName ?? friend.displayName}</strong>
+          <span className="friend-view__bar-extra">'s calendar (read-only)</span>
         </span>
         <div className="friend-view__bar-actions">
           <Button
@@ -222,9 +225,26 @@ export function FriendCalendarView({ friend, isOnline, onBack }: FriendCalendarV
             <NoteIcon size={14} />
             <span className="friend-view__btn-label">Send a note</span>
           </Button>
-          <Button onClick={onBack} className="friend-view__back" aria-label="Back to your calendar">
+          {/* Phone, on one of their days: back to their month first (like
+              any iPhone screen you went into), not straight out. */}
+          {expanded && (
+            <Button
+              onClick={() => setExpanded(false)}
+              className="friend-view__back friend-view__back--month"
+              aria-label={`Back to ${monthName}`}
+            >
+              <ChevronLeftIcon size={14} />
+              <span className="friend-view__back-label">{monthName}</span>
+            </Button>
+          )}
+          <Button
+            onClick={onBack}
+            className={`friend-view__back ${expanded ? "friend-view__back--desktop-only" : ""}`}
+            aria-label="Back to your calendar"
+          >
             <ChevronLeftIcon size={14} />
             <span className="friend-view__btn-label">Back to your calendar</span>
+            <span className="friend-view__back-label">Back</span>
           </Button>
         </div>
       </div>
@@ -278,8 +298,6 @@ export function FriendCalendarView({ friend, isOnline, onBack }: FriendCalendarV
               selectedDate={selectedDate}
               collapsed={collapsed}
               onToggleGroup={toggleGroup}
-              expanded={expanded}
-              onToggleExpanded={() => setExpanded((v) => !v)}
               friendOfFriendStreaks={friendOfFriendStreaks}
               friendStreaksLoading={friendStreaksLoading}
             />
@@ -304,8 +322,6 @@ function FriendDayContent({
   selectedDate,
   collapsed,
   onToggleGroup,
-  expanded,
-  onToggleExpanded,
   friendOfFriendStreaks,
   friendStreaksLoading,
 }: {
@@ -314,8 +330,6 @@ function FriendDayContent({
   selectedDate: string;
   collapsed: Set<string>;
   onToggleGroup: (key: string) => void;
-  expanded: boolean;
-  onToggleExpanded: () => void;
   friendOfFriendStreaks: FriendOfFriendStreakData[];
   friendStreaksLoading: boolean;
 }) {
@@ -410,16 +424,6 @@ function FriendDayContent({
 
   return (
     <>
-      <div className="day-panel__expand-toggle-wrap">
-        <button
-          type="button"
-          className="day-panel__expand-toggle"
-          onClick={onToggleExpanded}
-          aria-label={expanded ? "Collapse to show calendar" : "Expand to full screen"}
-        >
-          {expanded ? <ChevronDownIcon size={16} /> : <ChevronUpIcon size={16} />}
-        </button>
-      </div>
       <div className={`friend-view__profile ${data.bio ? "friend-view__profile--with-bio" : ""}`}>
         <span className="friend-view__avatar-wrap">
           <AvatarBadge avatarId={data.avatarId} size={48} />

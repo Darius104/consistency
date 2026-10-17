@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { AuthScreen } from "./auth/AuthScreen";
 import { useSession } from "./auth/useSession";
 import { CalendarView } from "./components/calendar/CalendarView";
@@ -390,6 +391,10 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute("data-mode", appearanceMode);
+    // iPhone status bar icons: light on a dark app, dark on a light one.
+    invoke("set_native_appearance", { dark: appearanceMode === "dark" }).catch(
+      () => {},
+    );
   }, [appearanceMode]);
 
   // iPhone: reminders come from the server once registered (see
@@ -1133,15 +1138,76 @@ export default function App() {
     );
   }
 
+  // Phone bottom navigation - also shown on a friend's calendar, where any
+  // tab takes you back to your own.
+  const tabBar = (
+    <MobileTabBar
+      activeTab={
+        settingsOpen ? settingsTab : viewingFriend ? "calendar" : mobileTab
+      }
+      onSelectTab={(tab) => {
+        // From a friend's calendar, any tab goes back to your own.
+        if (viewingFriend) {
+          setViewingFriend(null);
+          if (tab === "today") setSelectedDate(todayKey());
+          setMobileTab(tab);
+          return;
+        }
+        // Leaving the Settings/Profile tab just closes it - the re-tap
+        // shortcuts below only apply when already on that tab.
+        if (settingsOpen) {
+          setSettingsOpen(false);
+        } else {
+          if (tab === "calendar" && mobileTab === "calendar")
+            setResetMonthRequest((n) => n + 1);
+        }
+        if (tab === "today") setSelectedDate(todayKey());
+        setMobileTab(tab);
+      }}
+      onAdd={() => {
+        setViewingFriend(null);
+        // A past day can't take new tasks (see AddMenu's disabled), so
+        // "+" lands on today instead of opening a menu that can't add.
+        // The sheet opens over whichever tab you're on, for the day
+        // selected there - only a past day (which can't take new tasks)
+        // falls back to today.
+        if (selectedDate < todayKey()) setSelectedDate(todayKey());
+        setAddMenuOpenRequest((n) => n + 1);
+      }}
+      onOpenProfile={() => {
+        setViewingFriend(null);
+        // Opening it, switching to it from Settings, or tapping it again
+        // all land on the Profile page.
+        setSettingsSection("profile");
+        setSettingsTab("profile");
+        setSettingsKey((k) => k + 1);
+        setSettingsOpen(true);
+      }}
+      onOpenSettings={() => {
+        setViewingFriend(null);
+        // Same for Settings: always its top-level list.
+        setSettingsSection("home");
+        setSettingsTab("settings");
+        setSettingsKey((k) => k + 1);
+        setSettingsOpen(true);
+      }}
+      avatarId={friendStreaks.yourAvatarId}
+      profileBadgeCount={supportBadgeCount}
+    />
+  );
+
   if (viewingFriend) {
     return (
-      <Suspense fallback={null}>
-        <FriendCalendarView
-          friend={viewingFriend}
-          isOnline={onlineFriendIds.has(viewingFriend.userId)}
-          onBack={() => setViewingFriend(null)}
-        />
-      </Suspense>
+      <div className="app app--friend">
+        <Suspense fallback={null}>
+          <FriendCalendarView
+            friend={viewingFriend}
+            isOnline={onlineFriendIds.has(viewingFriend.userId)}
+            onBack={() => setViewingFriend(null)}
+          />
+        </Suspense>
+        {tabBar}
+      </div>
     );
   }
 
@@ -1328,48 +1394,9 @@ export default function App() {
           void handleSetTradingResult(value, unit)
         }
         addMenuOpenRequest={addMenuOpenRequest}
+        onAddMenuOpenRequestHandled={() => setAddMenuOpenRequest(0)}
       />
-      <MobileTabBar
-        activeTab={settingsOpen ? settingsTab : mobileTab}
-        onSelectTab={(tab) => {
-          // Leaving the Settings/Profile tab just closes it - the re-tap
-          // shortcuts below only apply when already on that tab.
-          if (settingsOpen) {
-            setSettingsOpen(false);
-          } else {
-            if (tab === "calendar" && mobileTab === "calendar")
-              setResetMonthRequest((n) => n + 1);
-          }
-          if (tab === "today") setSelectedDate(todayKey());
-          setMobileTab(tab);
-        }}
-        onAdd={() => {
-          // A past day can't take new tasks (see AddMenu's disabled), so
-          // "+" lands on today instead of opening a menu that can't add.
-          // The sheet opens over whichever tab you're on, for the day
-          // selected there - only a past day (which can't take new tasks)
-          // falls back to today.
-          if (selectedDate < todayKey()) setSelectedDate(todayKey());
-          setAddMenuOpenRequest((n) => n + 1);
-        }}
-        onOpenProfile={() => {
-          // Opening it, switching to it from Settings, or tapping it again
-          // all land on the Profile page.
-          setSettingsSection("profile");
-          setSettingsTab("profile");
-          setSettingsKey((k) => k + 1);
-          setSettingsOpen(true);
-        }}
-        onOpenSettings={() => {
-          // Same for Settings: always its top-level list.
-          setSettingsSection("home");
-          setSettingsTab("settings");
-          setSettingsKey((k) => k + 1);
-          setSettingsOpen(true);
-        }}
-        avatarId={friendStreaks.yourAvatarId}
-        profileBadgeCount={supportBadgeCount}
-      />
+      {tabBar}
 
       {noteFormState.open && (
         <NoteForm

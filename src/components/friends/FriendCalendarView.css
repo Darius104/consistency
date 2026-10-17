@@ -6,6 +6,22 @@
   overflow: hidden;
 }
 
+/* Inside the app's frame (App.tsx), so the phone's tab bar stays under it
+   and the frame keeps it clear of the status bar. */
+.app--friend > .friend-view {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  height: auto;
+}
+
+/* The short "Back" / month labels are the phone's; desktop keeps
+   "Back to your calendar". */
+.friend-view__back-label,
+.friend-view__bar .friend-view__back--month {
+  display: none;
+}
+
 .friend-view__bar {
   flex: none;
   display: flex;
@@ -238,6 +254,27 @@
     flex: 1;
     height: auto;
     min-height: 0;
+    animation: friend-view-month-in 220ms var(--ease-out);
+  }
+
+  /* A day slides in from the right; going back, the month slides in from
+     the left - the same direction as the back arrow. */
+  .friend-view--day-expanded .friend-view__day {
+    animation: friend-view-day-in 260ms var(--ease-out);
+  }
+}
+
+@keyframes friend-view-day-in {
+  from {
+    opacity: 0;
+    transform: translateX(32px);
+  }
+}
+
+@keyframes friend-view-month-in {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
   }
 }
 
@@ -247,7 +284,7 @@
 @media (max-width: 700px) {
   .friend-view__bar {
     display: grid;
-    grid-template-columns: 40px minmax(0, 1fr) auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr);
     align-items: center;
     gap: var(--space-2);
     padding: var(--space-2) var(--space-3);
@@ -281,12 +318,37 @@
   .friend-view__back,
   .friend-view__send-note {
     justify-content: center;
-    width: 40px;
     height: 36px;
     padding: 0;
   }
 
-  .friend-view__back svg,
+  /* iOS-style text back button: "‹ Back" out of their calendar, "‹ October"
+     from one of their days back to the month. */
+  .friend-view__back {
+    gap: 2px;
+    margin-left: -6px;
+    padding: 0 8px 0 2px;
+    border-color: transparent;
+    background: none;
+    color: var(--accent);
+    font-size: var(--text-md);
+    font-weight: 500;
+  }
+
+  .friend-view__back svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  .friend-view__back-label,
+  .friend-view__bar .friend-view__back--month {
+    display: inline-flex;
+  }
+
+  .friend-view__bar .friend-view__back--desktop-only {
+    display: none;
+  }
+
   .friend-view__send-note svg {
     width: 20px;
     height: 20px;
