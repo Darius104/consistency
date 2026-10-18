@@ -38,7 +38,7 @@
       "icons/icon.ico"
     ],
     "macOS": {
-      "signingIdentity": "Apple Development: comansebastian@icloud.com (23DUTU657D)"
+      "signingIdentity": "D1F10F8775CA8BB2E7AC10F82921B8E4ADE888D7"
     },
     "resources": {
       "sounds/consistency_reminder.caf": "consistency_reminder.caf"

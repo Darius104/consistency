@@ -22,8 +22,9 @@ certificate (no paid Developer Program membership needed) satisfies it
 fine. This certificate expires (~1 year for a free personal team) and is
 tied to this specific Mac's keychain - if a future build fails to sign, or
 notifications start silently failing again, run `security find-identity
--v -p codesigning` for the current identity string and update this config
-value to match.
+-v -p codesigning` and update this config value to match. Use the
+certificate's 40-character SHA-1 hash, not its name - the name contains the
+Apple ID email, and this repo is public.
 
 ## Steps
 
