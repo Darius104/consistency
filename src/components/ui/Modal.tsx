@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { XIcon } from "./icons";
 import "./Modal.css";
@@ -15,6 +15,11 @@ interface ModalProps {
    *  stays visible) with no close button, instead of covering everything.
    *  The tab bar is how you leave it. No effect on desktop. */
   asTab?: boolean;
+  /** A small icon in a colored square before the title - says at a glance
+   *  what kind of thing this window is (see day-panel/addKinds.ts). */
+  icon?: ReactNode;
+  /** That square's color. */
+  accent?: string;
 }
 
 // Matches the CSS transition duration below - the actual unmount (calling
@@ -35,7 +40,15 @@ interface DragState {
   velocity: number;
 }
 
-export function Modal({ title, onClose, children, size = "default", asTab = false }: ModalProps) {
+export function Modal({
+  title,
+  onClose,
+  children,
+  size = "default",
+  asTab = false,
+  icon,
+  accent,
+}: ModalProps) {
   const [closing, setClosing] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -162,7 +175,18 @@ export function Modal({ title, onClose, children, size = "default", asTab = fals
           onPointerCancel={onHeaderPointerUp}
         >
           <span className="modal-grabber" aria-hidden="true" />
-          <h2 className="modal-title">{title}</h2>
+          <h2 className="modal-title">
+            {icon && (
+              <span
+                className="modal-title-icon"
+                style={accent ? ({ "--modal-accent": accent } as CSSProperties) : undefined}
+                aria-hidden="true"
+              >
+                {icon}
+              </span>
+            )}
+            <span className="modal-title-text">{title}</span>
+          </h2>
           <button className="modal-close" onClick={requestClose} aria-label="Close">
             <XIcon size={16} />
           </button>

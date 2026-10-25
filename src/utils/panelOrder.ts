@@ -51,6 +51,31 @@ export const WIDGET_LABELS: Record<WidgetId, string> = {
   friendStreaks: "Friend Comparison",
 };
 
+/** Each widget's own color - its card's edge and icon, its tile, its row
+ *  in the widget gallery and in Settings > Widgets. */
+export const WIDGET_COLORS: Record<WidgetId, string> = {
+  streak: "#ff9f43",
+  weekly: "#3b82f6",
+  freezes: "#38bdf8",
+  templates: "#a855f7",
+  quote: "#f5c442",
+  friendStreaks: "#22c55e",
+};
+
+/** The Day Streak widget's looks - picked in Settings > Widgets. */
+export type StreakStyle = "campfire" | "ring" | "compact" | "weeks";
+
+export const STREAK_STYLES: { id: StreakStyle; label: string }[] = [
+  { id: "campfire", label: "Campfire" },
+  { id: "ring", label: "Ring" },
+  { id: "compact", label: "Compact" },
+  { id: "weeks", label: "Two weeks" },
+];
+
+export function parseStreakStyle(saved: string | null): StreakStyle {
+  return STREAK_STYLES.some((s) => s.id === saved) ? (saved as StreakStyle) : "campfire";
+}
+
 // Canonical listing order for management UIs (e.g. Settings > Widgets) -
 // deliberately fixed, unlike the user's freely-draggable panelOrder, so that
 // page doesn't reshuffle itself as the user reorders their actual panel.

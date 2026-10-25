@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import type { TradingResult } from "../../types";
+import { parseDateKey } from "../../utils/dates";
 import { formatTradingResult } from "../../utils/trading";
 import { FrostIcon } from "../ui/icons";
 import "./CalendarDay.css";
@@ -50,7 +51,13 @@ export function CalendarDay({
   onSelect,
 }: CalendarDayProps) {
   const isFullyCompleted = completionRate === 1;
-  const heatAlpha = completionRate === null ? 0 : 0.12 + completionRate * 0.48;
+  const weekday = parseDateKey(dateKey).getDay();
+  const isWeekend = weekday === 0 || weekday === 6;
+  // The day's progress as a thin bar along the bottom - only where it says
+  // something: today, and past days that weren't finished. A fully done
+  // day just gets its quiet check (most days are, so they stay calm).
+  const showProgress =
+    completionRate !== null && !isFullyCompleted && (isPast || isToday);
 
   return (
     <button
@@ -60,10 +67,10 @@ export function CalendarDay({
         isSelected && "cal-day--selected",
         isFullyCompleted && "cal-day--complete",
         isFrozen && "cal-day--frozen",
+        isWeekend && "cal-day--weekend",
       ]
         .filter(Boolean)
         .join(" ")}
-      style={{ "--heat-alpha": heatAlpha } as CSSProperties}
       onClick={() => onSelect(dateKey)}
     >
       <span className={`cal-day__number ${isToday ? "cal-day__number--today" : ""}`}>
@@ -97,7 +104,7 @@ export function CalendarDay({
               ? "cal-day__result-center--positive"
               : tradingResult.value < 0
                 ? "cal-day__result-center--negative"
-                : ""
+                : "cal-day__result-center--even"
           }`}
         >
           {formatTradingResult(tradingResult.value, tradingResult.unit)}
@@ -105,8 +112,13 @@ export function CalendarDay({
       )}
       {/* Only on days still ahead - on past days it was on nearly every
           cell and said nothing (their fill/check already tell the story). */}
-      {hasTasks && !isPast && tradingResult === null && (
+      {hasTasks && !isPast && !isToday && tradingResult === null && (
         <span className="cal-day__indicator" />
+      )}
+      {showProgress && (
+        <span className="cal-day__progress" aria-hidden="true">
+          <span style={{ width: `${(completionRate ?? 0) * 100}%` }} />
+        </span>
       )}
       {chips.length > 0 && (
         <span className="cal-day__chips">

@@ -58,22 +58,24 @@ export function ReminderList({ tasks, completions, onSelectReminder }: ReminderL
   return (
     <div className="reminder-list">
       {groups.map((group) => (
-        <div className="reminder-list__group" key={group.day}>
-          <span className="reminder-list__group-heading">{formatDay(group.day)}</span>
-          {group.items.map((e) => (
-            <button
-              type="button"
-              className="reminder-list__row"
-              key={`${e.taskId}:${e.date}`}
-              onClick={() => onSelectReminder(e.taskId, e.date)}
-            >
-              <span className="reminder-list__title">{e.title}</span>
-              <span className="reminder-list__time">
-                <BellIcon size={12} />
-                {e.time}
-              </span>
-            </button>
-          ))}
+        <div className="settings-group-wrap" key={group.day}>
+          <span className="settings-group__title">{formatDay(group.day)}</span>
+          <div className="settings-group">
+            {group.items.map((e) => (
+              <button
+                type="button"
+                className="settings-group__row reminder-list__row"
+                key={`${e.taskId}:${e.date}`}
+                onClick={() => onSelectReminder(e.taskId, e.date)}
+              >
+                <span className="reminder-list__title">{e.title}</span>
+                <span className="reminder-list__time">
+                  <BellIcon size={11} />
+                  {e.time}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
       ))}
     </div>

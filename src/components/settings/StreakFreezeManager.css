@@ -4,17 +4,22 @@
   gap: var(--space-5);
 }
 
+/* "Oct 22 frozen - streak protected." for a moment after Freeze. */
 .freeze-manager__confirm {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-sm);
-  background: var(--frost-soft);
-  border: 1px solid var(--frost);
+  padding: 10px var(--space-3);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--page-color, var(--frost)) 16%, var(--surface));
   color: var(--text);
   font-size: var(--text-sm);
+  font-weight: 600;
   animation: freeze-confirm-in 220ms var(--ease-out);
+}
+
+.freeze-manager__confirm svg {
+  color: var(--page-color, var(--frost));
 }
 
 @keyframes freeze-confirm-in {
@@ -24,80 +29,6 @@
   }
 }
 
-.freeze-manager__rate {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-}
-
-/* --- Grouped layout --- */
-
-.freeze-manager__hero {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: var(--space-4) var(--space-3);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--frost) 10%, var(--surface));
-  text-align: center;
-}
-
-.freeze-manager__hero-icon {
-  display: inline-flex;
-  color: var(--frost);
-}
-
-.freeze-manager__hero-count {
-  font-size: 28px;
-  font-weight: 800;
-  color: var(--text);
-  font-variant-numeric: tabular-nums;
-}
-
-.freeze-manager__hero-count span {
-  font-size: var(--text-md);
+.freeze-manager__date {
   font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.freeze-manager__hero-text {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-}
-
-.freeze-manager .freeze-manager__rate {
-  margin-left: var(--space-2);
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-}
-
-.freeze-manager__freeze {
-  flex: none;
-  height: 30px;
-  padding: 0 14px;
-  border: none;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--frost) 18%, transparent);
-  color: var(--frost);
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-
-.freeze-manager__freeze:disabled {
-  opacity: 0.4;
-}
-
-.freeze-manager__frost {
-  flex: none;
-  color: var(--frost);
-}
-
-.freeze-manager__remove {
-  flex: none;
-  border: none;
-  background: none;
-  padding: var(--space-1) 0;
-  color: var(--danger);
-  font-size: var(--text-sm);
-  font-weight: 500;
 }

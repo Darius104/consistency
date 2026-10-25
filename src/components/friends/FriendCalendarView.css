@@ -404,3 +404,28 @@
     display: inline;
   }
 }
+
+/* Their result for the day, the same pill as on the calendar cell. */
+.friend-view__result {
+  flex: none;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: var(--text-sm);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.friend-view__result--positive {
+  color: var(--trading-profit);
+  background: color-mix(in srgb, var(--trading-profit) 16%, transparent);
+}
+
+.friend-view__result--negative {
+  color: var(--trading-loss);
+  background: color-mix(in srgb, var(--trading-loss) 16%, transparent);
+}
+
+.friend-view__result--even {
+  color: var(--amber-text);
+  background: color-mix(in srgb, #f59e0b 16%, transparent);
+}

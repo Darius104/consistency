@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 import {
   deleteTicket,
   listAllTickets,
   type AdminSupportTicket,
   type TicketStatus,
 } from "../../db/support";
-import { Card } from "../ui/Card";
 import { ConfirmModal } from "../ui/ConfirmModal";
 import { Skeleton } from "../ui/Skeleton";
 import { TrashIcon } from "../ui/icons";
+import { TYPE_COLOR } from "./SupportSection";
 import { TicketStatusGroup } from "./TicketStatusGroup";
 import { TicketThreadModal } from "./TicketThreadModal";
 import "./SupportSection.css";
@@ -108,7 +109,12 @@ export function AdminTicketsList({ onSeen }: AdminTicketsListProps) {
         >
           <div className="support-list__row-header">
             <span className="support-list__author">{ticket.displayName}</span>
-            <span className="support-list__type">{TICKET_TYPE_LABEL[ticket.type]}</span>
+            <span
+              className="settings-tag"
+              style={{ "--tag-color": TYPE_COLOR[ticket.type] } as CSSProperties}
+            >
+              {TICKET_TYPE_LABEL[ticket.type]}
+            </span>
             <span className={`support-list__status support-list__status--${ticket.status}`}>
               {STATUS_LABEL[ticket.status]}
             </span>
@@ -130,18 +136,15 @@ export function AdminTicketsList({ onSeen }: AdminTicketsListProps) {
   }
 
   return (
-    <Card>
-      <div className="support-list__header">
-        <span className="settings__label">Support Tickets</span>
-        {tickets && (
-          <span className="support-list__count">
-            {tickets.length} total · {openCount} open
-          </span>
-        )}
-      </div>
-      {error && <span className="settings__hint settings__hint--warning">{error}</span>}
+    <div className="settings-pages">
+      {tickets && (
+        <span className="settings-footnote">
+          {tickets.length} total · {openCount} open
+        </span>
+      )}
+      {error && <span className="settings-footnote settings-footnote--warning">{error}</span>}
       {!tickets && !error && (
-        <div className="support-list">
+        <div className="settings-group">
           {[0, 1, 2].map((i) => (
             <div className="support-list__row-skeleton" key={i}>
               <Skeleton width="50%" height="0.85em" />
@@ -151,7 +154,7 @@ export function AdminTicketsList({ onSeen }: AdminTicketsListProps) {
         </div>
       )}
       {tickets && tickets.length === 0 && (
-        <span className="settings__hint">No tickets yet.</span>
+        <span className="settings-footnote">No tickets yet.</span>
       )}
       {tickets &&
         STATUS_GROUP_ORDER.map((status) => (
@@ -187,6 +190,6 @@ export function AdminTicketsList({ onSeen }: AdminTicketsListProps) {
           onClose={() => setPendingDelete(null)}
         />
       )}
-    </Card>
+    </div>
   );
 }

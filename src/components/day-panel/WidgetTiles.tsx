@@ -3,7 +3,13 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from
 import type { FriendStreakEntry } from "../../hooks/useFriendStreaks";
 import type { Tag } from "../../types";
 import type { AvatarId } from "../../utils/avatars";
-import { WIDGET_LABELS, type PanelBlockId, type WidgetId } from "../../utils/panelOrder";
+import {
+  WIDGET_COLORS,
+  WIDGET_LABELS,
+  type PanelBlockId,
+  type StreakStyle,
+  type WidgetId,
+} from "../../utils/panelOrder";
 import type { Quote } from "../../utils/quotes";
 import type {
   TemplateBreakdownItem,
@@ -28,6 +34,7 @@ interface WidgetTilesProps {
   tasks: ReactNode;
   streak: number;
   bestStreak: number;
+  streakStyle?: StreakStyle;
   todayStatus: TodayStatus;
   weekly: WeeklyCompletion;
   freezesRemaining: number;
@@ -404,7 +411,12 @@ export function WidgetTiles(props: WidgetTilesProps) {
             // colors, today's progress, "N left to keep it alive") spanning
             // the grid, not shrunk into a tile you'd have to open.
             <div className="widget-tile-hero">
-              <StreakCounter streak={props.streak} best={props.bestStreak} today={props.todayStatus} />
+              <StreakCounter
+                streak={props.streak}
+                best={props.bestStreak}
+                today={props.todayStatus}
+                variant={props.streakStyle}
+              />
               {!arranging && (
                 <button
                   type="button"
@@ -421,6 +433,7 @@ export function WidgetTiles(props: WidgetTilesProps) {
               role="button"
               tabIndex={0}
               className="widget-tile"
+              style={{ "--widget-color": WIDGET_COLORS[id] } as CSSProperties}
               onClick={() => {
                 if (suppressClickRef.current) {
                   suppressClickRef.current = false;

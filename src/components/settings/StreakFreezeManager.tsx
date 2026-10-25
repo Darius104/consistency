@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { MAX_FREEZES_PER_MONTH, type FreezeCandidate } from "../../utils/stats";
+import type { FreezeCandidate } from "../../utils/stats";
 import { parseDateKey, todayKey } from "../../utils/dates";
 import { FrostIcon } from "../ui/icons";
 import "./StreakFreezeManager.css";
@@ -57,17 +57,8 @@ export function StreakFreezeManager({
   }
 
   return (
+    // How many are left this month is in the page's banner (SettingsModal).
     <div className="settings-pages freeze-manager">
-      <div className="freeze-manager__hero">
-        <span className="freeze-manager__hero-icon">
-          <FrostIcon size={22} />
-        </span>
-        <span className="freeze-manager__hero-count">
-          {freezesRemaining} <span>of {MAX_FREEZES_PER_MONTH} left</span>
-        </span>
-        <span className="freeze-manager__hero-text">this month · protects your streak on a missed day</span>
-      </div>
-
       {confirmation && (
         <div className="freeze-manager__confirm" key={confirmation.id}>
           <FrostIcon size={13} />
@@ -82,18 +73,21 @@ export function StreakFreezeManager({
             <div className="settings-group__row settings-group__row--muted">Nothing to freeze this month</div>
           </div>
         ) : (
-          <div className="settings-group">
+          <div className="settings-group settings-group--tiles">
             {candidates.map((c) => {
               const percent = Math.round(c.rate * 100);
               return (
                 <div className="settings-group__row" key={c.date}>
-                  <span className="settings-group__label">
+                  <span className="settings-tile settings-tile--muted" aria-hidden="true">
+                    {parseDateKey(c.date).getDate()}
+                  </span>
+                  <span className="settings-group__label settings-group__label--stack">
                     {formatDate(c.date)}
-                    <span className="freeze-manager__rate">{percent}% done</span>
+                    <small>{percent}% done</small>
                   </span>
                   <button
                     type="button"
-                    className="freeze-manager__freeze"
+                    className="settings-row-action"
                     onClick={() => handleFreezeClick(c.date)}
                     disabled={freezesRemaining === 0}
                   >
@@ -112,15 +106,17 @@ export function StreakFreezeManager({
       {frozenDays.length > 0 && (
         <div className="settings-group-wrap">
           <span className="settings-group__title">Frozen</span>
-          <div className="settings-group">
+          <div className="settings-group settings-group--tiles">
             {frozenDays.map((date) => (
               <div className="settings-group__row" key={date}>
-                <FrostIcon size={14} className="freeze-manager__frost" />
-                <span className="settings-group__label">{formatDate(date)}</span>
+                <span className="settings-tile" aria-hidden="true">
+                  <FrostIcon size={14} />
+                </span>
+                <span className="settings-group__label freeze-manager__date">{formatDate(date)}</span>
                 {isCurrentMonth(date) ? (
                   <button
                     type="button"
-                    className="freeze-manager__remove"
+                    className="settings-row-action settings-row-action--danger"
                     aria-label={`Unfreeze ${formatDate(date)}`}
                     onClick={() => onUnfreeze(date)}
                   >

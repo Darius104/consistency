@@ -3,11 +3,12 @@ import type { PointerEvent, SyntheticEvent } from "react";
 import type { Task } from "../../types";
 import { Checkbox } from "../ui/Checkbox";
 import { PriorityDot } from "../ui/PriorityDot";
-import { AlarmClockIcon, TrashIcon } from "../ui/icons";
+import { AlarmClockIcon, CalendarMoveIcon, TrashIcon } from "../ui/icons";
 import "./TaskItem.css";
 
-// Swipe left reveals a Delete button this wide; swiping past most of the
-// row's width deletes straight away (the iOS Mail/Reminders "full swipe").
+// Swipe left reveals a Delete button this wide (and Move beside it, when
+// the task can move); swiping past most of the row's width deletes
+// straight away (the iOS Mail/Reminders "full swipe").
 const REVEAL_PX = 84;
 const FULL_SWIPE_FRACTION = 0.55;
 
@@ -22,6 +23,9 @@ interface TaskItemProps {
   onToggle: () => void;
   onView: () => void;
   onDelete: () => void;
+  /** Move it to another day - only given for an unfinished one-off task
+   *  (TaskList decides; a repeating task comes back on its own). */
+  onMove?: () => void;
   /** Long-press (touch) / drag (mouse) to reorder - see useReorderDrag's
    *  bindLongPress. */
   onDragPointerDown: (e: PointerEvent) => void;
@@ -47,6 +51,7 @@ export function TaskItem({
   onToggle,
   onView,
   onDelete,
+  onMove,
   onDragPointerDown,
   suppressClick,
   dragging,
@@ -84,6 +89,8 @@ export function TaskItem({
   const [offset, setOffset] = useState(0);
   const [tracking, setTracking] = useState(false);
   const open = offset !== 0 && !tracking;
+  const canMove = !!onMove && !locked;
+  const reveal = canMove ? REVEAL_PX * 2 : REVEAL_PX;
 
   // An open row closes again when you touch anywhere else.
   useEffect(() => {
@@ -146,7 +153,7 @@ export function TaskItem({
       setOffset(0);
       onDelete();
     } else if (offset < -REVEAL_PX / 2) {
-      setOffset(-REVEAL_PX);
+      setOffset(-reveal);
     } else {
       setOffset(0);
     }
@@ -159,6 +166,21 @@ export function TaskItem({
       className={`task-swipe ${open ? "task-swipe--open" : ""} ${leaving ? "task-swipe--leaving" : ""}`}
       aria-hidden={leaving || undefined}
     >
+      {canMove && (
+        <button
+          type="button"
+          className="task-swipe__move"
+          tabIndex={open ? 0 : -1}
+          aria-hidden={!open}
+          onClick={() => {
+            setOffset(0);
+            onMove?.();
+          }}
+        >
+          <CalendarMoveIcon size={16} />
+          Move
+        </button>
+      )}
       {!locked && (
         <button
           type="button"
@@ -247,16 +269,31 @@ export function TaskItem({
           {task.notes && <div className="task-item__notes">{task.notes}</div>}
         </div>
         {!locked && (
-          <button
-            className="task-item__delete"
-            aria-label="Delete task"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete();
-            }}
-          >
-            <TrashIcon size={14} />
-          </button>
+          <span className="task-item__hover-actions">
+            {canMove && (
+              <button
+                className="task-item__move"
+                aria-label="Move to another day"
+                title="Move to another day"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMove?.();
+                }}
+              >
+                <CalendarMoveIcon size={14} />
+              </button>
+            )}
+            <button
+              className="task-item__delete"
+              aria-label="Delete task"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+            >
+              <TrashIcon size={14} />
+            </button>
+          </span>
         )}
       </div>
     </div>

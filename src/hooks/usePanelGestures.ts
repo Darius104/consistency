@@ -20,8 +20,19 @@ interface Options {
  *  go to the next/previous day. Native touch listeners on the scroll
  *  container, never blocking its own scrolling. Returns how far the pull
  *  indicator should show (px) and whether a refresh is running. */
+/** Where the day's content is during a swipe: x offset (px), and whether
+ *  it should glide there (true) or follow the finger as-is (false). */
+export interface DaySwipe {
+  x: number;
+  animate: boolean;
+}
+
+// How long the old day takes to slide out before the new one slides in.
+const SWIPE_OUT_MS = 170;
+
 export function usePanelGestures(ref: React.RefObject<HTMLElement | null>, options: Options) {
   const [pull, setPull] = useState(0);
+  const [swipe, setSwipe] = useState<DaySwipe>({ x: 0, animate: false });
   const [refreshing, setRefreshing] = useState(false);
   const optionsRef = useRef(options);
   optionsRef.current = options;
@@ -57,6 +68,11 @@ export function usePanelGestures(ref: React.RefObject<HTMLElement | null>, optio
         else if (Math.abs(dy) > 8) mode = "none";
         else return;
       }
+      // The day's content follows the finger 1:1.
+      if (mode === "swipe") {
+        setSwipe({ x: dx, animate: false });
+        return;
+      }
       if (mode === "pull") {
         if (el!.scrollTop > 0) {
           mode = "none";
@@ -70,6 +86,11 @@ export function usePanelGestures(ref: React.RefObject<HTMLElement | null>, optio
       }
     }
 
+    // Back at rest: nothing is offset any more.
+    function settle() {
+      setSwipe((s) => (s.x === 0 ? { x: 0, animate: false } : s));
+    }
+
     function onEnd(e: TouchEvent) {
       if (!start) return;
       const t = e.changedTouches[0];
@@ -77,7 +98,23 @@ export function usePanelGestures(ref: React.RefObject<HTMLElement | null>, optio
       const dy = t.clientY - start.y;
       if (mode === "swipe" && Math.abs(dx) >= SWIPE_MIN_PX && Math.abs(dx) > Math.abs(dy) * 1.5) {
         hapticSelection();
-        optionsRef.current.onSwipeDay(dx < 0 ? 1 : -1);
+        const delta = dx < 0 ? 1 : -1;
+        const width = el!.clientWidth;
+        // Old day slides out the way it was swiped, then the new day
+        // comes in from the other side.
+        setSwipe({ x: delta === 1 ? -width : width, animate: true });
+        window.setTimeout(() => {
+          optionsRef.current.onSwipeDay(delta);
+          setSwipe({ x: delta === 1 ? width * 0.35 : -width * 0.35, animate: false });
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => setSwipe({ x: 0, animate: true })),
+          );
+          window.setTimeout(settle, SWIPE_OUT_MS + 260);
+        }, SWIPE_OUT_MS);
+      } else if (mode === "swipe") {
+        // Not far enough: spring back.
+        setSwipe({ x: 0, animate: true });
+        window.setTimeout(settle, 260);
       }
       if (mode === "pull") {
         if (pulled >= PULL_TRIGGER_PX) {
@@ -112,5 +149,5 @@ export function usePanelGestures(ref: React.RefObject<HTMLElement | null>, optio
     };
   }, [ref, options.enabled]);
 
-  return { pull, refreshing, triggered: pull >= PULL_TRIGGER_PX };
+  return { pull, refreshing, triggered: pull >= PULL_TRIGGER_PX, swipe };
 }

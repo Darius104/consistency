@@ -1,29 +1,40 @@
+/* The Add menu. Every choice has its own color (see addKinds.ts: blue
+   task, purple template, yellow note, green result), set per element as
+   --kind (and --kind-ink, the icon color that reads on it). Phone: a sheet
+   of big colored tiles. Desktop: the familiar dropdown under "+ Add", with
+   the templates opening in a list beside it. */
+
 .add-menu {
   position: relative;
 }
 
-.add-menu__popup {
+/* --- Desktop dropdown --------------------------------------------------- */
+
+.add-menu__popup,
+.add-menu__flyout {
   position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
   z-index: 10;
-  min-width: 190px;
-  max-width: 260px;
-  max-height: 260px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-  padding: var(--space-2);
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
   display: flex;
   flex-direction: column;
   gap: 2px;
-  transform-origin: top right;
   opacity: 1;
   transform: scale(1);
   transition: opacity 160ms var(--ease-out), transform 160ms var(--ease-out);
+}
+
+.add-menu__popup {
+  top: calc(100% + 4px);
+  right: 0;
+  width: 250px;
+  max-height: 320px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  transform-origin: top right;
 
   @starting-style {
     opacity: 0;
@@ -31,59 +42,126 @@
   }
 }
 
+/* The checklist of a template's tasks needs more room than a menu row. */
+.add-menu__popup--wide {
+  width: 300px;
+}
+
+/* Beside the dropdown, level with its "Template" row - drawn over the
+   whole window (AddMenu.tsx places it), so the right panel can't crop it.
+   Fixed width: a long template name shortens with "..." instead of
+   widening it. */
+.add-menu__flyout {
+  position: fixed;
+  z-index: 1000;
+  width: 240px;
+  max-height: 300px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  transform-origin: top right;
+
+  @starting-style {
+    opacity: 0;
+    transform: translateX(6px);
+  }
+}
+
+.add-menu__flyout-title {
+  padding: 6px 8px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
 .add-menu__option {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  background: transparent;
+  gap: 10px;
+  min-width: 0;
+  padding: 7px 8px;
   border: none;
-  border-radius: var(--radius-sm);
-  padding: var(--space-2);
-  text-align: left;
+  border-radius: 8px;
+  background: transparent;
   color: var(--text);
   font-size: var(--text-sm);
+  text-align: left;
   transition: background-color 0.12s ease;
 }
 
-.add-menu__option:hover {
+.add-menu__option:hover,
+.add-menu__option--open {
   background: var(--surface-hover);
 }
 
+/* The colored square. */
 .add-menu__option-icon {
   flex: none;
-  width: 26px;
-  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  color: var(--text-secondary);
-  transition: background-color 0.12s ease, color 0.12s ease;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--kind, var(--accent));
+  color: var(--kind-ink, #fff);
 }
 
-.add-menu__option:hover .add-menu__option-icon {
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-
-.add-menu__option-name {
+.add-menu__option-text {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.add-menu__option-name,
+.add-menu__option-sub {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 500;
+}
+
+.add-menu__option-name {
+  font-weight: 600;
+}
+
+.add-menu__option-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Templates beside the dropdown: name, then its task count on the right. */
+.add-menu__flyout .add-menu__option-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+
+.add-menu__flyout .add-menu__option-sub,
+.add-menu__flyout .add-menu__option-chevron {
+  display: none;
 }
 
 .add-menu__option-meta {
   flex: none;
-  font-size: var(--text-xs);
+  font-size: 11px;
   color: var(--text-muted);
 }
 
 .add-menu__option-chevron {
   flex: none;
+  color: var(--text-muted);
+}
+
+.add-menu__kbd {
+  flex: none;
+  padding: 1px 6px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  font: inherit;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
@@ -93,25 +171,18 @@
 }
 
 /* The divider lives here, not on the button itself - so the hover
-   highlight (scoped to just the button's own box) never touches the line,
-   instead of looking fused to it. */
+   highlight never touches the line. */
 .add-menu__back-row {
   padding-bottom: var(--space-2);
   margin-bottom: var(--space-2);
   border-bottom: 1px solid var(--border);
 }
 
-/* Wider than the plain option-list steps - a checklist of task titles needs
-   more room to stay readable than a one-line menu item does. */
-.add-menu__popup--wide {
-  min-width: 240px;
-  max-width: 320px;
-}
-
 .add-menu__step {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
   animation: add-menu-step-in 140ms var(--ease-out);
 }
 
@@ -120,27 +191,42 @@
     opacity: 0;
     transform: translateX(4px);
   }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
 }
+
+/* --- A template's tasks: pick which to add ----------------------------- */
 
 .add-menu__review-header {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
   padding: 0 var(--space-2);
-  margin-bottom: 2px;
+  margin-bottom: 4px;
 }
 
 .add-menu__review-title {
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.add-menu__review-dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--kind);
+}
+
+.add-menu__review-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .add-menu__review-select-all {
@@ -162,7 +248,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  max-height: 180px;
+  max-height: 200px;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -188,79 +274,134 @@
 
 .add-menu__review-confirm {
   margin-top: var(--space-2);
+  border-color: transparent;
+  background: var(--kind);
+  color: var(--kind-ink, #fff);
+  font-weight: 600;
 }
 
-/* Two-line options (name + what it does) - the subtitle only shows in the
-   phone sheet; the desktop dropdown stays a compact one-line menu. */
-.add-menu__option-text {
-  flex: 1;
+/* --- Phone: a sheet of big colored tiles (inside Modal) ----------------- */
+
+.add-menu__tiles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  animation: add-menu-step-in 140ms var(--ease-out);
+}
+
+.add-menu__tile {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--kind) 30%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--kind) 14%, var(--surface));
+  color: var(--text);
+  text-align: left;
+  transition: transform 120ms var(--ease-out), background-color 0.12s ease;
 }
 
-.add-menu__option-sub {
-  display: none;
+.add-menu__tile:active {
+  transform: scale(0.97);
+  background: color-mix(in srgb, var(--kind) 22%, var(--surface));
 }
 
-.add-menu__option-icon--task {
-  background: var(--accent-soft);
-  color: var(--accent);
+/* An odd last tile takes the whole row. */
+.add-menu__tile:last-child:nth-child(odd) {
+  grid-column: span 2;
 }
 
-.add-menu__option-icon--template {
-  background: rgba(167, 139, 250, 0.16);
-  color: #a78bfa;
+.add-menu__tile-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 10px;
+  border-radius: 13px;
+  background: var(--kind);
+  color: var(--kind-ink, #fff);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--kind) 35%, transparent);
 }
 
-.add-menu__option-icon--note {
-  background: rgba(245, 196, 66, 0.16);
-  color: #f5c442;
+.add-menu__tile-icon svg {
+  width: 20px;
+  height: 20px;
 }
 
-/* --- Phone: bottom sheet (rendered inside Modal, see AddMenu.tsx) --- */
-
-.add-menu__sheet .add-menu__step {
-  gap: 4px;
-}
-
-.add-menu__sheet .add-menu__option {
-  gap: var(--space-3);
-  min-height: 58px;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  background: var(--surface);
+.add-menu__tile-name {
   font-size: var(--text-md);
+  font-weight: 700;
 }
 
-.add-menu__sheet .add-menu__option:active {
-  background: var(--surface-hover);
+.add-menu__tile-sub,
+.add-menu__tile-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.add-menu__sheet .add-menu__option-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-}
-
-.add-menu__sheet .add-menu__option-icon svg {
-  width: 18px;
-  height: 18px;
-}
-
-.add-menu__sheet .add-menu__option-sub {
-  display: block;
-  margin-top: 1px;
+.add-menu__tile-sub {
   font-size: var(--text-xs);
   color: var(--text-muted);
 }
 
+/* Template list on the phone: one rounded group of rows. */
+.add-menu__group {
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.add-menu__sheet .add-menu__template {
+  position: relative;
+  gap: 12px;
+  min-height: 58px;
+  padding: 8px 14px;
+  border-radius: 0;
+  font-size: var(--text-md);
+}
+
+.add-menu__sheet .add-menu__template + .add-menu__template::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 56px;
+  right: 0;
+  height: 1px;
+  background: var(--border);
+}
+
+.add-menu__sheet .add-menu__template:active {
+  background: var(--surface-hover);
+}
+
+.add-menu__sheet .add-menu__option-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+}
+
+.add-menu__sheet .add-menu__option-name {
+  font-weight: 500;
+}
+
+.add-menu__sheet .add-menu__option-sub {
+  font-size: var(--text-xs);
+}
+
 .add-menu__sheet .add-menu__option-meta {
-  font-size: var(--text-sm);
+  display: none;
 }
 
 /* Back is a plain text link here - the sheet's title already says where
-   you are, so it doesn't need a full row + divider. */
+   you are. */
 .add-menu__sheet .add-menu__back-row {
   border-bottom: none;
   padding-bottom: 0;
@@ -281,12 +422,12 @@
   margin: var(--space-1) 0 var(--space-2);
 }
 
-/* The checklist gets real height on a phone - and 44px rows. */
+/* The checklist gets real height on a phone - and 46px rows. */
 .add-menu__sheet .add-menu__review-list {
   max-height: 50dvh;
   gap: 0;
   background: var(--surface);
-  border-radius: var(--radius-md);
+  border-radius: 14px;
   padding: 0 var(--space-1);
 }
 
@@ -304,10 +445,10 @@
 .add-menu__sheet .add-menu__review-confirm {
   position: sticky;
   bottom: 0;
-  height: 48px;
+  height: 50px;
   margin-top: var(--space-3);
+  border-radius: 14px;
   font-size: var(--text-md);
-  font-weight: 600;
 }
 
 /* Phone: the tab bar's "+" is the way in (it opens the sheet through
@@ -317,14 +458,4 @@
   .add-menu > .btn {
     display: none;
   }
-}
-
-.add-menu__option-icon--result {
-  background: rgba(29, 215, 91, 0.14);
-  color: var(--trading-profit);
-}
-
-.add-menu__option-icon--result {
-  background: rgba(29, 215, 91, 0.14);
-  color: var(--trading-profit);
 }

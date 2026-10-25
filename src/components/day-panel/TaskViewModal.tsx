@@ -3,7 +3,7 @@ import type { Tag, Task } from "../../types";
 import { addDays, parseDateKey, todayKey } from "../../utils/dates";
 import { describeRecurrence, isTaskScheduledOn } from "../../utils/recurrence";
 import { Button } from "../ui/Button";
-import { CheckIcon, EditIcon, TrashIcon } from "../ui/icons";
+import { CalendarMoveIcon, CheckIcon, EditIcon, TrashIcon } from "../ui/icons";
 import { Modal } from "../ui/Modal";
 import { PriorityDot } from "../ui/PriorityDot";
 import "./TaskViewModal.css";
@@ -21,6 +21,8 @@ interface TaskViewModalProps {
   onToggle: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  /** Move it to another day - only given for a one-off task (App.tsx). */
+  onMove?: () => void;
   onClose: () => void;
 }
 
@@ -88,6 +90,7 @@ export function TaskViewModal({
   onToggle,
   onEdit,
   onDelete,
+  onMove,
   onClose,
 }: TaskViewModalProps) {
   const recurring = task.recurrenceType !== "none";
@@ -183,6 +186,13 @@ export function TaskViewModal({
             {completed ? "Completed" : "Mark complete"}
           </button>
         </div>
+
+        {!locked && !completed && onMove && (
+          <button type="button" className="task-view__move" onClick={onMove}>
+            <CalendarMoveIcon size={15} />
+            Move to another day
+          </button>
+        )}
 
         {!locked && (
           <button type="button" className="task-view__delete" onClick={onDelete}>

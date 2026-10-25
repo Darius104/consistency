@@ -46,7 +46,6 @@ export function TaskGroup({
   // A finished group that's been folded away shrinks to one quiet line
   // (TaskList also moves it to the bottom) - what's left to do stays on top.
   const isDoneCompact = isComplete && collapsed;
-  const percent = totalCount === 0 ? 0 : (doneCount / totalCount) * 100;
 
   return (
     <div
@@ -89,14 +88,23 @@ export function TaskGroup({
         }}
         aria-expanded={!collapsed}
       >
-        {isDoneCompact ? (
+        {isDoneCompact && (
           <span className="task-group__done-icon" aria-hidden="true">
             <CheckIcon size={11} />
           </span>
-        ) : (
-          <span className="task-group__dot" aria-hidden="true" />
         )}
         <span className="task-group__label">{label}</span>
+        {/* Folded with tasks still to do: says so, in the template's color. */}
+        {collapsed && !isComplete && totalCount > 0 && (
+          <span className="task-group__left">{totalCount - doneCount} left</span>
+        )}
+        {!isDoneCompact && (
+          <span
+            className="task-group__ring"
+            style={{ "--progress": totalCount === 0 ? 0 : doneCount / totalCount } as CSSProperties}
+            aria-hidden="true"
+          />
+        )}
         <span className="task-group__count">
           {doneCount}/{totalCount}
         </span>
@@ -105,11 +113,6 @@ export function TaskGroup({
           className={`task-group__chevron ${collapsed ? "" : "task-group__chevron--open"}`}
         />
       </div>
-      {!isDoneCompact && (
-        <div className="task-group__progress" aria-hidden="true">
-          <span style={{ width: `${percent}%` }} />
-        </div>
-      )}
       <div
         className={`task-group__items-wrapper ${collapsed ? "task-group__items-wrapper--collapsed" : ""}`}
         aria-hidden={collapsed}

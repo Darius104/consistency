@@ -101,7 +101,7 @@
   border: none;
   background: none;
   padding: 0;
-  color: var(--accent);
+  color: var(--page-color, var(--accent));
   font-size: var(--text-sm);
   font-weight: 600;
 }
@@ -141,10 +141,15 @@
   font-weight: 500;
 }
 
+/* Your code, while it's valid: a chip in the page's green. */
 .friends-manager .friends-manager__code {
   display: inline-flex;
   align-items: baseline;
   gap: var(--space-2);
+  padding: 4px 12px;
+  border: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--page-color, var(--accent)) 16%, transparent);
 }
 
 .friends-manager .friends-manager__code-value {
@@ -162,11 +167,20 @@
   font-variant-numeric: tabular-nums;
 }
 
-.friends-manager__redeem-input {
+/* (Doubled class: out-ranks .settings-group__input's right alignment,
+   which loads after this file.) */
+.friends-manager__redeem-input.friends-manager__redeem-input {
+  flex: 1;
   text-align: left;
   text-transform: uppercase;
 }
 
 .friends-manager__redeem-input::placeholder {
   text-transform: none;
+}
+
+/* (Doubled class: out-ranks .settings-group__value, which loads later.) */
+.friends-manager__open.friends-manager__open {
+  color: color-mix(in srgb, var(--page-color, var(--accent)) 85%, var(--text));
+  font-weight: 600;
 }

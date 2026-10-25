@@ -6,7 +6,9 @@ import {
   parseTradingResultInput,
 } from "../../utils/trading";
 import { Button } from "../ui/Button";
+import { TrendingUpIcon } from "../ui/icons";
 import { Modal } from "../ui/Modal";
+import { ADD_COLORS } from "./addKinds";
 import "./TradingResultModal.css";
 
 const PLACEHOLDER: Record<TradingResultUnit, string> = {
@@ -85,7 +87,12 @@ export function TradingResultModal({
   const hasAmount = draft.trim() !== "";
 
   return (
-    <Modal title={`Result · ${formatDayName(dateKey)}`} onClose={onClose}>
+    <Modal
+      title={`Result · ${formatDayName(dateKey)}`}
+      icon={<TrendingUpIcon size={14} />}
+      accent={ADD_COLORS.result}
+      onClose={onClose}
+    >
       <div className={`trading-result-modal trading-result-modal--${side}`}>
         <div
           className="trading-result-modal__side"
@@ -124,6 +131,9 @@ export function TradingResultModal({
             aria-label="Amount"
             aria-invalid={invalid}
             value={draft}
+            // Sized to what's typed, so the amount sits centered with its
+            // sign and unit right beside it.
+            size={Math.max(draft.length, hasAmount ? 1 : PLACEHOLDER[selectedUnit].length)}
             onChange={(e) => onDraftChange(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") commit();

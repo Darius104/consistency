@@ -1,62 +1,41 @@
-.admin-members {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  margin-top: var(--space-5);
-}
-
 .admin-members__header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+  padding-right: var(--space-3);
 }
 
 .admin-members__count {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  color: var(--text-muted);
 }
 
 .admin-members__search {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--text-sm);
+  height: 40px;
+  padding: 0 var(--space-4);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: var(--surface);
+  font-size: var(--text-md);
   color: var(--text);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.15s ease;
 }
 
-.admin-members__search:hover {
-  border-color: var(--border-strong);
+.admin-members__search::placeholder {
+  color: var(--text-muted);
 }
 
 .admin-members__search:focus-visible {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-.admin-members__empty {
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-}
-
-.admin-members__list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  max-height: 360px;
-  overflow-y: auto;
+  border-color: var(--page-color, var(--accent));
 }
 
 .admin-members__row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-3);
+  gap: var(--space-2);
+}
+
+.admin-members__row .avatar-badge {
+  margin-right: 2px;
 }
 
 .admin-members__identity {
@@ -71,8 +50,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: var(--text-md);
-  color: var(--text);
+  font-weight: 600;
 }
 
 .admin-members__bio {
@@ -83,45 +61,31 @@
   color: var(--text-muted);
 }
 
-.admin-members__tier {
-  flex: none;
-  font-size: var(--text-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  padding: 2px 8px;
-  border-radius: 999px;
-  color: var(--text-secondary);
-  background: var(--bg-elevated);
-}
-
-.admin-members__tier--premium {
-  color: var(--priority-medium);
-  background: rgba(217, 164, 65, 0.14);
-}
-
-.admin-members__tier--admin {
-  color: var(--accent);
-  background: var(--accent-soft);
-}
-
+/* See this member's calendar - a soft round button. */
 .admin-members__view {
   flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
-  background: transparent;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface-hover);
   color: var(--text-secondary);
 }
 
-.admin-members__view:hover:not(:disabled) {
-  border-color: var(--border-strong);
-  color: var(--text);
+@media (hover: hover) {
+  .admin-members__view:hover:not(:disabled) {
+    color: var(--text);
+  }
 }
 
 .admin-members__view:disabled {
   opacity: 0.4;
+}
+
+/* Taking Premium away is the quieter (grey) action. */
+.admin-members__make-free {
+  --action-color: var(--text-secondary);
 }

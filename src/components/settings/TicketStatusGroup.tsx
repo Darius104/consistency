@@ -14,12 +14,11 @@ export function TicketStatusGroup<T>({ label, tickets, renderRow }: TicketStatus
   if (tickets.length === 0) return null;
 
   return (
-    <div className="ticket-status-group">
-      <div className="ticket-status-group__header">
-        <span className="settings__label">{label}</span>
-        <span className="ticket-status-group__count">{tickets.length}</span>
-      </div>
-      <div className="support-list">{tickets.map(renderRow)}</div>
+    <div className="settings-group-wrap">
+      <span className="settings-group__title">
+        {label} · {tickets.length}
+      </span>
+      <div className="settings-group">{tickets.map(renderRow)}</div>
     </div>
   );
 }

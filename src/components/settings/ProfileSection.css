@@ -16,11 +16,12 @@
 
 .profile-page__change {
   border: none;
-  background: none;
-  padding: var(--space-1) var(--space-2);
-  color: var(--accent);
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--page-color, var(--accent)) 16%, transparent);
+  color: color-mix(in srgb, var(--page-color, var(--accent)) 85%, var(--text));
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .profile-page__field-label {

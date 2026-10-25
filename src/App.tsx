@@ -7,6 +7,7 @@ import { PhraseModal } from "./components/calendar/PhraseModal";
 import { DayPanel } from "./components/day-panel/DayPanel";
 import { NoteForm } from "./components/day-panel/NoteForm";
 import { TaskViewModal } from "./components/day-panel/TaskViewModal";
+import { MoveTaskModal } from "./components/day-panel/MoveTaskModal";
 import { supabase } from "./lib/supabaseClient";
 import { clearAllCache } from "./db/localCache";
 import { ensureProfile, syncMyThemeToProfile, type Friend } from "./db/friends";
@@ -67,7 +68,7 @@ import type {
   TradingResult,
   TradingResultUnit,
 } from "./types";
-import { addDays, startOfWeek, todayKey } from "./utils/dates";
+import { addDays, formatDayName, startOfWeek, todayKey } from "./utils/dates";
 import { tasksScheduledOn } from "./utils/recurrence";
 import {
   computeTemplateBreakdown,
@@ -92,9 +93,11 @@ import {
   parsePanelOrder,
   parseHiddenWidgets,
   resolveNewWidgetIds,
+  parseStreakStyle,
   FREE_WIDGET_LIMIT,
   WIDGET_IDS,
   type PanelBlockId,
+  type StreakStyle,
   type WidgetId,
 } from "./utils/panelOrder";
 import { useTaskReminders } from "./hooks/useTaskReminders";
@@ -152,6 +155,12 @@ const HIDDEN_WIDGETS_SETTING_KEY = "hiddenWidgets";
 // why hiddenWidgets alone can't tell "shown" apart from "never migrated".
 const KNOWN_WIDGET_IDS_SETTING_KEY = "knownWidgetIds";
 const PHRASE_VIEW_SETTING_KEY = "lastPhraseViewDate";
+// Which look the Day Streak widget has (Settings > Widgets > Day Streak).
+const STREAK_STYLE_SETTING_KEY = "streakStyle";
+// Whether friends see your logged results on your calendar - "false" hides
+// them; anything else (or never set) shares. Read on the server too, by
+// get_friend_calendar_data (supabase/friend_trading_results_schema.sql).
+const SHARE_RESULTS_SETTING_KEY = "shareTradingResults";
 const FREEZE_SUGGESTION_DISMISSED_KEY = "freezeSuggestionDismissedDate";
 const TRADING_RESULT_UNIT_SETTING_KEY = "tradingResultUnit";
 const DEFAULT_TRADING_RESULT_UNIT: TradingResultUnit = "r";
@@ -235,10 +244,25 @@ export default function App() {
   const [appearanceMode, setAppearanceMode] = useState<AppearanceMode>(
     () => readLocalAppearanceMode() ?? "dark",
   );
+  // The last mode picked here, and when - same reason as
+  // recentStreakStyleRef below: a sync finishing between quick taps could
+  // bring back the server's older mode and flip the app back and forth.
+  const recentAppearanceRef = useRef<{ mode: AppearanceMode; at: number } | null>(null);
+  const appearanceSaveTimerRef = useRef<number | null>(null);
+
+  // Switches at once; saves only the one you stop on.
   function handleChangeAppearanceMode(mode: AppearanceMode) {
     setAppearanceMode(mode);
     rememberAppearanceModeLocally(mode);
-    void setSetting(APPEARANCE_MODE_SETTING_KEY, mode);
+    recentAppearanceRef.current = { mode, at: Date.now() };
+    if (appearanceSaveTimerRef.current !== null) {
+      window.clearTimeout(appearanceSaveTimerRef.current);
+    }
+    appearanceSaveTimerRef.current = window.setTimeout(() => {
+      appearanceSaveTimerRef.current = null;
+      recentAppearanceRef.current = { mode, at: Date.now() };
+      void setSetting(APPEARANCE_MODE_SETTING_KEY, mode);
+    }, 500);
   }
   const [customColors, setCustomColors] = useState<RandomThemeColors | null>(
     null,
@@ -247,6 +271,14 @@ export default function App() {
   const [panelOrder, setPanelOrder] =
     useState<PanelBlockId[]>(DEFAULT_PANEL_ORDER);
   const [hiddenWidgets, setHiddenWidgets] = useState<WidgetId[]>([]);
+  const [streakStyle, setStreakStyle] = useState<StreakStyle>("campfire");
+  const [shareResults, setShareResults] = useState(true);
+  // The last style picked here, and when - a background sync finishing
+  // mid-way can briefly bring back the server's older choice, and its
+  // reload used to flip the widget back, then forward again (the same
+  // flicker withRecentToggles stops for checkboxes). A fresh pick wins.
+  const recentStreakStyleRef = useRef<{ style: StreakStyle; at: number } | null>(null);
+  const streakStyleSaveTimerRef = useRef<number | null>(null);
   const [arranging, setArranging] = useState(false);
   const [loading, setLoading] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -293,6 +325,11 @@ export default function App() {
     task: Task;
     date: string;
   } | null>(null);
+  // The task whose "Move to another day" picker is open.
+  const [movingTask, setMovingTask] = useState<Task | null>(null);
+  // "Moved ... to Tomorrow · Undo" right after a move - the same toast spot
+  // as the other two. Holds the tasks as they were, so Undo puts them back.
+  const [movedUndo, setMovedUndo] = useState<{ tasks: Task[]; to: string } | null>(null);
   // Same confirmation step for notes - free-typed content is just as easy
   // to lose to a stray tap as a task, and previously had no confirmation
   // at all, unlike every task-deletion path.
@@ -480,6 +517,8 @@ export default function App() {
       savedPhraseViewDate,
       savedFreezeSuggestionDismissedDate,
       savedAppearanceMode,
+      savedStreakStyle,
+      savedShareResults,
     ] = await Promise.all([
       getAllTasks(),
       getTags(),
@@ -500,6 +539,8 @@ export default function App() {
       getSetting(PHRASE_VIEW_SETTING_KEY),
       getSetting(FREEZE_SUGGESTION_DISMISSED_KEY),
       getSetting(APPEARANCE_MODE_SETTING_KEY),
+      getSetting(STREAK_STYLE_SETTING_KEY),
+      getSetting(SHARE_RESULTS_SETTING_KEY),
     ]);
     setTasks(taskRows);
     setTags(tagRows);
@@ -531,6 +572,13 @@ export default function App() {
     setTradingResultUnit(
       (savedTradingResultUnit as TradingResultUnit | null) ??
         DEFAULT_TRADING_RESULT_UNIT,
+    );
+    const recentStyle = recentStreakStyleRef.current;
+    setShareResults(savedShareResults !== "false");
+    setStreakStyle(
+      recentStyle && Date.now() - recentStyle.at < RECENT_TOGGLE_MS
+        ? recentStyle.style
+        : parseStreakStyle(savedStreakStyle),
     );
 
     let resolvedTheme: ThemeId;
@@ -600,7 +648,10 @@ export default function App() {
     }
     setLastPhraseViewDate(savedPhraseViewDate);
     setFreezeSuggestionDismissedDate(savedFreezeSuggestionDismissedDate);
-    if (savedAppearanceMode === "light" || savedAppearanceMode === "dark") {
+    const recentMode = recentAppearanceRef.current;
+    if (recentMode && Date.now() - recentMode.at < RECENT_TOGGLE_MS) {
+      // Just picked here - keep it (see recentAppearanceRef).
+    } else if (savedAppearanceMode === "light" || savedAppearanceMode === "dark") {
       setAppearanceMode(savedAppearanceMode);
       rememberAppearanceModeLocally(savedAppearanceMode);
     } else {
@@ -731,6 +782,26 @@ export default function App() {
       : [...hiddenWidgets, id];
     setHiddenWidgets(next);
     await setSetting(HIDDEN_WIDGETS_SETTING_KEY, JSON.stringify(next));
+  }
+
+  async function handleChangeShareResults(share: boolean) {
+    setShareResults(share);
+    await setSetting(SHARE_RESULTS_SETTING_KEY, share ? "true" : "false");
+  }
+
+  // Switches at once; saves only the one you stop on (quick taps through
+  // the styles used to queue a save and a sync per tap).
+  function handleChangeStreakStyle(style: StreakStyle) {
+    setStreakStyle(style);
+    recentStreakStyleRef.current = { style, at: Date.now() };
+    if (streakStyleSaveTimerRef.current !== null) {
+      window.clearTimeout(streakStyleSaveTimerRef.current);
+    }
+    streakStyleSaveTimerRef.current = window.setTimeout(() => {
+      streakStyleSaveTimerRef.current = null;
+      recentStreakStyleRef.current = { style, at: Date.now() };
+      void setSetting(STREAK_STYLE_SETTING_KEY, style);
+    }, 500);
   }
 
   async function handleShowWidget(id: WidgetId) {
@@ -888,6 +959,7 @@ export default function App() {
     });
     if (nextCompleted) {
       setDeletedTaskUndo(null);
+      setMovedUndo(null);
       setCompletedUndo({ task, date: selectedDate });
     } else if (completedUndo?.task.id === task.id) {
       setCompletedUndo(null);
@@ -912,6 +984,8 @@ export default function App() {
       setPaywallFeature("Streak freezes");
       return;
     }
+    // Only a day that's over can be missed - see getFreezeCandidates.
+    if (date >= todayKey()) return;
     if (freezesRemainingInMonth(freezes, date) === 0) return;
     setFreezes((prev) => new Set(prev).add(date));
     await addStreakFreeze(date);
@@ -967,6 +1041,7 @@ export default function App() {
     if (selectedDate < todayKey()) return;
     if (isDesktopWidth()) {
       void handleDeleteTask(task);
+      setMovedUndo(null);
       setDeletedTaskUndo(task);
     } else {
       setPendingDeleteTask(task);
@@ -987,6 +1062,36 @@ export default function App() {
     const task = pendingDeleteTask;
     setPendingDeleteTask(null);
     await handleDeleteTask(task);
+  }
+
+  function handleRequestMoveTask(task: Task) {
+    // Same past-day lock as deleting - moving a task off a day that's over
+    // would rewrite how that day went.
+    if (selectedDate < todayKey()) return;
+    setMovingTask(task);
+  }
+
+  // A one-off task lives on its startDate (see isTaskScheduledOn), so moving
+  // it is just giving it a new one.
+  async function handleMoveTasks(list: Task[], toDate: string) {
+    setMovingTask(null);
+    setViewingTask(null);
+    if (toDate < todayKey() || toDate === selectedDate) return;
+    for (const task of list) {
+      await updateTask(task.id, { ...task, startDate: toDate, endDate: null });
+    }
+    setDeletedTaskUndo(null);
+    setCompletedUndo(null);
+    setMovedUndo({ tasks: list, to: toDate });
+    await refreshAll();
+  }
+
+  async function handleUndoMove() {
+    if (!movedUndo) return;
+    const { tasks: list } = movedUndo;
+    setMovedUndo(null);
+    for (const task of list) await updateTask(task.id, task);
+    await refreshAll();
   }
 
   async function handleReorderTasks(taskIds: string[]) {
@@ -1281,6 +1386,20 @@ export default function App() {
           onDismiss={() => setCompletedUndo(null)}
         />
       )}
+      {movedUndo && !deletedTaskUndo && !completedUndo && (
+        <TaskDeletedToast
+          key={`moved-${movedUndo.tasks[0].id}-${movedUndo.to}`}
+          verb="Moved"
+          taskTitle={
+            movedUndo.tasks.length === 1
+              ? movedUndo.tasks[0].title
+              : `${movedUndo.tasks.length} tasks`
+          }
+          after={`to ${formatDayName(movedUndo.to)}`}
+          onUndo={() => void handleUndoMove()}
+          onDismiss={() => setMovedUndo(null)}
+        />
+      )}
       {deletedTaskUndo && (
         <TaskDeletedToast
           key={deletedTaskUndo.id}
@@ -1349,6 +1468,8 @@ export default function App() {
         tags={tags}
         streak={streak}
         bestStreak={bestStreak}
+        streakStyle={streakStyle}
+        onChangeStreakStyle={handleChangeStreakStyle}
         todayStatus={todayStatus}
         weekly={weekly}
         freezesRemaining={freezesRemainingThisMonth}
@@ -1370,6 +1491,7 @@ export default function App() {
         onToggle={handleToggle}
         onView={setViewingTask}
         onDelete={handleRequestDeleteTask}
+        onMove={handleRequestMoveTask}
         onReorderTasks={handleReorderTasks}
         onReorderTags={handleReorderTags}
         templates={templates}
@@ -1474,6 +1596,10 @@ export default function App() {
             onShowWidget={handleShowWidget}
             streak={streak}
             bestStreak={bestStreak}
+            streakStyle={streakStyle}
+            onChangeStreakStyle={handleChangeStreakStyle}
+            shareResults={shareResults}
+            onChangeShareResults={(share) => void handleChangeShareResults(share)}
             todayStatus={todayStatus}
             weekly={weekly}
             templateBreakdown={templateBreakdown}
@@ -1526,7 +1652,37 @@ export default function App() {
             setViewingTask(null);
             handleRequestDeleteTask(task);
           }}
+          onMove={
+            viewingTask.recurrenceType === "none"
+              ? () => handleRequestMoveTask(viewingTask)
+              : undefined
+          }
           onClose={() => setViewingTask(null)}
+        />
+      )}
+
+      {movingTask && (
+        <MoveTaskModal
+          task={movingTask}
+          fromDate={selectedDate}
+          groupRest={
+            movingTask.tagId
+              ? occurrences
+                  .filter(
+                    (o) =>
+                      !o.completed &&
+                      o.task.id !== movingTask.id &&
+                      o.task.tagId === movingTask.tagId &&
+                      o.task.recurrenceType === "none",
+                  )
+                  .map((o) => o.task)
+              : []
+          }
+          groupName={tags.find((t) => t.id === movingTask.tagId)?.name}
+          groupColor={tags.find((t) => t.id === movingTask.tagId)?.color}
+          tasks={tasks}
+          onMove={(list, toDate) => void handleMoveTasks(list, toDate)}
+          onClose={() => setMovingTask(null)}
         />
       )}
 

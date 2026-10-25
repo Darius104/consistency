@@ -14,6 +14,8 @@
   overflow: visible;
 }
 
+/* Swiped open: Move (blue, when the task can move) then Delete (red). */
+.task-swipe__move,
 .task-swipe__delete {
   position: absolute;
   inset: 0 0 0 auto;
@@ -30,14 +32,20 @@
   font-weight: 600;
 }
 
+.task-swipe__move {
+  right: 84px;
+  background: #3b82f6;
+}
+
 .task-item {
   position: relative;
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-3) 2px;
-  /* Opaque, so the Delete button behind stays hidden until swiped to. */
-  background: var(--bg-elevated);
+  padding: 10px 14px 10px 16px;
+  /* The card's own surface (TaskGroup.css) - and opaque, so the Delete
+     button behind stays hidden until swiped to. */
+  background: var(--surface);
   cursor: pointer;
   /* Native vertical scrolling stays on everywhere on the row - sideways
      moves come to us for the swipe, and a long press picks the row up
@@ -81,14 +89,11 @@
    translateY instead of fighting it. */
 .task-item--dragging {
   z-index: 5;
-  /* Grows into the group card's own side padding (equal padding back, so
-     the checkbox and title don't move) - the lifted row reads as a card of
-     its own while staying inside the group. A scale-up instead pushed its
-     left edge out past the group. */
-  margin-inline: calc(-1 * var(--space-3));
-  padding-inline: calc(var(--space-3) + 2px);
+  /* Lifts as a card of its own; it already spans the list's full width,
+     so it doesn't need to grow (a scale-up pushed its edges out past the
+     list). */
   border-radius: var(--radius-md);
-  background: var(--surface);
+  background: var(--surface-hover);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
   cursor: grabbing;
 }
@@ -124,7 +129,7 @@
 
 .task-item__time {
   font-size: var(--text-xs);
-  color: var(--text-secondary);
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
   flex: none;
 }
@@ -140,23 +145,40 @@
 
 /* Desktop: a small trash that appears on hover. Touch: none at all -
    swipe left instead (the inline button was too easy to hit by accident). */
+/* Laid over the right end of the row (on hover), so it doesn't hold space
+   and push the time in from the edge. */
+.task-item__hover-actions {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  translate: 0 -50%;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.task-item__move,
 .task-item__delete {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: none;
-  background: transparent;
+  background: var(--surface-hover);
   border: none;
   color: var(--text-muted);
   padding: var(--space-1);
   border-radius: var(--radius-sm);
-  opacity: 0;
-  transition: opacity 0.12s ease, color 0.12s ease;
+  transition: color 0.12s ease;
 }
 
 @media (hover: hover) {
-  .task-item:hover .task-item__delete {
+  .task-item:hover .task-item__hover-actions,
+  .task-item__hover-actions:focus-within {
     opacity: 1;
+  }
+
+  .task-item__move:hover {
+    color: #3b82f6;
   }
 
   .task-item__delete:hover {
@@ -165,13 +187,13 @@
 }
 
 @media (hover: none) {
-  .task-item__delete {
+  .task-item__hover-actions {
     display: none;
   }
 }
 
+/* Done: greyed out rather than crossed out - quieter, still readable. */
 .task-item--completed .task-item__title {
-  text-decoration: line-through;
   color: var(--text-muted);
 }
 
@@ -186,14 +208,15 @@
   pointer-events: none;
 }
 
-.task-swipe--leaving .task-swipe__delete {
+.task-swipe--leaving .task-swipe__delete,
+.task-swipe--leaving .task-swipe__move {
   visibility: hidden;
 }
 
 /* The divider above a leaving row fades with it rather than lingering as
    a double line while the gap closes. */
-.task-group__items > *:has(> .task-swipe--leaving) {
-  border-top-color: transparent;
+.task-group__items > *:has(> .task-swipe--leaving)::before {
+  display: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -207,20 +230,10 @@
    them. The rows reach a few px into the group card's own padding (see
    TaskGroup.css) and pad back by the same, so text stays where it was. */
 @media (hover: hover) and (pointer: fine) {
-  .task-item {
-    padding-inline: var(--space-2);
-    border-radius: var(--radius-md);
-  }
-
-  /* Swipe-to-delete is touch only - and its red button would peek out
-     behind the rounded corners. */
-  .task-swipe__delete {
+  /* Swipe-to-delete (and move) is touch only. */
+  .task-swipe__delete,
+  .task-swipe__move {
     display: none;
-  }
-
-  .task-item--dragging {
-    margin-inline: -4px;
-    padding-inline: calc(var(--space-2) + 4px);
   }
 }
 
@@ -261,4 +274,26 @@
 .task-item__time-icon {
   flex: none;
   opacity: 0.8;
+}
+
+/* The checkbox in a task row: round, in the template's color (from the
+   group, see TaskGroup.css) - so done ticks match their group instead of
+   all being bright green. */
+.task-item .checkbox {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border-color: color-mix(in srgb, var(--group-color, var(--accent)) 75%, var(--text-muted));
+}
+
+.task-item .checkbox--checked,
+.task-item .checkbox-hit:hover .checkbox--checked {
+  background: var(--group-color, var(--accent));
+  border-color: var(--group-color, var(--accent));
+  color: #fff;
+}
+
+.task-item .checkbox-hit:hover .checkbox:not(.checkbox--checked),
+.task-item .checkbox:hover:not(.checkbox--checked) {
+  border-color: var(--group-color, var(--accent));
 }

@@ -1,26 +1,31 @@
+/* The result button: a soft green pill in the same shape as "+ Add"
+   next to it (DayPanel.css) - green is the result's color everywhere
+   (see addKinds.ts). Once a result is logged it shows in its own color
+   (green profit / red loss). */
 .trading-result {
+  --result-color: #22c55e;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  /* Same size and shape as the "+ Add" button next to it (see Button.css)
-     - only the dashed outline says it's the optional one. */
-  height: 30px;
-  padding: 0 var(--space-3);
-  border-radius: var(--radius-sm);
-  border: 1px dashed var(--border-strong);
-  background: transparent;
-  color: var(--text-secondary);
+  gap: 5px;
+  height: 34px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--result-color) 14%, var(--surface));
+  color: color-mix(in srgb, var(--result-color) 85%, var(--text));
   font-size: var(--text-sm);
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
-  transition: border-color 0.12s ease, color 0.12s ease, background-color 0.12s ease;
+  transition: background-color 0.12s ease, transform 120ms var(--ease-out);
 }
 
 .trading-result:hover {
-  color: var(--accent);
-  border-color: var(--accent);
-  background: var(--surface-hover);
+  background: color-mix(in srgb, var(--result-color) 24%, var(--surface));
+}
+
+.trading-result:active {
+  transform: scale(0.96);
 }
 
 .trading-result__dot {
@@ -31,11 +36,11 @@
 }
 
 .trading-result--positive {
-  color: var(--trading-profit);
+  --result-color: var(--trading-profit);
 }
 
 .trading-result--negative {
-  color: var(--trading-loss);
+  --result-color: var(--trading-loss);
 }
 
 /* Phone: logging a result lives in the tab bar's "+" sheet (see AddMenu),

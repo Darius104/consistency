@@ -41,33 +41,33 @@
   color: var(--trading-loss);
 }
 
-/* --- Amount: an underline, not a boxed field --- */
+/* --- Amount: big and centered, in the side's color (green / red) --- */
 
 .trading-result-modal__field {
   display: flex;
   align-items: baseline;
-  gap: 2px;
-  border-bottom: 2px solid var(--border);
-  padding: var(--space-2) 2px;
-  font-size: 28px;
-  font-weight: 700;
+  justify-content: center;
+  gap: 4px;
+  padding: var(--space-3) 0 var(--space-2);
+  font-size: 46px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   color: var(--side-color);
   font-variant-numeric: tabular-nums;
-  transition: border-color 160ms ease;
 }
 
-.trading-result-modal__field:focus-within {
-  border-bottom-color: var(--side-color);
-}
-
-.trading-result-modal__field--invalid,
-.trading-result-modal__field--invalid:focus-within {
-  border-bottom-color: var(--danger);
+.trading-result-modal__field--invalid {
+  color: var(--danger);
 }
 
 .trading-result-modal__input {
-  flex: 1;
+  flex: none;
+  max-width: 100%;
   min-width: 0;
+  /* Exactly as wide as what's typed (the size attribute is the fallback
+     where this isn't supported). */
+  field-sizing: content;
+  text-align: center;
   background: transparent;
   border: none;
   border-radius: 0;
@@ -78,6 +78,7 @@
 
 .trading-result-modal__input::placeholder {
   font-size: var(--text-lg);
+  letter-spacing: 0;
   font-weight: 500;
   color: var(--text-muted);
 }
@@ -88,11 +89,13 @@
 
 .trading-result-modal__suffix {
   flex: none;
-  font-size: 20px;
+  font-size: 24px;
+  opacity: 0.85;
 }
 
 .trading-result-modal__error {
   margin-top: calc(-1 * var(--space-2));
+  text-align: center;
   font-size: var(--text-xs);
   color: var(--danger);
 }
@@ -125,6 +128,15 @@
 }
 
 /* --- Actions --- */
+
+/* Save in the side's color - green for a profit, red for a loss. */
+.trading-result-modal__save,
+.trading-result-modal__save:hover:not(:disabled) {
+  border-color: transparent;
+  background: var(--side-color);
+  color: #fff;
+  font-weight: 700;
+}
 
 .trading-result-modal__actions {
   display: flex;

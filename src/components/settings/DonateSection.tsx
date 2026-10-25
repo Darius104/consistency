@@ -5,14 +5,11 @@ import "./DonateSection.css";
 
 const BUY_ME_A_COFFEE_URL = "https://buymeacoffee.com/coman";
 
+// "Support Consistency" itself is the page's banner (SettingsModal).
 export function DonateSection() {
   return (
     <div className="settings-pages">
-      <div className="donate-page__hero">
-        <span className="donate-page__icon" aria-hidden="true">
-          <HeartIcon size={26} />
-        </span>
-        <span className="donate-page__title">Support Consistency</span>
+      <div className="settings-group donate-page__note">
         <p className="donate-page__text">
           It's free to use. If it's helped you build a habit, a coffee helps keep it running and
           improving.

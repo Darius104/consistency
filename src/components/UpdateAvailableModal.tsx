@@ -1,7 +1,6 @@
 import type { Update } from "@tauri-apps/plugin-updater";
-import { Button } from "./ui/Button";
 import { Modal } from "./ui/Modal";
-import { CheckIcon, ChevronRightIcon, RefreshIcon } from "./ui/icons";
+import { CheckIcon, RefreshIcon } from "./ui/icons";
 import "./UpdateAvailableModal.css";
 
 interface UpdateAvailableModalProps {
@@ -11,6 +10,9 @@ interface UpdateAvailableModalProps {
   onInstall: () => void;
   onLater: () => void;
 }
+
+// Updates are blue - the same "something new to add" blue as tasks.
+const UPDATE_COLOR = "#3b82f6";
 
 // Release notes are written as short "- " bullet lines (see RELEASING.md) -
 // this turns them into an actual list instead of dumping them as one big
@@ -23,6 +25,9 @@ function parseNotes(body: string): string[] {
     .filter(Boolean);
 }
 
+/** "A new version is ready": the version on a blue banner, what's new as a
+ *  short list, and Update & Restart. Opened on launch when an update is
+ *  found, and from Settings > Account > Check. */
 export function UpdateAvailableModal({
   update,
   installing,
@@ -33,28 +38,32 @@ export function UpdateAvailableModal({
   const notes = update.body ? parseNotes(update.body) : [];
 
   return (
-    <Modal title="Update available" onClose={onLater}>
+    <Modal
+      title="Update available"
+      onClose={onLater}
+      icon={<RefreshIcon size={15} />}
+      accent={UPDATE_COLOR}
+    >
       <div className="update-modal">
-        <div className="update-modal__hero">
-          <span className="update-modal__icon">
-            <RefreshIcon size={22} />
+        <div className="update-modal__banner">
+          <span className="update-modal__icon" aria-hidden="true">
+            <RefreshIcon size={24} />
           </span>
-          <h3 className="update-modal__title">A new version is ready</h3>
-          <div className="update-modal__version-chip">
-            <span className="update-modal__version-from">{update.currentVersion}</span>
-            <ChevronRightIcon size={12} className="update-modal__version-arrow" />
-            <span className="update-modal__version-to">{update.version}</span>
-          </div>
+          <span className="update-modal__banner-text">
+            <span className="update-modal__title">Version {update.version}</span>
+            <span className="update-modal__sub">You have {update.currentVersion}</span>
+          </span>
+          <span className="update-modal__new">New</span>
         </div>
 
         {notes.length > 0 && (
           <div className="update-modal__notes-section">
-            <span className="settings__label">What's new</span>
+            <span className="update-modal__label">What's new</span>
             <ul className="update-modal__notes">
               {notes.map((line, i) => (
                 <li key={i}>
-                  <span className="update-modal__note-check">
-                    <CheckIcon size={10} />
+                  <span className="update-modal__note-check" aria-hidden="true">
+                    <CheckIcon size={11} />
                   </span>
                   {line}
                 </li>
@@ -65,24 +74,35 @@ export function UpdateAvailableModal({
 
         {error && <div className="update-modal__error">{error}</div>}
 
-        <div className="update-modal__actions">
-          <Button onClick={onLater} disabled={installing} className="update-modal__later">
-            Not now
-          </Button>
-          <Button
-            variant="primary"
-            onClick={onInstall}
-            disabled={installing}
-            className="update-modal__install"
-          >
-            {installing ? "Downloading…" : "Update & Restart"}
-          </Button>
-        </div>
         {installing && (
-          <div className="update-modal__progress" role="progressbar" aria-label="Downloading update">
-            <span className="update-modal__progress-fill" />
+          <div className="update-modal__progress-wrap">
+            <div className="update-modal__progress" role="progressbar" aria-label="Downloading update">
+              <span className="update-modal__progress-fill" />
+            </div>
+            <span className="update-modal__progress-text">
+              Downloading - the app restarts by itself when it's done.
+            </span>
           </div>
         )}
+
+        <div className="update-modal__actions">
+          <button
+            type="button"
+            className="update-modal__later"
+            onClick={onLater}
+            disabled={installing}
+          >
+            Not now
+          </button>
+          <button
+            type="button"
+            className="update-modal__install"
+            onClick={onInstall}
+            disabled={installing}
+          >
+            {installing ? "Downloading…" : "Update & Restart"}
+          </button>
+        </div>
       </div>
     </Modal>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import type { StreakStyle } from "../../utils/panelOrder";
 import { streakTier, type TodayStatus, type WeekDayState } from "../../utils/stats";
 import { CheckIcon, FrostIcon } from "../ui/icons";
 import { Flame } from "./Flame";
@@ -9,6 +10,8 @@ interface StreakCounterProps {
   streak: number;
   best: number;
   today: TodayStatus;
+  /** Which look (Settings > Widgets > Day Streak) - Campfire by default. */
+  variant?: StreakStyle;
 }
 
 const WEEK_LETTERS = ["M", "T", "W", "T", "F", "S", "S"];
@@ -50,7 +53,7 @@ function statusPill(today: TodayStatus): { text: ReactNode; tone: string } {
   return { text: `${today.remaining} left today`, tone: "pending" };
 }
 
-export function StreakCounter({ streak, best, today }: StreakCounterProps) {
+export function StreakCounter({ streak, best, today, variant = "campfire" }: StreakCounterProps) {
   const t = streakTier(streak);
   const isRecordStreak = streak > 0 && streak >= best;
 
@@ -102,6 +105,114 @@ export function StreakCounter({ streak, best, today }: StreakCounterProps) {
   }, [today.allDone]);
 
   const pill = statusPill(today);
+  const pillEl = (
+    <span
+      className={`streak-hero__pill streak-hero__pill--${pill.tone} ${
+        barPop ? "streak-hero__pill--pop" : ""
+      }`}
+    >
+      {pill.text}
+    </span>
+  );
+  const valueEl = (
+    <span className={`streak-hero__value ${pop ? "streak-hero__value--pop" : ""}`}>{streak}</span>
+  );
+  const bestText = best > 0 ? (isRecordStreak ? "Personal best" : `Best ${best}`) : null;
+  const weekEl = (
+    <ol className="streak-hero__week" aria-label="This week">
+      {today.week.map((day, i) => (
+        <li
+          key={day.date}
+          className={`streak-hero__day streak-hero__day--${day.state}`}
+          aria-label={`${day.date}: ${WEEK_STATE_LABELS[day.state]}`}
+        >
+          <span className="streak-hero__day-dot">
+            {day.state === "done" && <CheckIcon size={10} />}
+            {day.state === "frozen" && <FrostIcon size={10} />}
+          </span>
+          <span className="streak-hero__day-letter">{WEEK_LETTERS[i]}</span>
+        </li>
+      ))}
+    </ol>
+  );
+
+  // Ring: the streak inside a ring that fills with today's progress.
+  if (variant === "ring") {
+    return (
+      <div className={`streak-hero streak-hero--${t} streak-ring`}>
+        <div className="streak-ring__top">
+          <div
+            className="streak-ring__dial"
+            style={{ "--progress": power } as CSSProperties}
+            role="img"
+            aria-label={`${streak} day streak, ${today.completed} of ${today.scheduled} done today`}
+          >
+            <span className="streak-ring__inner">
+              {valueEl}
+              <span className="streak-ring__unit">days</span>
+            </span>
+          </div>
+          <div className="streak-ring__side">
+            {today.hasTasks && (
+              <span className="streak-ring__today">
+                Today{" "}
+                <b>
+                  {today.completed} of {today.scheduled}
+                </b>
+              </span>
+            )}
+            {pillEl}
+            {bestText && <span className="streak-hero__best">{bestText}</span>}
+          </div>
+        </div>
+        {weekEl}
+      </div>
+    );
+  }
+
+  // Compact: one slim line - flame, number, today's pill.
+  if (variant === "compact") {
+    return (
+      <div className={`streak-hero streak-hero--${t} streak-compact`}>
+        <Flame power={power} showLogs={false} />
+        {valueEl}
+        <span className="streak-compact__unit">day streak</span>
+        {pillEl}
+      </div>
+    );
+  }
+
+  // Two weeks: the last 14 days as squares, oldest first.
+  if (variant === "weeks") {
+    return (
+      <div className={`streak-hero streak-hero--${t} streak-weeks`}>
+        <div className="streak-weeks__top">
+          <Flame power={power} />
+          <div className="streak-hero__text">
+            {valueEl}
+            <span className="streak-hero__unit">day streak{bestText ? ` · ${bestText.toLowerCase()}` : ""}</span>
+          </div>
+          {pillEl}
+        </div>
+        <ol className="streak-weeks__grid" aria-label="The last two weeks">
+          {today.recent.map((day) => (
+            <li
+              key={day.date}
+              className={`streak-weeks__day streak-weeks__day--${day.state}`}
+              aria-label={`${day.date}: ${WEEK_STATE_LABELS[day.state]}`}
+            >
+              {day.state === "done" && <CheckIcon size={10} />}
+              {day.state === "frozen" && <FrostIcon size={10} />}
+            </li>
+          ))}
+        </ol>
+        <div className="streak-weeks__legend" aria-hidden="true">
+          <span>2 weeks ago</span>
+          <span>Today</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`streak-hero streak-hero--${t}`}>
@@ -109,57 +220,18 @@ export function StreakCounter({ streak, best, today }: StreakCounterProps) {
         <div className="streak-hero__primary">
           <Flame power={power} />
           <div className="streak-hero__text">
-            <span className={`streak-hero__value ${pop ? "streak-hero__value--pop" : ""}`}>
-              {streak}
-            </span>
-            <span className="streak-hero__unit">
-              day streak
-              {best > 0 &&
-                (isRecordStreak ? (
-                  <span className="streak-hero__best streak-hero__best--record"> · Personal best</span>
-                ) : (
-                  <span className="streak-hero__best"> · Best {best}</span>
-                ))}
-            </span>
+            {valueEl}
+            <span className="streak-hero__unit">day streak</span>
           </div>
         </div>
-        <span
-          className={`streak-hero__pill streak-hero__pill--${pill.tone} ${
-            barPop ? "streak-hero__pill--pop" : ""
-          }`}
-        >
-          {pill.text}
-        </span>
+        {/* Today's status on the right, the best streak quietly under it. */}
+        <div className="streak-hero__side">
+          {pillEl}
+          {bestText && <span className="streak-hero__best">{bestText}</span>}
+        </div>
       </div>
 
-      <ol className="streak-hero__week" aria-label="This week">
-        {today.week.map((day, i) => (
-          <li
-            key={day.date}
-            className={`streak-hero__day streak-hero__day--${day.state}`}
-            aria-label={`${day.date}: ${WEEK_STATE_LABELS[day.state]}`}
-          >
-            <span className="streak-hero__day-dot">
-              {day.state === "done" && <CheckIcon size={10} />}
-              {day.state === "frozen" && <FrostIcon size={10} />}
-            </span>
-            <span className="streak-hero__day-letter">{WEEK_LETTERS[i]}</span>
-          </li>
-        ))}
-      </ol>
-
-      {/* Desktop's narrower panel: status and best move down to one quiet
-          line instead of crowding the number (the phone keeps the pill). */}
-      <div className="streak-hero__footer">
-        <span className={`streak-hero__footer-status streak-hero__footer-status--${pill.tone}`}>
-          {pill.text}
-        </span>
-        {best > 0 && (
-          <span className={`streak-hero__footer-best ${isRecordStreak ? "streak-hero__best--record" : ""}`}>
-            {isRecordStreak ? "Personal best" : `Best ${best}`}
-          </span>
-        )}
-      </div>
+      {weekEl}
     </div>
   );
 }

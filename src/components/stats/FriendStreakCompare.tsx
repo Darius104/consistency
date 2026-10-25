@@ -1,10 +1,13 @@
 import { useRef } from "react";
+import type { ReactNode } from "react";
 import type { FriendStreakEntry } from "../../hooks/useFriendStreaks";
 import type { AvatarId } from "../../utils/avatars";
-import { CrownIcon } from "../ui/icons";
+import { WIDGET_COLORS } from "../../utils/panelOrder";
+import { CrownIcon, UsersIcon } from "../ui/icons";
 import { Skeleton } from "../ui/Skeleton";
 import { AvatarBadge } from "./AvatarBadge";
 import { Flame } from "./Flame";
+import { WidgetCard } from "./WidgetCard";
 import "./stats.css";
 import "./FriendStreakCompare.css";
 
@@ -51,8 +54,7 @@ export function FriendStreakCompare({
   // a skeleton every few minutes.
   if (loading && friends.length === 0) {
     return (
-      <div className="stat-card">
-        <div className="stat-card__label">Friend comparison</div>
+      <FriendsCard>
         <ul className="friend-streak-compare" aria-hidden="true">
           {Array.from({ length: lastKnownCountRef.current + 1 }, (_, i) => (
             <li className="friend-streak-compare__row" key={i}>
@@ -62,16 +64,15 @@ export function FriendStreakCompare({
             </li>
           ))}
         </ul>
-      </div>
+      </FriendsCard>
     );
   }
 
   if (!loading && friends.length === 0) {
     return (
-      <div className="stat-card">
-        <div className="stat-card__label">Friend comparison</div>
-        <p className="stat-card__sub">{emptyMessage}</p>
-      </div>
+      <FriendsCard>
+        <p className="widget-card__foot">{emptyMessage}</p>
+      </FriendsCard>
     );
   }
 
@@ -87,8 +88,7 @@ export function FriendStreakCompare({
   ].sort((a, b) => b.streak - a.streak);
 
   return (
-    <div className="stat-card">
-      <div className="stat-card__label">Friend comparison</div>
+    <FriendsCard>
       <ul className="friend-streak-compare">
         {rows.map((row, i) => (
           <li
@@ -109,6 +109,14 @@ export function FriendStreakCompare({
           </li>
         ))}
       </ul>
-    </div>
+    </FriendsCard>
+  );
+}
+
+function FriendsCard({ children }: { children: ReactNode }) {
+  return (
+    <WidgetCard color={WIDGET_COLORS.friendStreaks} icon={<UsersIcon size={13} />} title="Friends" meta="streaks">
+      {children}
+    </WidgetCard>
   );
 }

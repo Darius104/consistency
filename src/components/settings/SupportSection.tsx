@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 import {
   createTicket,
   deleteTicket,
@@ -11,7 +12,7 @@ import type { MembershipState } from "../../hooks/useMembership";
 import { Button } from "../ui/Button";
 import { ConfirmModal } from "../ui/ConfirmModal";
 import { Skeleton } from "../ui/Skeleton";
-import { ChevronRightIcon, TrashIcon } from "../ui/icons";
+import { ChevronRightIcon, PlusIcon, TrashIcon } from "../ui/icons";
 import { AdminTicketsList } from "./AdminTicketsList";
 import { TicketThreadModal } from "./TicketThreadModal";
 import "./SupportSection.css";
@@ -37,6 +38,14 @@ const SHORT_TYPE_LABEL: Record<TicketType, string> = {
   bug: "Bug",
   feature: "Idea",
   question: "Question",
+};
+
+/** Each kind of message's color - red bug, amber idea, blue question
+ *  (shared with the admin's list). */
+export const TYPE_COLOR: Record<TicketType, string> = {
+  bug: "#ef4444",
+  feature: "#f59e0b",
+  question: "#3b82f6",
 };
 
 const STATUS_LABEL: Record<TicketStatus, string> = {
@@ -145,13 +154,16 @@ function MemberSupportForm({ onSeen }: MemberSupportFormProps) {
   return (
     <div className="settings-pages support-page">
       <div className="settings-group-wrap">
-        <div className="settings-group">
+        <div className="settings-group settings-group--tiles">
           <button
             type="button"
             className="settings-group__row settings-group__row--accent"
             aria-expanded={composing}
             onClick={() => setComposing((v) => !v)}
           >
+            <span className="settings-tile" aria-hidden="true">
+              <PlusIcon size={15} />
+            </span>
             <span className="settings-group__label">New message</span>
             <ChevronRightIcon
               size={15}
@@ -160,14 +172,14 @@ function MemberSupportForm({ onSeen }: MemberSupportFormProps) {
           </button>
           {composing && (
             <div className="settings-group__expand support-page__compose">
-              <div className="support-page__types" role="radiogroup" aria-label="Message type">
+              <div className="settings-segmented" role="radiogroup" aria-label="Message type">
                 {TICKET_TYPE_OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
                     type="button"
                     role="radio"
                     aria-checked={type === opt.value}
-                    className={`support-page__type ${type === opt.value ? "support-page__type--active" : ""}`}
+                    className={`settings-segmented__option ${type === opt.value ? "settings-segmented__option--active" : ""}`}
                     onClick={() => setType(opt.value)}
                   >
                     {SHORT_TYPE_LABEL[opt.value]}
@@ -227,7 +239,12 @@ function MemberSupportForm({ onSeen }: MemberSupportFormProps) {
                       onClick={() => handleOpenTicket(ticket)}
                     >
                       <span className="support-page__ticket-top">
-                        <span className="support-page__ticket-type">{SHORT_TYPE_LABEL[ticket.type]}</span>
+                        <span
+                          className="settings-tag"
+                          style={{ "--tag-color": TYPE_COLOR[ticket.type] } as CSSProperties}
+                        >
+                          {SHORT_TYPE_LABEL[ticket.type]}
+                        </span>
                         {ticket.unseenByMember && <span className="support-page__new">New reply</span>}
                         <span className="support-page__ticket-date">{formatDate(ticket.createdAt)}</span>
                       </span>

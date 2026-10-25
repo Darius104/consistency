@@ -81,11 +81,11 @@ export function CalendarHeader({
           {onOpenPhrase && (
             <span className="cal-header__phrase-wrap">
               <Button
-                className="btn--icon"
+                className="btn--icon cal-header__tool cal-header__tool--phrase"
                 onClick={onOpenPhrase}
                 aria-label="Phrase of the day"
               >
-                <SparklesIcon size={15} />
+                <SparklesIcon size={16} />
                 {phraseUnseen && <span className="cal-header__phrase-badge" aria-hidden="true" />}
               </Button>
               {phraseUnseen && (
@@ -97,23 +97,33 @@ export function CalendarHeader({
             </span>
           )}
           {onOpenCreateTemplate && (
-            <Button className="cal-header__templates" onClick={onOpenCreateTemplate} aria-label="Templates">
+            <Button
+              className="cal-header__tool cal-header__tool--templates cal-header__templates"
+              onClick={onOpenCreateTemplate}
+              aria-label="Templates"
+            >
               <BookmarkIcon size={15} />
               <span className="cal-header__templates-label">Templates</span>
             </Button>
           )}
           <div className="cal-header__date-nav">
             <Button className="btn--icon" onClick={onPrev} aria-label="Previous month">
-              <ChevronLeftIcon size={15} />
+              <ChevronLeftIcon size={16} />
             </Button>
-            <Button onClick={onToday}>Today</Button>
+            <Button className="cal-header__today" onClick={onToday}>
+              Today
+            </Button>
             <Button className="btn--icon" onClick={onNext} aria-label="Next month">
-              <ChevronRightIcon size={15} />
+              <ChevronRightIcon size={16} />
             </Button>
           </div>
           {onOpenSettings && (
-            <Button className="btn--icon cal-header__settings" onClick={onOpenSettings} aria-label="Settings">
-              <SettingsIcon size={15} />
+            <Button
+              className="btn--icon cal-header__tool cal-header__settings"
+              onClick={onOpenSettings}
+              aria-label="Settings"
+            >
+              <SettingsIcon size={16} />
               {!!settingsBadgeCount && (
                 <span className="cal-header__count-badge">
                   {settingsBadgeCount > 9 ? "9+" : settingsBadgeCount}

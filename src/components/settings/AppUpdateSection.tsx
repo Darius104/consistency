@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getVersion } from "@tauri-apps/api/app";
 import { useAppUpdater } from "../../hooks/useAppUpdater";
 import { Button } from "../ui/Button";
-import { Card } from "../ui/Card";
 import { Modal } from "../ui/Modal";
-import "../ui/ConfirmModal.css";
+import { CheckIcon, RefreshIcon } from "../ui/icons";
+import { UpdateAvailableModal } from "../UpdateAvailableModal";
+import "../UpdateAvailableModal.css";
 
 /**
  * Desktop-only in practice (see useAppUpdater's own doc comment) - this
@@ -14,61 +16,107 @@ import "../ui/ConfirmModal.css";
  * on-mount check silently found) - see `justChecked` below.
  *
  * Self-sufficient rather than sharing App.tsx's own useAppUpdater instance
- * - finding an update here offers its own "Update & Restart" right in this
- * row, independent of the auto-check-on-launch modal App.tsx shows (which
- * a user may have already dismissed with "Later").
+ * - finding an update here opens the same "Update available" window App.tsx
+ * shows on launch (which a user may have already dismissed with "Not now").
  */
 export function AppUpdateSection() {
   const { update, checking, installing, error, checkNow, installAndRestart } = useAppUpdater();
   const [justChecked, setJustChecked] = useState(false);
-  const [showUpToDateModal, setShowUpToDateModal] = useState(false);
+  const [showUpToDate, setShowUpToDate] = useState(false);
+  const [showUpdate, setShowUpdate] = useState(false);
+  const [version, setVersion] = useState<string | null>(null);
+  // Set while a check you asked for is running - the result is decided
+  // once it's finished (below), when `update`/`error` are the new ones.
+  const [awaitingCheck, setAwaitingCheck] = useState(false);
+
+  useEffect(() => {
+    getVersion()
+      .then(setVersion)
+      .catch(() => {});
+  }, []);
 
   async function handleCheck() {
-    const result = await checkNow();
+    setAwaitingCheck(true);
+    await checkNow();
     setJustChecked(true);
-    if (result) return;
-    setShowUpToDateModal(true);
   }
+
+  useEffect(() => {
+    if (!awaitingCheck || checking) return;
+    setAwaitingCheck(false);
+    if (update) setShowUpdate(true);
+    else if (!error) setShowUpToDate(true);
+  }, [awaitingCheck, checking, update, error]);
 
   const idleStatus = justChecked
     ? error
-      ? `Couldn't check for updates: ${error}`
+      ? `Couldn't check: ${error}`
       : "You're up to date."
-    : "Check for a newer version of the app.";
+    : version
+      ? `You're on version ${version}.`
+      : "Look for a newer version of the app.";
 
   return (
-    <Card>
-      <span className="settings__label">Updates</span>
-      <div className="settings__row">
-        <span className="settings__row-text">
-          {update ? `Version ${update.version} is available.` : idleStatus}
-        </span>
-        {update ? (
-          <Button variant="primary" onClick={() => void installAndRestart()} disabled={installing}>
-            {installing ? "Downloading…" : "Update & Restart"}
-          </Button>
-        ) : (
-          <Button onClick={() => void handleCheck()} disabled={checking}>
-            {checking ? "Checking…" : "Check for Updates"}
-          </Button>
-        )}
+    <div className="settings-group-wrap">
+      <span className="settings-group__title">Updates</span>
+      <div className="settings-group">
+        <div className="settings-group__row">
+          <span className="settings-group__label settings-group__label--stack">
+            {update ? `Version ${update.version} is ready` : "Check for updates"}
+            <small>{update ? "Installs and restarts the app." : idleStatus}</small>
+          </span>
+          {update ? (
+            <Button variant="primary" onClick={() => setShowUpdate(true)} disabled={installing}>
+              {installing ? "Downloading…" : "See what's new"}
+            </Button>
+          ) : (
+            <button
+              type="button"
+              className="settings-row-action"
+              onClick={() => void handleCheck()}
+              disabled={checking}
+            >
+              {checking ? "Checking…" : "Check"}
+            </button>
+          )}
+        </div>
       </div>
-      {update && error && <span className="settings__hint settings__hint--warning">{error}</span>}
 
-      {showUpToDateModal && (
-        <Modal title="Check for Updates" onClose={() => setShowUpToDateModal(false)}>
-          <div className="confirm-modal">
-            <p className="confirm-modal__message">
-              You're up to date — this is the latest version of Consistency.
-            </p>
-            <div className="confirm-modal__actions">
-              <Button variant="primary" onClick={() => setShowUpToDateModal(false)}>
-                OK
-              </Button>
-            </div>
+      {showUpdate && update && (
+        <UpdateAvailableModal
+          update={update}
+          installing={installing}
+          error={error}
+          onInstall={() => void installAndRestart()}
+          onLater={() => setShowUpdate(false)}
+        />
+      )}
+
+      {showUpToDate && (
+        <Modal
+          title="Check for updates"
+          onClose={() => setShowUpToDate(false)}
+          icon={<RefreshIcon size={15} />}
+          accent="#3b82f6"
+        >
+          <div className="update-modal update-modal--current">
+            <span className="update-modal__done" aria-hidden="true">
+              <CheckIcon size={28} />
+            </span>
+            <span className="update-modal__current-text">
+              <span className="update-modal__title">You're up to date</span>
+              <span className="update-modal__sub">
+                {version
+                  ? `Consistency ${version} is the latest version.`
+                  : "This is the latest version of Consistency."}
+              </span>
+            </span>
+            <button type="button" className="update-modal__ok" onClick={() => setShowUpToDate(false)}>
+              OK
+            </button>
           </div>
         </Modal>
       )}
-    </Card>
+    </div>
   );
 }

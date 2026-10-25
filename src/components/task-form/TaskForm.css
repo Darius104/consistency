@@ -118,3 +118,349 @@
     flex-direction: column;
   }
 }
+
+/* --- The task form (TaskForm.tsx) -------------------------------------
+   Everything above is the older field styling, still used by the template
+   task editor (settings/TemplateTaskModal.tsx). Each setting has its own
+   color, as --tint: orange time, sky repeat, the template's own color,
+   the priority's color. */
+
+.task-form--new {
+  gap: var(--space-3);
+}
+
+.task-form__title,
+.task-form__notes {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  outline: none;
+  padding: 0;
+}
+
+.task-form__title {
+  font-size: 19px;
+  font-weight: 600;
+  caret-color: var(--tint);
+}
+
+.task-form__notes {
+  resize: none;
+  font-size: var(--text-md);
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.task-form__title::placeholder,
+.task-form__notes::placeholder {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.task-form__flag {
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.task-form__dot {
+  flex: none;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+/* Low / Medium / High - each in its own color once picked. */
+.task-form__seg {
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 10px;
+  background: var(--bg-elevated);
+}
+
+.task-form__seg-btn {
+  padding: 5px 11px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  transition: background-color 0.12s ease, color 0.12s ease, transform 120ms var(--ease-out);
+}
+
+.task-form__seg-btn:active {
+  transform: scale(0.95);
+}
+
+.task-form__seg-btn--on {
+  background: color-mix(in srgb, var(--tint) 22%, transparent);
+  color: var(--tint);
+}
+
+/* --- Phone: a title card, then the settings as colored rows ------------ */
+
+.task-form__card,
+.task-form__group {
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.task-form__card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+}
+
+.task-form__card .task-form__notes {
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.task-form__group {
+  overflow: hidden;
+}
+
+.task-form__setting-wrap + .task-form__setting-wrap,
+.task-form__setting-wrap + .task-form__setting {
+  border-top: 1px solid var(--border);
+  margin-left: 0;
+}
+
+.task-form__setting {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 8px 14px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+
+button.task-form__setting:active {
+  background: var(--surface-hover);
+}
+
+.task-form__setting-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--tint);
+  color: #fff;
+}
+
+.task-form__setting-label {
+  flex: 1;
+  font-size: var(--text-md);
+  font-weight: 500;
+}
+
+/* The current value, on the right - a long template name shortens with
+   "..." instead of pushing the row wider. */
+.task-form__setting-value {
+  min-width: 0;
+  max-width: 55%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+.task-form__setting-value--set {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.task-form__setting-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-form__chevron {
+  flex: none;
+  color: var(--text-muted);
+  transition: transform 200ms var(--ease-out);
+}
+
+.task-form__setting--open .task-form__chevron {
+  transform: rotate(90deg);
+}
+
+/* The picker for an open row, right under it. */
+.task-form__editor {
+  padding: 4px 14px 14px 56px;
+  animation: task-form-editor-in 180ms var(--ease-out);
+}
+
+@keyframes task-form-editor-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.task-form__cta {
+  margin-top: var(--space-1);
+  height: 52px;
+  border: none;
+  border-radius: 14px;
+  background: var(--tint);
+  color: #fff;
+  font-size: var(--text-md);
+  font-weight: 700;
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--tint) 30%, transparent);
+  transition: transform 120ms var(--ease-out);
+}
+
+.task-form__cta:active {
+  transform: scale(0.98);
+}
+
+.task-form__delete-link {
+  align-self: center;
+  padding: var(--space-2);
+  border: none;
+  background: none;
+  color: var(--danger);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+/* --- Desktop: title, notes, a line of colored chips -------------------- */
+
+.task-form--desk .task-form__title {
+  font-size: 20px;
+}
+
+.task-form__chips {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.task-form__chip {
+  max-width: 190px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border: 1px solid color-mix(in srgb, var(--tint) 32%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tint) 14%, transparent);
+  color: var(--tint);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.task-form__chip:hover,
+.task-form__chip--open {
+  background: color-mix(in srgb, var(--tint) 24%, transparent);
+}
+
+/* Not set yet: a quiet dashed chip that says what it would set. */
+.task-form__chip--unset {
+  border-style: dashed;
+  border-color: var(--border-strong);
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.task-form__chip--unset:hover,
+.task-form__chip--unset.task-form__chip--open {
+  background: var(--surface-hover);
+  color: var(--text-secondary);
+}
+
+.task-form__chip .task-form__flag {
+  font-size: 12px;
+}
+
+.task-form__chip svg {
+  flex: none;
+  width: 13px;
+  height: 13px;
+}
+
+.task-form__chip-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* An open chip's options, in a panel right under the chips. */
+.task-form__panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px 14px;
+  border: 1px solid color-mix(in srgb, var(--tint) 28%, var(--border));
+  border-radius: 12px;
+  background: var(--surface);
+  animation: task-form-editor-in 160ms var(--ease-out);
+}
+
+.task-form__panel-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--tint);
+}
+
+.task-form__footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) calc(-1 * var(--space-5)) calc(-1 * var(--space-5));
+  padding: 12px var(--space-5);
+  border-top: 1px solid var(--border);
+}
+
+.task-form__hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.task-form__footer-right {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.task-form__save {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 9px;
+  background: var(--tint);
+  color: #fff;
+  font-weight: 600;
+  transition: filter 0.12s ease, transform 120ms var(--ease-out);
+}
+
+.task-form__save:hover {
+  filter: brightness(1.08);
+}
+
+.task-form__save:active {
+  transform: scale(0.97);
+}

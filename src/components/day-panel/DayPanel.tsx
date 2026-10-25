@@ -1,11 +1,18 @@
 import { Fragment, useEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { FriendNote } from "../../db/friendNotes";
 import type { FriendStreakEntry } from "../../hooks/useFriendStreaks";
 import type { AvatarId } from "../../utils/avatars";
 import type { DayNote, Tag, Task, Template, TradingResult, TradingResultUnit } from "../../types";
 import { formatDayName, parseDateKey, todayKey } from "../../utils/dates";
-import { WIDGET_LABELS, type PanelBlockId, type WidgetId } from "../../utils/panelOrder";
+import {
+  STREAK_STYLES,
+  WIDGET_COLORS,
+  WIDGET_LABELS,
+  type PanelBlockId,
+  type StreakStyle,
+  type WidgetId,
+} from "../../utils/panelOrder";
 import type { Quote } from "../../utils/quotes";
 import {
   MAX_FREEZES_PER_MONTH,
@@ -34,6 +41,7 @@ import { QuoteWidget } from "../stats/QuoteWidget";
 import { StreakCounter } from "../stats/StreakCounter";
 import { WeeklyCompletion } from "../stats/WeeklyCompletion";
 import { AddMenu } from "./AddMenu";
+import { WIDGET_INFO, WidgetGallery } from "./WidgetGallery";
 import { FriendNoteWidget } from "./FriendNoteWidget";
 import { TaskList } from "./TaskList";
 import { TradingResultBadge } from "./TradingResultBadge";
@@ -77,6 +85,10 @@ interface DayPanelProps {
   tags: Tag[];
   streak: number;
   bestStreak: number;
+  /** The Day Streak widget's look (Settings > Widgets > Day Streak). */
+  streakStyle?: StreakStyle;
+  /** Picks it right from the widget's own menu, too. */
+  onChangeStreakStyle?: (style: StreakStyle) => void;
   todayStatus: TodayStatus;
   weekly: WeeklyCompletionData;
   freezesRemaining: number;
@@ -101,6 +113,7 @@ interface DayPanelProps {
   onToggle: (task: Task) => void;
   onView: (task: Task) => void;
   onDelete: (task: Task) => void;
+  onMove?: (task: Task) => void;
   onReorderTasks: (taskIds: string[]) => void;
   onReorderTags: (tagIds: string[]) => void;
   templates: Template[];
@@ -141,6 +154,8 @@ export function DayPanel({
   tags,
   streak,
   bestStreak,
+  streakStyle,
+  onChangeStreakStyle,
   todayStatus,
   weekly,
   freezesRemaining,
@@ -162,6 +177,7 @@ export function DayPanel({
   onToggle,
   onView,
   onDelete,
+  onMove,
   onReorderTasks,
   onReorderTags,
   templates,
@@ -194,7 +210,7 @@ export function DayPanel({
   // opens the full widget here, in a sheet.
   const isPhone = useMediaQuery("(max-width: 700px)");
   const panelRef = useRef<HTMLDivElement>(null);
-  const { pull, refreshing, triggered } = usePanelGestures(panelRef, {
+  const { pull, refreshing, triggered, swipe } = usePanelGestures(panelRef, {
     enabled: isPhone,
     onRefresh,
     onSwipeDay,
@@ -436,7 +452,7 @@ export function DayPanel({
 
   const blocks: Record<PanelBlockId, ReactNode> = {
     streak: (
-      <StreakCounter streak={streak} best={bestStreak} today={todayStatus} />
+      <StreakCounter streak={streak} best={bestStreak} today={todayStatus} variant={streakStyle} />
     ),
     weekly: <WeeklyCompletion data={weekly} />,
     freezes: <FreezeSummary remaining={freezesRemaining} total={MAX_FREEZES_PER_MONTH} />,
@@ -458,6 +474,7 @@ export function DayPanel({
         onToggle={onToggle}
         onView={onView}
         onDelete={onDelete}
+        onMove={onMove}
         onReorderTasks={onReorderTasks}
         onReorderTags={onReorderTags}
         notes={notes}
@@ -479,7 +496,18 @@ export function DayPanel({
   const visibleOrder = order.filter((id) => id === "tasks" || !hiddenWidgets.includes(id as WidgetId));
 
   return (
-    <div className="day-panel" ref={panelRef}>
+    <div
+      className={`day-panel ${swipe.x !== 0 || swipe.animate ? "day-panel--swiping" : ""} ${swipe.animate ? "day-panel--swipe-glide" : ""}`}
+      ref={panelRef}
+      style={
+        swipe.x !== 0 || swipe.animate
+          ? ({
+              "--day-swipe": `${swipe.x}px`,
+              "--day-swipe-fade": `${1 - Math.min(Math.abs(swipe.x) / 400, 1) * 0.6}`,
+            } as CSSProperties)
+          : undefined
+      }
+    >
       {isPhone && (
         <div
           className={`day-panel__pull ${refreshing ? "day-panel__pull--refreshing" : ""}`}
@@ -526,6 +554,7 @@ export function DayPanel({
           />
           <AddMenu
             templates={templates}
+            tags={tags}
             onAddTask={onAddTask}
             onApplyTemplate={onApplyTemplate}
             onAddNote={onAddNote}
@@ -575,6 +604,7 @@ export function DayPanel({
             tasks={blocks.tasks}
             streak={streak}
             bestStreak={bestStreak}
+            streakStyle={streakStyle}
             todayStatus={todayStatus}
             weekly={weekly}
             freezesRemaining={freezesRemaining}
@@ -677,30 +707,50 @@ export function DayPanel({
       {actionSheetFor && (
         <ActionSheet
           title={WIDGET_LABELS[actionSheetFor]}
+          icon={WIDGET_INFO[actionSheetFor].icon}
+          color={WIDGET_COLORS[actionSheetFor]}
+          subtitle={WIDGET_INFO[actionSheetFor].text}
           onClose={() => setActionSheetFor(null)}
           actions={[
-            {
-              label: "Remove widget",
-              icon: <XIcon size={16} />,
-              onSelect: () => onHideWidget(actionSheetFor),
-            },
             {
               label: "Arrange widgets",
               icon: <GripIcon size={16} />,
               onSelect: onStartArranging,
             },
+            {
+              label: "Remove widget",
+              icon: <XIcon size={16} />,
+              onSelect: () => onHideWidget(actionSheetFor),
+              destructive: true,
+            },
           ]}
-        />
+        >
+          {/* Day Streak's look, switchable right here - it changes behind
+              the sheet as you tap, so you see it before closing. */}
+          {actionSheetFor === "streak" && onChangeStreakStyle && (
+            <div className="widget-menu__styles" role="radiogroup" aria-label="Day Streak style">
+              {STREAK_STYLES.map((st) => (
+                <button
+                  key={st.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={(streakStyle ?? "campfire") === st.id}
+                  className={`widget-menu__style ${(streakStyle ?? "campfire") === st.id ? "widget-menu__style--on" : ""}`}
+                  onClick={() => onChangeStreakStyle(st.id)}
+                >
+                  {st.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </ActionSheet>
       )}
 
       {addWidgetSheetOpen && (
-        <ActionSheet
-          title="Add a widget"
+        <WidgetGallery
+          widgets={hiddenWidgets}
+          onAdd={onShowWidget}
           onClose={() => setAddWidgetSheetOpen(false)}
-          actions={hiddenWidgets.map((id) => ({
-            label: WIDGET_LABELS[id],
-            onSelect: () => onShowWidget(id),
-          }))}
         />
       )}
     </div>

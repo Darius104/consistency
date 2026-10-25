@@ -231,7 +231,7 @@ export function FriendsManager({
                   disabled={!online}
                 >
                   {body}
-                  <span className="settings-group__value">Calendar</span>
+                  <span className="settings-group__value friends-manager__open">Calendar</span>
                   <ChevronRightIcon size={15} className="settings-group__chevron" />
                 </button>
               );

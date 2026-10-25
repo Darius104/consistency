@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import "./ActionSheet.css";
 
@@ -12,6 +12,14 @@ export interface ActionSheetAction {
 
 interface ActionSheetProps {
   title?: string;
+  /** With an icon, the title becomes a header: the icon in a square of
+   *  `color`, the title, and `subtitle` under it. */
+  icon?: ReactNode;
+  color?: string;
+  subtitle?: string;
+  /** Anything extra between the header and the actions (e.g. the Day
+   *  Streak's style picker). */
+  children?: ReactNode;
   actions: ActionSheetAction[];
   onClose: () => void;
 }
@@ -22,7 +30,17 @@ interface ActionSheetProps {
 // action sheet, not a dialog.
 const CLOSE_DURATION_MS = 200;
 
-export function ActionSheet({ title, actions, onClose }: ActionSheetProps) {
+/** A short list of choices about one thing: a bottom sheet on a phone, a
+ *  small centered card on desktop. */
+export function ActionSheet({
+  title,
+  icon,
+  color,
+  subtitle,
+  children,
+  actions,
+  onClose,
+}: ActionSheetProps) {
   const [closing, setClosing] = useState(false);
 
   function requestClose() {
@@ -50,9 +68,23 @@ export function ActionSheet({ title, actions, onClose }: ActionSheetProps) {
         role="dialog"
         aria-modal="true"
         aria-label={title}
+        style={color ? ({ "--sheet-color": color } as CSSProperties) : undefined}
       >
         <div className="action-sheet__grabber" aria-hidden="true" />
-        {title && <div className="action-sheet__title">{title}</div>}
+        {icon ? (
+          <div className="action-sheet__head">
+            <span className="action-sheet__icon" aria-hidden="true">
+              {icon}
+            </span>
+            <span className="action-sheet__head-text">
+              <span className="action-sheet__name">{title}</span>
+              {subtitle && <span className="action-sheet__subtitle">{subtitle}</span>}
+            </span>
+          </div>
+        ) : (
+          title && <div className="action-sheet__title">{title}</div>
+        )}
+        {children}
         <div className="action-sheet__actions">
           {actions.map((action) => (
             <button
@@ -71,7 +103,11 @@ export function ActionSheet({ title, actions, onClose }: ActionSheetProps) {
                 action.onSelect();
               }}
             >
-              {action.icon}
+              {action.icon && (
+                <span className="action-sheet__action-icon" aria-hidden="true">
+                  {action.icon}
+                </span>
+              )}
               {action.label}
             </button>
           ))}

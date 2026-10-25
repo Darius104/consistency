@@ -69,7 +69,7 @@
   color: #ef4444;
 }
 .note-rich .note-c-orange {
-  color: #f59e0b;
+  color: var(--amber-text);
 }
 .note-rich .note-c-green {
   color: #22c55e;

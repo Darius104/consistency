@@ -3,3 +3,108 @@
   flex-direction: column;
   gap: var(--space-4);
 }
+
+/* "Templates" heading over the first template, today's progress on the
+   right. */
+.task-list__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: var(--space-1) 4px calc(-1 * var(--space-1));
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.task-list__heading-progress {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.task-list__heading-progress--all {
+  color: var(--success);
+}
+
+/* Finished templates, together in one green-tinted card. */
+.task-list__done {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0 6px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--success) 6%, var(--surface));
+}
+
+.task-list__done-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 6px;
+  color: var(--success);
+  font-weight: 700;
+}
+
+.task-list__done-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--success);
+  color: #0d1a14;
+}
+
+.task-list__done-count {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.task-list__done-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 7px 14px 7px 40px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  text-align: left;
+  transition: background-color 0.12s ease;
+}
+
+.task-list__done-row:hover {
+  background: color-mix(in srgb, var(--success) 8%, transparent);
+}
+
+.task-list__done-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--group-color);
+}
+
+/* Long names shorten with "..." instead of widening the card. */
+.task-list__done-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-list__done-tally {
+  flex: none;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--success);
+  font-variant-numeric: tabular-nums;
+}

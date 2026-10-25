@@ -53,41 +53,98 @@
   margin-left: auto;
 }
 
-/* Prev/Today/Next as one visually cohesive segmented control (one border,
-   thin dividers between segments) instead of three separate button chips
-   competing for attention next to everything else in this row. */
+/* The header's buttons: soft filled shapes, not outlined boxes. Each one
+   that leads somewhere has its own color (--tool) - amber for the phrase,
+   purple for templates (the same purple as "Template" in the Add menu);
+   settings stays a quiet grey. Mixed a little toward the text color so it
+   stays readable in light mode too. */
+.cal-header .cal-header__tool {
+  --tool: var(--text-secondary);
+  height: 34px;
+  border: none;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-weight: 600;
+  transition: background-color 0.12s ease, color 0.12s ease, transform 120ms var(--ease-out);
+}
+
+.cal-header .cal-header__tool.btn--icon {
+  width: 34px;
+}
+
+.cal-header .cal-header__tool:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.cal-header .cal-header__tool:active {
+  transform: scale(0.95);
+}
+
+.cal-header .cal-header__tool--phrase {
+  --tool: #f5c442;
+}
+
+.cal-header .cal-header__tool--templates {
+  --tool: #a855f7;
+}
+
+.cal-header .cal-header__tool--phrase,
+.cal-header .cal-header__tool--templates {
+  background: color-mix(in srgb, var(--tool) 14%, var(--surface));
+  color: color-mix(in srgb, var(--tool) 82%, var(--text));
+}
+
+.cal-header .cal-header__tool--phrase:hover,
+.cal-header .cal-header__tool--templates:hover {
+  background: color-mix(in srgb, var(--tool) 24%, var(--surface));
+  color: color-mix(in srgb, var(--tool) 82%, var(--text));
+}
+
+/* Prev / Today / Next: one soft pill, no dividers. */
 .cal-header__date-nav {
   display: flex;
-  align-items: stretch;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
+  align-items: center;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--surface);
 }
 
 .cal-header__date-nav .btn {
+  height: 34px;
   border: none;
-  border-radius: 0;
+  border-radius: 10px;
   background: transparent;
+  color: var(--text-secondary);
 }
 
-.cal-header__date-nav .btn:not(:last-child) {
-  border-right: 1px solid var(--border);
+.cal-header__date-nav .btn--icon {
+  width: 32px;
 }
 
 .cal-header__date-nav .btn:hover {
   background: var(--surface-hover);
+  color: var(--text);
+}
+
+.cal-header__date-nav .cal-header__today {
+  padding: 0 8px;
+  color: var(--text);
+  font-weight: 600;
 }
 
 /* A quiet nudge that today's phrase hasn't been opened yet - stops
    pulsing (and disappears) the moment it has. */
 .cal-header__phrase-badge {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 7px;
-  height: 7px;
+  top: 5px;
+  right: 5px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--danger);
+  box-shadow: 0 0 0 2px var(--surface);
 }
 
 .cal-header__phrase-badge::after {
@@ -95,7 +152,7 @@
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--danger);
   animation: phrase-badge-ping 1.8s ease-out infinite;
 }
 
@@ -190,7 +247,7 @@
   }
 
   .cal-header .cal-header__templates {
-    width: 30px;
+    width: 34px;
     padding: 0;
   }
 

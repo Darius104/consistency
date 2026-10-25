@@ -1,5 +1,13 @@
 import { supabase } from "../lib/supabaseClient";
-import type { Priority, RecurrenceType, Tag, Task, ThemeId } from "../types";
+import type {
+  Priority,
+  RecurrenceType,
+  Tag,
+  Task,
+  ThemeId,
+  TradingResult,
+  TradingResultUnit,
+} from "../types";
 import { DEFAULT_AVATAR_ID, parseAvatarId, type AvatarId } from "../utils/avatars";
 import {
   parseHiddenWidgets,
@@ -51,6 +59,9 @@ export interface FriendCalendarData {
   tags: Tag[];
   completions: Set<string>;
   freezes: Set<string>;
+  /** Their logged results by date - empty when they've turned off "Share
+   *  my results with friends" (see friend_trading_results_schema.sql). */
+  tradingResults: Record<string, TradingResult>;
   theme: ThemeId;
   randomColors: RandomThemeColors | null;
   displayName: string;
@@ -407,6 +418,8 @@ export async function fetchFriendCalendarData(friendUserId: string): Promise<Fri
     tags: FriendTagRow[];
     completions: { task_id: string; date: string }[];
     freezes: { date: string }[];
+    /** Missing until friend_trading_results_schema.sql has been run. */
+    trading_results?: { date: string; value: number; unit: string }[];
     panel_order: string | null;
     hidden_widgets: string | null;
   };
@@ -422,12 +435,19 @@ export async function fetchFriendCalendarData(friendUserId: string): Promise<Fri
 
   const completions = new Set(raw.completions.map((c) => `${c.task_id}:${c.date}`));
   const freezes = new Set(raw.freezes.map((f) => f.date));
+  const tradingResults: Record<string, TradingResult> = Object.fromEntries(
+    (raw.trading_results ?? []).map((r) => [
+      r.date,
+      { date: r.date, value: r.value, unit: r.unit as TradingResultUnit },
+    ]),
+  );
 
   return {
     tasks,
     tags,
     completions,
     freezes,
+    tradingResults,
     theme: (profile.theme as ThemeId) ?? DEFAULT_THEME,
     randomColors: profile.random_theme_colors ?? null,
     displayName: profile.display_name,

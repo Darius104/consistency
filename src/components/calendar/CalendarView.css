@@ -159,10 +159,9 @@
   display: contents;
 }
 
-/* Howbout-style phone grid: the weekday row and the month sit on one
-   full-bleed panel with rounded top corners, and weeks are separated by
-   thin lines only - the cells themselves have no box of their own (see
-   CalendarDay.css's matching phone rules). */
+/* Phone grid: the weekday row and the month sit on one full-bleed panel
+   with rounded top corners; each day is a small rounded tile (see
+   CalendarDay.css's phone rules). */
 @media (max-width: 700px) {
   .cal-view__sheet {
     flex: 1;
@@ -197,6 +196,7 @@
   }
 
   .cal-view__grid {
-    gap: 0;
+    gap: 3px;
+    padding: 0 3px 3px;
   }
 }

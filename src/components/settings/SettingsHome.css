@@ -68,7 +68,7 @@
   padding: 2px 7px;
   border-radius: 999px;
   background: rgba(245, 196, 66, 0.16);
-  color: #f5c442;
+  color: var(--gold-text);
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -178,27 +178,29 @@
   white-space: nowrap;
 }
 
-/* Desktop sidebar: same pieces, compact, with the open page highlighted.
-   Last in the file so it overrides the base sizes above. */
+/* Desktop sidebar: a flat list (no cards), soft icon tiles in each row's
+   color, and the open page as a solid pill in its own color. Last in the
+   file so it overrides the base sizes above. */
 @media (min-width: 701px) {
   .settings-home {
     flex: none;
-    width: 264px;
+    width: 250px;
     gap: var(--space-3);
-    padding: var(--space-3) var(--space-3) var(--space-5);
+    padding: 14px 10px var(--space-4);
     border-right: 1px solid var(--border);
     background: var(--bg);
     scrollbar-width: thin;
   }
 
   .settings-home__profile {
-    padding: var(--space-2) var(--space-3) var(--space-2) var(--space-2);
-    border-radius: 12px;
+    padding: 6px 8px;
+    border-radius: 10px;
+    background: none;
   }
 
   .settings-home__profile .avatar-badge {
-    --avatar-size: 40px !important;
-    font-size: 21px !important;
+    --avatar-size: 34px !important;
+    font-size: 18px !important;
   }
 
   .settings-home__name {
@@ -210,24 +212,31 @@
   }
 
   .settings-home__group {
-    border-radius: 12px;
+    gap: 2px;
+    border-radius: 0;
+    background: none;
+    overflow: visible;
   }
 
   .settings-home__row {
-    min-height: 38px;
-    gap: var(--space-2);
-    padding: 0 var(--space-2);
+    min-height: 34px;
+    gap: 9px;
+    padding: 0 8px;
+    border-radius: 9px;
+    color: var(--text-secondary);
     font-size: var(--text-sm);
   }
 
   .settings-home__row + .settings-home__row::before {
-    left: calc(var(--space-2) + 24px + var(--space-2));
+    display: none;
   }
 
   .settings-home__icon {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
     border-radius: 6px;
+    background: color-mix(in srgb, var(--row-color) 18%, transparent);
+    color: var(--row-color);
   }
 
   .settings-home__icon svg {
@@ -247,17 +256,43 @@
   @media (hover: hover) {
     .settings-home__row:hover,
     .settings-home__profile:hover {
-      background: var(--surface-hover);
+      background: var(--surface);
+      color: var(--text);
     }
   }
 
-  .settings-home__row--active,
-  .settings-home__profile--active {
-    background: var(--surface-hover);
+  .settings-home__row:active,
+  .settings-home__profile:active {
+    background: var(--surface);
   }
 
-  .settings-home__row--active .settings-home__label {
-    font-weight: 600;
+  /* The open page: a solid pill in its own color. */
+  .settings-home__row.settings-home__row--active {
+    background: var(--row-color);
+    color: var(--row-ink);
+    font-weight: 700;
+  }
+
+  .settings-home__row--active .settings-home__icon {
+    background: rgba(255, 255, 255, 0.22);
+    color: inherit;
+  }
+
+  .settings-home__row--active .settings-home__value {
+    color: inherit;
+    opacity: 0.85;
+  }
+
+  .settings-home__profile.settings-home__profile--active {
+    background: color-mix(in srgb, var(--row-color) 18%, transparent);
+  }
+
+  /* Sign out: a quiet line at the bottom, not a card. */
+  .settings-home__row--danger {
+    color: var(--danger);
+  }
+
+  .settings-home__row.settings-home__row--danger:hover {
+    color: var(--danger);
   }
 }
-

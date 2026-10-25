@@ -34,8 +34,8 @@
 }
 
 .theme-swatch--selected .theme-swatch__preview {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
+  border-color: var(--page-color, var(--accent));
+  box-shadow: 0 0 0 1px var(--page-color, var(--accent));
 }
 
 .theme-swatch__dot {

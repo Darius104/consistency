@@ -1,21 +1,14 @@
-/* Bleeds edge-to-edge inside modal-body by cancelling that wrapper's own
-   padding - this card owns its own layout (colored hero band, own footer
-   padding) instead of sitting centered inside the generic padded box every
-   other modal uses. modal-panel already clips to its rounded corners
-   (overflow: hidden), so the hero band's background is clipped there too
-   without this component needing to know its own radius. */
-/* Wider than the shared modal default now that the quote is the focal
-   point - gives it more room per line instead of wrapping tightly at
-   480px. Scoped to just this dialog via :has() so every other modal
-   keeps its plain default width. */
+/* Phrase of the Day: the phrase as a bold "poster" card in its category's
+   color (--phrase-color, see utils/quotes.ts), ‹ Got it › underneath. The
+   window's own icon is always the phrase's amber (CalendarHeader's button
+   is the same). */
+
 .modal-panel:has(.phrase-modal) {
-  width: 560px;
+  width: 480px;
 }
 
-/* This card's content is always short and bounded (a single quote) - it
-   never needs to scroll. Without this, the shared modal-body's
-   overflow-y: auto (there for taller modals) makes WebKit's overlay
-   scrollbar flash briefly on open even though there's nothing to scroll. */
+/* Always short - it never needs to scroll (and an empty scrollbar would
+   flash on open in WebKit). */
 .modal-body:has(.phrase-modal) {
   overflow: hidden;
 }
@@ -23,115 +16,127 @@
 .phrase-modal {
   display: flex;
   flex-direction: column;
-  margin: calc(var(--space-5) * -1);
+  gap: var(--space-4);
 }
 
-.phrase-modal__hero {
+.phrase-modal__card {
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   align-items: center;
+  gap: 16px;
+  min-height: 220px;
   justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-5);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--phrase-color, var(--accent)) 20%, var(--bg-elevated)) 0%,
-    var(--bg-elevated) 100%
-  );
-  animation: phrase-fade 280ms var(--ease-out) both;
+  padding: 28px 24px 22px;
+  border-radius: 18px;
+  text-align: center;
+  color: #fff;
+  background:
+    radial-gradient(
+      120% 90% at 20% 0%,
+      color-mix(in srgb, var(--phrase-color) 70%, #fff 12%),
+      transparent 60%
+    ),
+    linear-gradient(160deg, var(--phrase-color), color-mix(in srgb, var(--phrase-color) 55%, #000));
+  box-shadow: 0 14px 36px color-mix(in srgb, var(--phrase-color) 35%, transparent);
+  animation: phrase-in 260ms var(--ease-out) both;
 }
 
-.phrase-modal__icon {
-  width: 22px;
-  height: 22px;
-  flex: none;
-  display: flex;
+.phrase-modal__category {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--phrase-color, var(--accent));
-  color: #10131f;
-  animation: phrase-pop 420ms var(--ease-out) 60ms both;
-}
-
-.phrase-modal__eyebrow {
-  font-size: var(--text-xs);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--phrase-color, var(--accent));
-  animation: phrase-fade 280ms var(--ease-out) 100ms both;
-}
-
-/* This is the whole point of the modal - it gets the lion's share of the
-   space and the largest type in the card, everything above it (icon,
-   category label) is just a small tag identifying the quote, not a
-   competing focal point. */
-.phrase-modal__quote-row {
-  display: flex;
-  align-items: stretch;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-5) calc(var(--space-5) * 2);
-  animation: phrase-fade 280ms var(--ease-out) 140ms both;
-}
-
-.phrase-modal__bar {
-  flex: none;
-  width: 3px;
+  gap: 5px;
+  padding: 4px 10px;
   border-radius: 999px;
-  background: var(--phrase-color, var(--accent));
+  background: rgba(255, 255, 255, 0.18);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .phrase-modal__text {
   margin: 0;
-  font-size: 21px;
-  font-weight: 600;
-  line-height: 1.5;
-  color: var(--text);
-  text-align: left;
+  max-width: 34ch;
+  font-size: 23px;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
-.phrase-modal__footer {
-  display: flex;
-  justify-content: center;
-  padding: 0 var(--space-5) calc(var(--space-5) * 1.25);
-  animation: phrase-fade 280ms var(--ease-out) 180ms both;
-}
-
-/* .btn.phrase-modal__done (not just .phrase-modal__done) for specificity
-   over .btn--primary's own fixed height/padding - sits inset within the
-   card's own padding like any other button, just tied to the category
-   color instead of the app's fixed accent. */
-.btn.phrase-modal__done {
-  height: 44px;
-  padding: 0 var(--space-5);
+.phrase-modal__date {
   font-size: var(--text-sm);
-  background: var(--phrase-color, var(--accent));
-  color: #10131f;
+  font-weight: 600;
+  opacity: 0.8;
 }
 
-.btn.phrase-modal__done:hover {
-  filter: brightness(1.08);
+/* ‹ Got it › */
+.phrase-modal__actions {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-2);
 }
 
-@keyframes phrase-fade {
+.phrase-modal__step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text-secondary);
+  transition: background-color 0.15s ease, color 0.15s ease, transform 120ms var(--ease-out);
+}
+
+.phrase-modal__step:disabled {
+  opacity: 0.3;
+}
+
+.phrase-modal__step:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+@media (hover: hover) {
+  .phrase-modal__step:hover:not(:disabled) {
+    background: var(--surface-hover);
+    color: var(--text);
+  }
+}
+
+.phrase-modal__done {
+  height: 46px;
+  border: none;
+  border-radius: 12px;
+  background: var(--phrase-color);
+  color: var(--phrase-ink);
+  font-size: var(--text-md);
+  font-weight: 700;
+  transition: filter 0.15s ease, transform 120ms var(--ease-out), background-color 0.25s ease;
+}
+
+.phrase-modal__done:active {
+  transform: scale(0.98);
+}
+
+@media (hover: hover) {
+  .phrase-modal__done:hover {
+    filter: brightness(1.08);
+  }
+}
+
+@keyframes phrase-in {
   from {
     opacity: 0;
-    translate: 0 6px;
-  }
-  to {
-    opacity: 1;
-    translate: 0 0;
+    transform: translateY(6px) scale(0.98);
   }
 }
 
-@keyframes phrase-pop {
-  from {
-    opacity: 0;
-    scale: 0.6;
-  }
-  to {
-    opacity: 1;
-    scale: 1;
+@media (prefers-reduced-motion: reduce) {
+  .phrase-modal__card {
+    animation: none;
   }
 }

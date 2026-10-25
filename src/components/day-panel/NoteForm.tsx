@@ -7,7 +7,9 @@ import {
   noteToHtml,
 } from "../../utils/richNote";
 import { Button } from "../ui/Button";
+import { NoteIcon } from "../ui/icons";
 import { Modal } from "../ui/Modal";
+import { ADD_COLORS, inkOn } from "./addKinds";
 import "./NoteForm.css";
 import "./NoteRich.css";
 
@@ -155,7 +157,12 @@ export function NoteForm({ note, onSave, onClose, onDelete }: NoteFormProps) {
     ];
 
   return (
-    <Modal title={note ? "Edit note" : "New note"} onClose={onClose}>
+    <Modal
+      title={note ? "Edit note" : "New note"}
+      icon={<NoteIcon size={14} style={{ color: inkOn(ADD_COLORS.note) }} />}
+      accent={ADD_COLORS.note}
+      onClose={onClose}
+    >
       <div className="note-form">
         <div
           className="note-form__toolbar"
@@ -259,7 +266,12 @@ export function NoteForm({ note, onSave, onClose, onDelete }: NoteFormProps) {
 
         <div className="note-form__actions">
           <Button onClick={onClose}>Cancel</Button>
-          <Button variant="primary" onClick={handleSave} disabled={empty}>
+          <Button
+            variant="primary"
+            className="note-form__save"
+            onClick={handleSave}
+            disabled={empty}
+          >
             {note ? "Save" : "Add"}
           </Button>
         </div>

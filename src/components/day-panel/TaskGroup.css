@@ -1,20 +1,40 @@
+/* A template's tasks as one soft card: no border, the template's color as
+   a thin edge down the left side, and no progress bar (the count says the
+   same). */
 .task-group {
   --group-color: var(--text-muted);
+  position: relative;
   display: flex;
   flex-direction: column;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: var(--space-3) var(--space-4);
-  transition: border-color 0.15s ease, background-color 0.15s ease, padding 0.2s ease;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.task-group::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: var(--group-color);
+  pointer-events: none;
 }
 
 /* Deadline close and this group still has tasks left (see TaskList's
    UrgencyLevel): a countdown strip across the top of the card and a
-   matching tint on its border - amber with time to spare, red in the last
+   matching tint around it - amber with time to spare, red in the last
    hour, gently pulsing in the last 15 minutes. */
 .task-group {
   --urgency-color: #f5a524;
+}
+
+/* Light mode: a deeper amber - the bright one is too pale as text on
+   white. Only the amber stage; the last hour stays red. */
+:root[data-mode="light"] .task-group--urgency-warn {
+  --urgency-color: #b45309;
 }
 
 .task-group--urgency-high,
@@ -22,21 +42,33 @@
   --urgency-color: var(--danger);
 }
 
-.task-group--urgency-warn,
-.task-group--urgency-high,
-.task-group--urgency-critical {
-  border-color: color-mix(in srgb, var(--urgency-color) 45%, var(--border));
+/* Laid over the card (rows included - their own background would hide an
+   inset shadow on the card itself). */
+.task-group--urgency-warn::after,
+.task-group--urgency-high::after,
+.task-group--urgency-critical::after {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--urgency-color) 45%, transparent);
+  pointer-events: none;
 }
 
-/* Bleeds to the card's own edges (negative margin matching its padding),
-   so it reads as a strip across the top rather than a padded row. */
+/* While the countdown shows, its color frames the card - the template's
+   own color edge steps aside so the two don't compete. */
+.task-group--urgency-warn::before,
+.task-group--urgency-high::before,
+.task-group--urgency-critical::before {
+  display: none;
+}
+
 .task-group__urgency {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: calc(var(--space-3) * -1) calc(var(--space-4) * -1) var(--space-3);
-  padding: 8px var(--space-4);
-  border-radius: 16px 16px 0 0;
+  padding: 8px 14px 8px 16px;
   background: color-mix(in srgb, var(--urgency-color) 12%, transparent);
   border-bottom: 1px solid color-mix(in srgb, var(--urgency-color) 30%, transparent);
   color: var(--urgency-color);
@@ -107,9 +139,7 @@
    `transform`, so it composes with the JS-driven translateY instead of
    fighting it. */
 .task-group--dragging {
-  position: relative;
   z-index: 5;
-  transition: none;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
   scale: 1.02;
 }
@@ -120,7 +150,7 @@
   gap: var(--space-2);
   background: transparent;
   border: none;
-  padding: 2px 0;
+  padding: 12px 14px 12px 16px;
   color: var(--text);
   width: 100%;
   font: inherit;
@@ -150,14 +180,6 @@
   transform: rotate(90deg);
 }
 
-.task-group__dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex: none;
-  background: var(--group-color);
-}
-
 .task-group__label {
   flex: 1;
   min-width: 0;
@@ -165,7 +187,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--text-md);
-  font-weight: 700;
+  font-weight: 650;
 }
 
 /* Phone-sized screens: template titles read as too small at the desktop
@@ -176,11 +198,40 @@
   }
 }
 
-.task-group__count {
-  margin-left: auto;
-  font-size: var(--text-sm);
+/* "2 left" - only on a folded template that still has tasks to do. */
+.task-group__left {
+  flex: none;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--group-color) 15%, transparent);
+  color: color-mix(in srgb, var(--group-color) 85%, var(--text));
+  font-size: 11px;
   font-weight: 600;
-  color: var(--text-secondary);
+}
+
+/* Today's progress as a small ring in the template's color (green once
+   it's all done). */
+.task-group__ring {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, var(--surface) 0 4px, transparent 4.5px),
+    conic-gradient(
+      var(--ring-color, var(--group-color)) calc(var(--progress, 0) * 360deg),
+      color-mix(in srgb, var(--group-color) 22%, transparent) 0
+    );
+}
+
+.task-group--complete .task-group__ring {
+  --ring-color: var(--success);
+}
+
+.task-group__count {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -188,43 +239,16 @@
   color: var(--success);
 }
 
-/* Today's progress for this group, in its template color. */
-.task-group__progress {
-  height: 4px;
-  margin-top: var(--space-2);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--group-color) 18%, transparent);
-  overflow: hidden;
-}
-
-.task-group__progress > span {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: var(--group-color);
-  transition: width 0.35s var(--ease-out);
-}
-
-.task-group--complete .task-group__progress > span {
-  background: var(--success);
-}
-
-/* Finished and folded away: one quiet line (TaskList also moves it below
+/* Finished and folded away: one quiet row (TaskList also moves it below
    everything still in progress). Tap still unfolds it. */
-.task-group--done-compact {
-  padding: var(--space-2) var(--space-4);
-  background: transparent;
-  border-style: dashed;
+.task-group--done-compact .task-group__header {
+  padding-block: 10px;
 }
 
 .task-group--done-compact .task-group__label {
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--text-secondary);
-}
-
-.task-group--done-compact .task-group__count {
-  font-size: var(--text-xs);
 }
 
 .task-group__done-icon {
@@ -241,12 +265,12 @@
 
 /* Grid-rows trick: animating 1fr -> 0fr smoothly collapses the row without
    ever knowing the content's actual height, no JS measurement needed. The
-   gap to the header lives here (not on .task-group's flex gap) so it can
-   close in lockstep with the row instead of leaving a dangling gap. */
+   negative top margin pulls the first row closer to the title while open
+   (the header keeps its full padding for when it's folded). */
 .task-group__items-wrapper {
   display: grid;
   grid-template-rows: 1fr;
-  margin-top: var(--space-3);
+  margin-top: -6px;
   transition: grid-template-rows 220ms var(--ease-out), margin-top 220ms var(--ease-out);
 }
 
@@ -260,25 +284,26 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  padding-bottom: 4px;
 }
 
-/* Thin lines between rows instead of a box around each one. */
-.task-group__items > * + * {
-  border-top: 1px solid var(--border);
+.task-group__items-wrapper--collapsed .task-group__items {
+  padding-bottom: 0;
 }
 
-/* See TaskItem.css: room for the rounded hover highlight. */
-@media (hover: hover) and (pointer: fine) {
-  .task-group__items {
-    margin-inline: calc(-1 * var(--space-2));
-  }
+.task-group__items > * {
+  position: relative;
+}
 
-  /* Dividers stay inset to the text, not the wider highlight area. */
-  .task-group__items > * + * {
-    border-top-color: transparent;
-    background-image: linear-gradient(var(--border), var(--border));
-    background-size: calc(100% - 2 * var(--space-2)) 1px;
-    background-position: center top;
-    background-repeat: no-repeat;
-  }
+/* Thin lines between rows, starting at the text (after the checkbox). */
+.task-group__items > * + *::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  left: 48px;
+  right: 0;
+  height: 1px;
+  background: var(--border);
+  pointer-events: none;
 }

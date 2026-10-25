@@ -1,10 +1,11 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { getTemplateTasks } from "../../db/queries";
 import type { Tag, Template, TemplateTaskBlueprint } from "../../types";
 import { PRESET_COLORS } from "../../utils/tagColors";
 import { Button } from "../ui/Button";
-import { ChevronLeftIcon, ChevronRightIcon, TagIcon, TrashIcon } from "../ui/icons";
+import { ADD_COLORS } from "../day-panel/addKinds";
+import { BookmarkIcon, ChevronLeftIcon, ChevronRightIcon, PlusIcon, TrashIcon } from "../ui/icons";
 import { Modal } from "../ui/Modal";
 import { Skeleton } from "../ui/Skeleton";
 import { TemplateTaskModal } from "./TemplateTaskModal";
@@ -144,6 +145,19 @@ export function TemplatesModal({
     }
   }
 
+  // Custom color: the system color picker behind the rainbow circle. The
+  // preview follows it live; it's saved once the picker is closed (the
+  // native "change"), not on every step while dragging around in it.
+  const customColorRef = useRef<HTMLInputElement>(null);
+  const isCustomColor = !PRESET_COLORS.some((c) => c.toLowerCase() === draftColor.toLowerCase());
+  useEffect(() => {
+    const input = customColorRef.current;
+    if (!input) return;
+    const commit = () => selectColor(input.value);
+    input.addEventListener("change", commit);
+    return () => input.removeEventListener("change", commit);
+  });
+
   function selectColor(c: string) {
     setDraftColor(c);
     if (liveTag && liveTag.color !== c) {
@@ -186,7 +200,12 @@ export function TemplatesModal({
   }
 
   return (
-    <Modal title={editingKey ? (liveTag ? "Edit template" : "New template") : "Templates"} onClose={onClose}>
+    <Modal
+      title={editingKey ? (liveTag ? "Edit template" : "New template") : "Templates"}
+      icon={<BookmarkIcon size={14} />}
+      accent={ADD_COLORS.template}
+      onClose={onClose}
+    >
       {editingKey ? (
         <div className="templates-modal-edit">
           <button type="button" className="templates-modal-edit__back" onClick={() => setEditingKey(null)}>
@@ -254,6 +273,27 @@ export function TemplatesModal({
                       aria-label={`Choose color ${c}`}
                     />
                   ))}
+                  <label
+                    className={`templates-modal-edit__swatch templates-modal-edit__swatch--custom ${
+                      isCustomColor ? "templates-modal-edit__swatch--active" : ""
+                    }`}
+                    style={isCustomColor ? ({ background: draftColor } as CSSProperties) : undefined}
+                    title="Custom color"
+                  >
+                    {!isCustomColor && (
+                      <span className="templates-modal-edit__custom-plus" aria-hidden="true">
+                        <PlusIcon size={12} />
+                      </span>
+                    )}
+                    <input
+                      ref={customColorRef}
+                      type="color"
+                      className="templates-modal-edit__color-input"
+                      value={draftColor}
+                      onChange={(e) => setDraftColor(e.target.value)}
+                      aria-label="Custom color"
+                    />
+                  </label>
                 </div>
               )}
             </div>
@@ -397,17 +437,8 @@ export function TemplatesModal({
       ) : (
         <div className="settings-pages templates-modal-list">
           <div className="settings-group-wrap">
+            {tags.length > 0 && (
             <div className="settings-group">
-              <button
-                type="button"
-                className="settings-group__row settings-group__row--accent"
-                onClick={startCreate}
-              >
-                <span className="templates-modal-list__plus" aria-hidden="true">
-                  +
-                </span>
-                <span className="settings-group__label">New template</span>
-              </button>
               {tags.map((tag) => {
                 const count = taskCountFor(tag);
                 return (
@@ -422,9 +453,11 @@ export function TemplatesModal({
                       style={{ "--card-color": tag.color } as CSSProperties}
                       aria-hidden="true"
                     >
-                      <TagIcon size={14} />
+                      <BookmarkIcon size={14} />
                     </span>
-                    <span className="settings-group__label">{tag.name}</span>
+                    <span className="settings-group__label templates-modal-list__name" title={tag.name}>
+                      {tag.name}
+                    </span>
                     <span className="settings-group__value">
                       {count === 0 ? "No tasks" : `${count} ${count === 1 ? "task" : "tasks"}`}
                     </span>
@@ -433,6 +466,12 @@ export function TemplatesModal({
                 );
               })}
             </div>
+            )}
+            {/* In the template purple, like "Template" in the Add menu. */}
+            <button type="button" className="templates-modal-list__new" onClick={startCreate}>
+              <PlusIcon size={15} />
+              New template
+            </button>
             <span className="settings-footnote">
               {tags.length === 0
                 ? "A template groups tasks you add together - like a Morning routine."

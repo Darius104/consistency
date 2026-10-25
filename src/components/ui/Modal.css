@@ -83,9 +83,35 @@
 }
 
 .modal-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: var(--text-md);
   font-weight: 600;
   margin: 0;
+}
+
+/* Long titles (a template's name, say) shorten with "..." instead of
+   pushing the close button out or widening the window. */
+.modal-title-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modal-title-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--modal-accent, var(--accent));
+  color: #fff;
 }
 
 .modal-close {

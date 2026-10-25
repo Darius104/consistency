@@ -1,7 +1,5 @@
 import type { MembershipState } from "../../hooks/useMembership";
-import { Card } from "../ui/Card";
 import { TIER_LABEL } from "./MembershipSection";
-import "./AdminPreviewSection.css";
 
 interface AdminPreviewSectionProps {
   membership: MembershipState;
@@ -22,18 +20,17 @@ export function AdminPreviewSection({ membership }: AdminPreviewSectionProps) {
   const { effectiveTier, previewTier, setPreview } = membership;
 
   return (
-    <Card>
-      <span className="settings__label">Preview the app as</span>
-      <span className="settings__hint">
-        See exactly what a Free or Premium member sees, without changing your real account.
-      </span>
-      <div className="admin-preview__options">
+    <div className="settings-group-wrap">
+      <span className="settings-group__title">Preview the app as</span>
+      <div className="settings-segmented" role="radiogroup" aria-label="Preview the app as">
         {PREVIEW_OPTIONS.map((opt) => (
           <button
             key={opt.value}
             type="button"
-            className={`admin-preview__btn ${
-              effectiveTier === opt.value ? "admin-preview__btn--active" : ""
+            role="radio"
+            aria-checked={effectiveTier === opt.value}
+            className={`settings-segmented__option ${
+              effectiveTier === opt.value ? "settings-segmented__option--active" : ""
             }`}
             onClick={() => setPreview(opt.value)}
           >
@@ -41,12 +38,16 @@ export function AdminPreviewSection({ membership }: AdminPreviewSectionProps) {
           </button>
         ))}
       </div>
-      {previewTier && (
-        <span className="settings__hint settings__hint--warning">
-          Previewing as {TIER_LABEL[previewTier]} - only visible on this device, doesn't change
-          your real account.
+      {previewTier ? (
+        <span className="settings-footnote settings-footnote--warning">
+          Previewing as {TIER_LABEL[previewTier]} - only on this device, your real account
+          doesn't change.
+        </span>
+      ) : (
+        <span className="settings-footnote">
+          See exactly what a Free or Premium member sees, without changing your real account.
         </span>
       )}
-    </Card>
+    </div>
   );
 }

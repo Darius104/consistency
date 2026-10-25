@@ -11,6 +11,7 @@ import type { Tag, Task } from "../../types";
 import { parseDateKey, startOfWeek, todayKey } from "../../utils/dates";
 import type { PanelBlockId, WidgetId } from "../../utils/panelOrder";
 import { getQuoteOfDay } from "../../utils/quotes";
+import { formatTradingResult } from "../../utils/trading";
 import { RANDOM_THEME_CSS_VARS, type RandomThemeColors } from "../../utils/randomTheme";
 import { tasksScheduledOn } from "../../utils/recurrence";
 import {
@@ -278,9 +279,9 @@ export function FriendCalendarView({ friend, isOnline, onBack }: FriendCalendarV
             tasks={data.tasks}
             completions={data.completions}
             freezes={data.freezes}
-            // Never fetched for a friend's calendar - a trading result is
-            // personal financial data, not something a friend should see.
-            tradingResults={{}}
+            // Only what they share - each person can turn this off in
+            // Settings > Friends (see friend_trading_results_schema.sql).
+            tradingResults={data.tradingResults}
             tags={data.tags}
             selectedDate={selectedDate}
             onSelectDate={(date) => {
@@ -355,6 +356,7 @@ function FriendDayContent({
   const templateBreakdown = computeTemplateBreakdown(data.tasks, data.completions, weekStart, todayKey());
 
   const groups = groupByTag(occurrences, data.tags);
+  const result = data.tradingResults[selectedDate] ?? null;
 
   const friendStreakEntries = friendOfFriendStreaks.map((f) => ({
     userId: f.userId,
@@ -440,6 +442,19 @@ function FriendDayContent({
       </div>
       <div className="friend-view__day-header">
         <h2 className="friend-view__date">{label}</h2>
+        {result && (
+          <span
+            className={`friend-view__result ${
+              result.value > 0
+                ? "friend-view__result--positive"
+                : result.value < 0
+                  ? "friend-view__result--negative"
+                  : "friend-view__result--even"
+            }`}
+          >
+            {formatTradingResult(result.value, result.unit)}
+          </span>
+        )}
       </div>
       {visibleOrder.map((id) => (
         <div className="day-panel__block" key={id}>

@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { useNow } from "../../hooks/useNow";
 import { useReorderDrag } from "../../hooks/useReorderDrag";
 import type { DayNote, Tag, Task } from "../../types";
@@ -59,6 +60,8 @@ interface TaskListProps {
   onToggle: (task: Task) => void;
   onView: (task: Task) => void;
   onDelete: (task: Task) => void;
+  /** Move an unfinished one-off task to another day (see MoveTaskModal). */
+  onMove?: (task: Task) => void;
   onReorderTasks: (taskIds: string[]) => void;
   onReorderTags: (tagIds: string[]) => void;
   notes: DayNote[];
@@ -90,6 +93,7 @@ export function TaskList({
   onToggle,
   onView,
   onDelete,
+  onMove,
   onReorderTasks,
   onReorderTags,
   notes,
@@ -189,7 +193,14 @@ export function TaskList({
   // not just reordered against other notes ("No tag" excluded from that
   // combined domain - it isn't a real group, it always stays last).
   const taskDrag = useReorderDrag((nextTaskIds) => onReorderTasks(nextTaskIds));
-  const layoutDrag = useReorderDrag((nextIds) => {
+  const layoutDrag = useReorderDrag((nextVisibleIds) => {
+    // Finished, folded templates sit in the "Done" card instead of the
+    // list, so they aren't part of a drag - put them back in their own
+    // saved slots and fill the rest in the dragged order.
+    const queue = [...nextVisibleIds];
+    const nextIds = draggableLayout.map((entry) =>
+      doneItemIds.has(entry.itemId) ? entry.itemId : (queue.shift() ?? entry.itemId),
+    );
     const nextTagIds = nextIds
       .filter((id) => id.startsWith("group:"))
       .map((id) => id.slice("group:".length));
@@ -288,6 +299,21 @@ export function TaskList({
 
   const draggableLayout = layout.filter((entry) => entry.draggable);
 
+  // Finished and folded: shown together in one "Done" card at the end
+  // instead of a card each.
+  const isDoneFolded = (g: Group) =>
+    g.occurrences.length > 0 &&
+    g.occurrences.every((o) => o.completed) &&
+    collapsed.has(g.scopedKey);
+  const doneGroups = groups.filter(isDoneFolded);
+  const doneItemIds = new Set(doneGroups.map((g) => groupItemId(g.key)));
+  const visibleLayout = layout.filter((entry) => !doneItemIds.has(entry.itemId));
+  const visibleDraggable = visibleLayout.filter((entry) => entry.draggable);
+  const finishedCount = groups.filter(
+    (g) => g.occurrences.length > 0 && g.occurrences.every((o) => o.completed),
+  ).length;
+  const firstGroupItemId = visibleLayout.find((entry) => entry.group)?.itemId;
+
   // App.tsx builds a brand-new `occurrences` array on every render, even
   // when nothing actually changed (e.g. a background sync re-rendering the
   // whole tree). Depending on that array directly would tear down and
@@ -364,7 +390,7 @@ export function TaskList({
 
   return (
     <div className="task-list">
-      {layout.map((entry) => {
+      {visibleLayout.map((entry) => {
         if (entry.note) {
           const note = entry.note;
           return (
@@ -375,7 +401,7 @@ export function TaskList({
                   dragging={draggedNoteId === note.id}
                   onDragPointerDown={layoutDrag.bindLongPress(
                     entry.itemId,
-                    () => draggableLayout.map((e) => e.itemId),
+                    () => visibleDraggable.map((e) => e.itemId),
                   )}
                   suppressClick={layoutDrag.suppressClick}
                   onEdit={() => onEditNote(note)}
@@ -399,6 +425,7 @@ export function TaskList({
 
         return (
           <Fragment key={entry.itemId}>
+            {entry.itemId === firstGroupItemId && templatesHeading()}
             <div
               ref={
                 isDraggable
@@ -418,7 +445,7 @@ export function TaskList({
                 onDragPointerDown={
                   isDraggable
                     ? layoutDrag.bindLongPress(entry.itemId, () =>
-                        draggableLayout.map((e) => e.itemId),
+                        visibleDraggable.map((e) => e.itemId),
                       )
                     : undefined
                 }
@@ -431,7 +458,7 @@ export function TaskList({
                 msLeft={msUntilMidnight}
               >
                 {/* Completed tasks stay exactly where they are (ticked and
-                    crossed out) - nothing moves when you tick one. */}
+                    greyed out) - nothing moves when you tick one. */}
                 {groupOccurrences.map(({ task, completed }) => (
                   <Fragment key={task.id}>
                     <div
@@ -449,6 +476,11 @@ export function TaskList({
                         onToggle={() => onToggle(task)}
                         onView={() => onView(task)}
                         onDelete={() => onDelete(task)}
+                        onMove={
+                          onMove && !completed && task.recurrenceType === "none"
+                            ? () => onMove(task)
+                            : undefined
+                        }
                         onDragPointerDown={taskDrag.bindLongPress(task.id, () =>
                           groupOccurrences.map((o) => o.task.id),
                         )}
@@ -463,6 +495,52 @@ export function TaskList({
           </Fragment>
         );
       })}
+
+      {/* Finished and folded templates, together in one card - a line
+          each (tap one to open it back up where it was). */}
+      {/* Every template finished: the heading goes over this card. */}
+      {!firstGroupItemId && doneGroups.length > 0 && templatesHeading()}
+      {doneGroups.length > 0 && (
+        <div className="task-list__done">
+          <div className="task-list__done-head">
+            <span className="task-list__done-check" aria-hidden="true">
+              <CheckIcon size={11} />
+            </span>
+            Done
+            <span className="task-list__done-count">{doneGroups.length}</span>
+          </div>
+          {doneGroups.map((g) => (
+            <button
+              key={g.key}
+              type="button"
+              className="task-list__done-row"
+              style={{ "--group-color": g.tag?.color ?? "var(--text-muted)" } as CSSProperties}
+              onClick={() => toggleGroup(g.scopedKey)}
+              aria-expanded={false}
+            >
+              <span className="task-list__done-dot" aria-hidden="true" />
+              <span className="task-list__done-name">{g.tag?.name ?? "No template"}</span>
+              <span className="task-list__done-tally">
+                {g.occurrences.length}/{g.occurrences.length}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
+
+  // "Templates" over the first template, with how many are finished today.
+  function templatesHeading() {
+    return (
+      <div className="task-list__heading">
+        <span>Templates</span>
+        <span
+          className={`task-list__heading-progress ${finishedCount === groups.length ? "task-list__heading-progress--all" : ""}`}
+        >
+          {finishedCount === groups.length ? "All done" : `${finishedCount} of ${groups.length} done`}
+        </span>
+      </div>
+    );
+  }
 }

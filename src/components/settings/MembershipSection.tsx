@@ -4,8 +4,7 @@ import { buyPremium, CAN_BUY_PREMIUM_HERE } from "../../premium";
 import { redeemPremiumCode, type Friend, type MembershipTier } from "../../db/friends";
 import type { MembershipState } from "../../hooks/useMembership";
 import { Button } from "../ui/Button";
-import { BookmarkIcon, CheckIcon, CrownIcon, FrostIcon, GridIcon, UsersIcon } from "../ui/icons";
-import "./SettingsHome.css";
+import { BookmarkIcon, CheckIcon, FrostIcon, GridIcon, UsersIcon } from "../ui/icons";
 import { AdminMembersList } from "./AdminMembersList";
 import "./MembershipSection.css";
 
@@ -46,13 +45,10 @@ export const TIER_LABEL: Record<MembershipTier, string> = {
   admin: "Admin",
 };
 
-const TIER_HINT: Record<MembershipTier, string> = {
-  free: "Upgrade for templates, extra widgets, and streak freezes.",
-  premium: "Thanks for supporting Consistency.",
-  admin: "You can see every member below and change their tier.",
-};
-
 /**
+ * Your tier itself (and what it means) is the page's banner, drawn by
+ * SettingsModal - this is everything under it.
+ *
  * Read-only for now - there's no self-service billing yet (see
  * supabase/membership_schema.sql), so nothing here can change your real
  * tier. Tier/preview state itself lives in useMembership (App.tsx owns the
@@ -125,9 +121,6 @@ export function MembershipSection({ online, onViewMember, membership }: Membersh
       {effectiveTier === "free" ? (
         <>
           <div className="membership-hero">
-            <span className="membership-hero__crown">
-              <CrownIcon size={24} />
-            </span>
             <span className="membership-hero__title">Consistency Premium</span>
             <span className="membership-hero__price">
               €9,99 <span>· one-time, yours forever</span>
@@ -151,7 +144,7 @@ export function MembershipSection({ online, onViewMember, membership }: Membersh
                 return (
                   <div className="membership-compare__row" key={perk.label}>
                     <span className="membership-compare__perk">
-                      <span className="settings-home__icon" style={{ "--row-color": perk.color } as CSSProperties}>
+                      <span className="settings-tile" style={{ "--tile-color": perk.color } as CSSProperties}>
                         <Icon size={15} />
                       </span>
                       <span className="membership-compare__perk-text">
@@ -172,24 +165,16 @@ export function MembershipSection({ online, onViewMember, membership }: Membersh
           {codeRow}
         </>
       ) : effectiveTier === "premium" ? (
+        // "You're Premium" is the page's banner (SettingsModal).
         <>
-          <div className="membership-hero membership-hero--active">
-            <span className="membership-hero__crown">
-              <CrownIcon size={24} />
-            </span>
-            <span className="membership-hero__title">You're Premium</span>
-            <span className="membership-hero__status">
-              <CheckIcon size={12} /> Active · thanks for supporting Consistency
-            </span>
-          </div>
           <div className="settings-group-wrap">
             <span className="settings-group__title">Included</span>
-            <div className="settings-group">
+            <div className="settings-group settings-group--tiles">
               {PERKS.map((perk) => {
                 const Icon = perk.icon;
                 return (
                   <div className="settings-group__row" key={perk.label}>
-                    <span className="settings-home__icon" style={{ "--row-color": perk.color } as CSSProperties}>
+                    <span className="settings-tile" style={{ "--tile-color": perk.color } as CSSProperties}>
                       <Icon size={15} />
                     </span>
                     <span className="settings-group__label membership-compare__perk-text">
@@ -205,17 +190,7 @@ export function MembershipSection({ online, onViewMember, membership }: Membersh
             </div>
           </div>
         </>
-      ) : (
-        effectiveTier && (
-          <div className={`membership-badge membership-badge--${effectiveTier}`}>
-            <CrownIcon size={18} />
-            <div className="membership-badge__text">
-              <span className="membership-badge__tier">{TIER_LABEL[effectiveTier]}</span>
-              <span className="membership-badge__hint">{TIER_HINT[effectiveTier]}</span>
-            </div>
-          </div>
-        )
-      )}
+      ) : null}
 
       {effectiveTier === "admin" && <AdminMembersList online={online} onView={onViewMember} />}
     </div>

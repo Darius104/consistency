@@ -1,24 +1,24 @@
+/* A day in the month grid: a soft rounded tile (the same surface as the
+   app's cards), the day's progress as a thin green bar along the bottom,
+   a quiet check once it's all done, the day's result as a pill in the
+   middle. Weekends a touch darker. Phone: the same tile, smaller, with
+   the day's tasks as chips. */
 .cal-day {
   position: relative;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  border: 1px solid var(--border);
-  /* Solid surface as the base layer, with the heatmap tint as a translucent
-     layer above it - both driven by CSS vars, so a theme switch repaints
-     both instantly with no JS involved. */
-  background-color: var(--surface);
-  background-image: linear-gradient(
-    rgba(var(--accent-rgb), var(--heat-alpha, 0)),
-    rgba(var(--accent-rgb), var(--heat-alpha, 0))
-  );
-  border-radius: var(--radius-sm);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   justify-content: flex-start;
   padding: var(--space-2);
-  transition: border-color 0.12s ease, box-shadow 0.12s ease;
+  border: none;
+  border-radius: 12px;
+  background: var(--surface);
+  color: inherit;
+  text-align: left;
+  transition: background-color 0.15s ease, box-shadow 0.15s ease;
   /* Each cell remounts (new `key`) only when the month itself changes, not
      on selection or completion updates - so this only ever plays when
      navigating months, never on the frequent day-to-day clicks. */
@@ -31,8 +31,14 @@
   }
 }
 
-.cal-day:hover {
-  border-color: var(--border-strong);
+.cal-day--weekend {
+  background: color-mix(in srgb, var(--surface) 72%, var(--bg));
+}
+
+@media (hover: hover) {
+  .cal-day:hover {
+    background: var(--surface-hover);
+  }
 }
 
 .cal-day--dim {
@@ -40,62 +46,35 @@
 }
 
 .cal-day--selected {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
+  box-shadow: inset 0 0 0 1.5px var(--accent);
 }
 
-.cal-day--complete {
-  border-color: var(--accent);
-}
-
-/* A frozen day gets its own icy wash so it reads as protected at a glance,
-   not just a plain gray badge in the corner - layered as a second
-   background-image on top of the heat-alpha tint (rather than replacing
-   it) so completion heat still shows through underneath. A flat
-   border-color alone read as just a colored outline, so the frost is
-   layered again as an inset box-shadow plus four corner radial-gradients -
-   together they read as ice creeping in from the edge toward the center,
-   fading out before it reaches the middle of the cell, instead of stopping
-   dead at the border line. */
+/* Frozen: a light ice tint, so it reads as protected at a glance. */
 .cal-day--frozen {
-  border-color: var(--frost);
-  box-shadow: inset 0 0 0 1px rgba(var(--frost-rgb), 0.5), inset 0 0 14px rgba(var(--frost-rgb), 0.35);
-  background-image: radial-gradient(
-      circle at top left,
-      rgba(var(--frost-rgb), 0.35),
-      transparent 65%
-    ),
-    radial-gradient(circle at top right, rgba(var(--frost-rgb), 0.35), transparent 65%),
-    radial-gradient(circle at bottom left, rgba(var(--frost-rgb), 0.35), transparent 65%),
-    radial-gradient(circle at bottom right, rgba(var(--frost-rgb), 0.35), transparent 65%),
-    linear-gradient(rgba(var(--frost-rgb), 0.12), rgba(var(--frost-rgb), 0.12)),
-    linear-gradient(
-      rgba(var(--accent-rgb), var(--heat-alpha, 0)),
-      rgba(var(--accent-rgb), var(--heat-alpha, 0))
-    );
+  background: color-mix(in srgb, var(--frost) 11%, var(--surface));
 }
 
 .cal-day__number {
   font-size: var(--text-sm);
+  font-weight: 600;
   color: var(--text-secondary);
 }
 
 .cal-day__number--today {
-  color: var(--on-accent);
-  background: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-  border-radius: 50%;
-  width: 18px;
-  height: 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-weight: 600;
+  width: 22px;
+  height: 22px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
 }
 
 .cal-day__badges {
   position: absolute;
-  /* Same inset as the day number, on the same line as it. */
   top: var(--space-2);
   right: var(--space-2);
   height: 18px;
@@ -104,21 +83,18 @@
   gap: 3px;
 }
 
+/* Quiet on purpose: it's on most days, so it marks them without competing
+   with the day's result. */
 .cal-day__check {
-  /* Quiet on purpose: it's on most days, so it marks them without
-     competing with the day's result. */
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  background: transparent;
-  color: color-mix(in srgb, var(--success) 70%, var(--text-muted));
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: none;
-  /* Only ever mounts the instant a day actually becomes fully completed -
-     a genuine, occasional moment worth a small pop rather than an instant
-     appearance. */
+  width: 13px;
+  height: 13px;
+  color: color-mix(in srgb, var(--success) 70%, var(--text-muted));
+  /* Only ever mounts the instant a day becomes fully completed - worth a
+     small pop. */
   animation: cal-day-check-in 260ms var(--ease-out);
 }
 
@@ -130,37 +106,33 @@
 }
 
 .cal-day__frozen {
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  background: var(--frost);
-  color: #0d2733;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: none;
-  /* Same pop-in as .cal-day__check - only ever mounts the instant a day
-     actually becomes frozen, a deliberate moment worth the same emphasis. */
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--frost) 25%, transparent);
+  color: var(--frost);
   animation: cal-day-check-in 260ms var(--ease-out);
 }
 
-/* The day's result: a small tinted pill along the bottom of the cell -
-   the one strong color in it. */
+/* The day's result: a tinted pill a little below the middle of the cell -
+   green profit, red loss, orange break-even. */
 .cal-day__result-center {
   position: absolute;
-  bottom: 6px;
+  top: 60%;
   left: 50%;
-  translate: -50% 0;
+  translate: -50% -50%;
   max-width: calc(100% - 8px);
-  padding: 2px 7px;
+  padding: 2px 8px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--text-muted) 18%, transparent);
   font-size: 12px;
   font-weight: 700;
   line-height: 1.3;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  color: var(--text-secondary);
   pointer-events: none;
   animation: cal-day-check-in 260ms var(--ease-out);
 }
@@ -175,6 +147,33 @@
   background: color-mix(in srgb, var(--trading-loss) 16%, transparent);
 }
 
+.cal-day__result-center--even {
+  color: var(--amber-text);
+  background: color-mix(in srgb, #f59e0b 16%, transparent);
+}
+
+/* The day's progress: a thin bar along the bottom, filling with the share
+   of its tasks done (full = the whole day). */
+.cal-day__progress {
+  position: absolute;
+  left: var(--space-2);
+  right: var(--space-2);
+  bottom: 6px;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--text-muted) 16%, transparent);
+}
+
+.cal-day__progress > span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--success);
+  transition: width 0.35s var(--ease-out);
+}
+
+/* Days still ahead with tasks: a small dot. */
 .cal-day__indicator {
   margin-top: auto;
   width: 5px;
@@ -183,18 +182,21 @@
   background: var(--accent);
 }
 
-/* Task chips (Howbout-style) - phone widths only. On desktop the cells are
-   smaller relative to their text and a plain dot reads better (tried and
-   rejected there), so chips stay hidden above 700px. */
+/* Task chips (Howbout-style) - phone widths only. On desktop the cells
+   are smaller relative to their text and a plain dot reads better (tried
+   and rejected there), so chips stay hidden above 700px. */
 .cal-day__chips {
   display: none;
 }
 
+/* --- Phone ----------------------------------------------------------- */
+
 @media (max-width: 700px) {
   .cal-day {
-    padding: 4px 2px;
+    padding: 4px 2px 8px;
     align-items: stretch;
     gap: 3px;
+    border-radius: 8px;
   }
 
   .cal-day__number {
@@ -202,13 +204,20 @@
     font-size: var(--text-xs);
   }
 
+  .cal-day__number--today {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+  }
+
   .cal-day__indicator {
     display: none;
   }
 
   .cal-day__badges {
-    top: 2px;
-    right: 2px;
+    top: 3px;
+    right: 3px;
+    height: auto;
   }
 
   .cal-day__chips {
@@ -248,53 +257,30 @@
     text-align: left;
   }
 
-  /* Smaller pill on the phone's narrow cells, below the chips. */
+  /* The middle of a phone cell holds its task chips, so the result sits
+     centered along the bottom instead, above the progress bar. */
   .cal-day__result-center {
-    bottom: 3px;
+    top: auto;
+    bottom: 11px;
+    translate: -50% 0;
     padding: 1px 4px;
     font-size: 9px;
   }
-}
 
-@media (max-width: 700px) {
-  .cal-day,
-  .cal-day:hover,
-  .cal-day--complete,
-  .cal-day--frozen {
-    border: none;
-    border-top: 1px solid var(--border);
-    border-radius: 0;
-    background: transparent;
-    box-shadow: none;
-  }
-
-  .cal-day--selected {
-    border: none;
-    border-top: 1px solid var(--border);
-    box-shadow: none;
-    /* The sheet itself is --surface-hover now (see CalendarView.css), so
-       the selected day needs to be a step lighter than that. */
-    background: color-mix(in srgb, var(--text) 9%, var(--surface-hover));
+  .cal-day__progress {
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
+    height: 2px;
   }
 }
 
-/* Desktop: completed days were the loudest thing on screen (a strong blue
-   fill), outshining today. The completion tint is softened to about a
-   third, the ✓ still marks them, and today gets the clear outline. */
-@media (min-width: 701px) {
-  .cal-day:not(.cal-day--frozen) {
-    background-image: linear-gradient(
-      rgba(var(--accent-rgb), calc(var(--heat-alpha, 0) * 0.38)),
-      rgba(var(--accent-rgb), calc(var(--heat-alpha, 0) * 0.38))
-    );
-  }
+/* Frozen: the day was protected, not finished - its bar is ice blue (like
+   the snowflake and the tint), not the green of a completed day. */
+.cal-day--frozen .cal-day__progress {
+  background: color-mix(in srgb, var(--frost) 18%, transparent);
+}
 
-  .cal-day--complete {
-    border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
-  }
-
-  .cal-day:has(.cal-day__number--today) {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 1px var(--accent);
-  }
+.cal-day--frozen .cal-day__progress > span {
+  background: var(--frost);
 }

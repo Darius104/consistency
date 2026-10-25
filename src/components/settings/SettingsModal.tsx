@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from "react";
-import type { ReactNode } from "react";
+import type { ComponentProps, CSSProperties, ReactNode } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import type { Friend } from "../../db/friends";
+import type { Friend, MembershipTier } from "../../db/friends";
 import type { MembershipState } from "../../hooks/useMembership";
 import type { ReminderStatus } from "../../hooks/useTaskReminders";
 import type { FriendStreakEntry } from "../../hooks/useFriendStreaks";
@@ -11,8 +11,10 @@ import type { AvatarId } from "../../utils/avatars";
 import type { RandomThemeColors } from "../../utils/randomTheme";
 import {
   FREE_WIDGET_LIMIT,
+  STREAK_STYLES,
   WIDGET_IDS,
   WIDGET_LABELS,
+  type StreakStyle,
   type WidgetId,
 } from "../../utils/panelOrder";
 import type { Quote } from "../../utils/quotes";
@@ -23,6 +25,8 @@ import {
   type TodayStatus,
   type WeeklyCompletion as WeeklyCompletionData,
 } from "../../utils/stats";
+import { inkOn } from "../day-panel/addKinds";
+import { WIDGET_INFO } from "../day-panel/WidgetGallery";
 import { TemplateBreakdown } from "../stats/TemplateBreakdown";
 import { FreezeSummary } from "../stats/FreezeSummary";
 import { FriendStreakCompare } from "../stats/FriendStreakCompare";
@@ -39,10 +43,13 @@ import {
   EyeIcon,
   FrostIcon,
   GridIcon,
+  GripIcon,
   HeartIcon,
   HelpIcon,
   ProfileIcon,
   PaletteIcon,
+  SettingsIcon,
+  TrendingUpIcon,
   UserIcon,
   UsersIcon,
 } from "../ui/icons";
@@ -56,6 +63,7 @@ import { FriendsManager } from "./FriendsManager";
 import { MembershipSection } from "./MembershipSection";
 import { ProfileSection } from "./ProfileSection";
 import { ReminderList } from "./ReminderList";
+import { SettingsBanner } from "./SettingsBanner";
 import {
   SettingsHome,
   type SettingsHomeRow,
@@ -95,6 +103,12 @@ interface SettingsModalProps {
   onShowWidget: (id: WidgetId) => void;
   streak: number;
   bestStreak: number;
+  /** The Day Streak widget's look - picked under its row in Widgets. */
+  streakStyle: StreakStyle;
+  onChangeStreakStyle: (style: StreakStyle) => void;
+  /** Whether friends see your logged results on your calendar. */
+  shareResults: boolean;
+  onChangeShareResults: (share: boolean) => void;
   todayStatus: TodayStatus;
   weekly: WeeklyCompletionData;
   templateBreakdown: TemplateBreakdownItem[];
@@ -141,6 +155,39 @@ const ADMIN_SECTION: SettingsSection = {
   icon: EyeIcon,
 };
 
+/** Each page's own color - its icon in the list, the banner on top of the
+ *  page, and the page's buttons (as --page-color, see SettingsModal.css). */
+const PAGE_COLORS: Record<string, string> = {
+  profile: "#6366f1",
+  appearance: "#8b5cf6",
+  widgets: "#f97316",
+  freezes: "#0ea5e9",
+  reminders: "#ef4444",
+  friends: "#22c55e",
+  membership: "#eab308",
+  donate: "#ec4899",
+  support: "#3b82f6",
+  account: "#64748b",
+  "admin-preview": "#6b7280",
+};
+
+const TIER_SHORT: Record<MembershipTier, string> = {
+  free: "Free",
+  premium: "Premium",
+  admin: "Admin",
+};
+
+const TIER_SUBTITLE: Record<MembershipTier, string> = {
+  free: "Upgrade for templates, more widgets and streak freezes.",
+  premium: "Active · thanks for supporting Consistency.",
+  admin: "See every member and change their tier.",
+};
+
+type BannerContent = Pick<
+  ComponentProps<typeof SettingsBanner>,
+  "subtitle" | "stat" | "aside"
+>;
+
 export function SettingsModal({
   initialSectionId,
   theme,
@@ -167,6 +214,10 @@ export function SettingsModal({
   onShowWidget,
   streak,
   bestStreak,
+  streakStyle,
+  onChangeStreakStyle,
+  shareResults,
+  onChangeShareResults,
   todayStatus,
   weekly,
   templateBreakdown,
@@ -229,6 +280,7 @@ export function SettingsModal({
             streak={streak}
             best={bestStreak}
             today={todayStatus}
+            variant={streakStyle}
           />
         );
       case "weekly":
@@ -256,18 +308,15 @@ export function SettingsModal({
     }
   }
 
-  const activeLabel = SECTIONS.find((s) => s.id === activeId)?.label ?? "";
+  const activeSection = SECTIONS.find((s) => s.id === activeId);
+  const pageColor = PAGE_COLORS[activeId] ?? PAGE_COLORS.account;
 
   // Phone start screen (SettingsHome): grouped like iOS Settings, each row
   // with its own icon color and current value.
   const visibleWidgetCount = WIDGET_IDS.length - hiddenWidgets.length;
-  const homeRow = (
-    id: string,
-    color: string,
-    value?: string,
-  ): SettingsHomeRow | null => {
+  const homeRow = (id: string, value?: string): SettingsHomeRow | null => {
     const section = SECTIONS.find((sec) => sec.id === id);
-    return section ? { ...section, color, value } : null;
+    return section ? { ...section, color: PAGE_COLORS[id], value } : null;
   };
   // Presence lists every signed-in account (you included), so only count
   // the ones that are actually your friends.
@@ -277,32 +326,94 @@ export function SettingsModal({
 
   const homeGroups = [
     [
-      homeRow("appearance", "#8b5cf6"),
-      homeRow("widgets", "#f97316", `${visibleWidgetCount} on`),
-      homeRow("reminders", "#ef4444", remindersEnabled ? "On" : "Off"),
+      homeRow("appearance"),
+      homeRow("widgets", `${visibleWidgetCount} on`),
+      homeRow("reminders", remindersEnabled ? "On" : "Off"),
     ],
-    [homeRow("freezes", "#0ea5e9", `${freezesRemaining} left`)],
+    [homeRow("freezes", `${freezesRemaining} left`)],
     [
       homeRow(
         "friends",
-        "#22c55e",
         onlineFriendCount > 0 ? `${onlineFriendCount} online` : undefined,
       ),
-      homeRow("support", "#3b82f6"),
+      homeRow("support"),
     ],
     [
-      homeRow(
-        "membership",
-        "#eab308",
-        membership.isPremium ? "Premium" : "Free",
-      ),
-      homeRow("donate", "#ec4899"),
+      homeRow("membership", membership.isPremium ? "Premium" : "Free"),
+      homeRow("donate"),
     ],
-    [homeRow("account", "#64748b"), homeRow("admin-preview", "#6b7280")],
+    [homeRow("account"), homeRow("admin-preview")],
   ].map((group) => group.filter((r): r is SettingsHomeRow => r !== null));
 
+  // What the banner on top of each page says - a line about the page and
+  // its key number (or a switch / pill) on the right.
+  const tier = membership.effectiveTier;
+  const banners: Record<string, BannerContent> = {
+    profile: { subtitle: "Your name, avatar and bio - what friends see." },
+    appearance: { subtitle: "Light or dark, and your app's colors." },
+    widgets: {
+      subtitle: "Pick what shows on your day.",
+      stat: { value: visibleWidgetCount, label: `of ${WIDGET_IDS.length} on` },
+    },
+    freezes: {
+      subtitle: "Keep your streak on a day you missed.",
+      stat: { value: freezesRemaining, label: `of ${MAX_FREEZES_PER_MONTH} left` },
+    },
+    reminders: {
+      subtitle: "At each task's time, plus a 9 PM nudge if anything's left.",
+      aside: (
+        <Switch
+          checked={remindersEnabled}
+          onChange={onChangeRemindersEnabled}
+          label="Task reminders"
+        />
+      ),
+    },
+    friends: {
+      subtitle:
+        onlineFriendCount > 0
+          ? `${onlineFriendCount} online now`
+          : "See each other's calendars and streaks.",
+      stat:
+        friendIds.length > 0
+          ? {
+              value: friendIds.length,
+              label: friendIds.length === 1 ? "friend" : "friends",
+            }
+          : undefined,
+    },
+    membership: {
+      subtitle: tier ? TIER_SUBTITLE[tier] : undefined,
+      aside: tier ? (
+        <span className="settings-banner__pill">{TIER_SHORT[tier]}</span>
+      ) : undefined,
+    },
+    donate: { subtitle: "Consistency is free - a coffee keeps it going." },
+    support: {
+      subtitle:
+        tier === "admin"
+          ? "Everyone's messages, by status."
+          : "Report a bug, share an idea or ask a question.",
+    },
+    account: { subtitle: "Updates, your data and signing out." },
+    "admin-preview": {
+      subtitle: "See the app the way a Free or Premium member does.",
+      aside: membership.previewTier ? (
+        <span className="settings-banner__pill">Previewing</span>
+      ) : undefined,
+    },
+  };
+  const ActiveIcon = activeSection?.icon;
+
   return (
-    <Modal title="Settings" onClose={onClose} size="wide" asTab>
+    <Modal
+      title="Settings"
+      onClose={onClose}
+      size="wide"
+      asTab
+      icon={<SettingsIcon size={15} />}
+      accent={PAGE_COLORS.account}
+    >
       <div
         className="settings"
         data-mobile-pane={showingDetail ? "detail" : "list"}
@@ -312,12 +423,21 @@ export function SettingsModal({
           avatarId={yourAvatarId}
           streak={streak}
           isPremium={membership.isPremium}
+          profileColor={PAGE_COLORS.profile}
           onSelect={selectSection}
           onSignOut={onSignOut}
           activeId={activeId}
         />
 
-        <div className="settings-detail">
+        <div
+          className="settings-detail"
+          style={
+            {
+              "--page-color": pageColor,
+              "--page-ink": inkOn(pageColor),
+            } as CSSProperties
+          }
+        >
           <div className="settings-detail__header">
             <button
               type="button"
@@ -328,11 +448,19 @@ export function SettingsModal({
               <ChevronLeftIcon size={18} />
               <span className="settings-detail__back-label">Settings</span>
             </button>
-            <h3 className="settings-detail__title">{activeLabel}</h3>
           </div>
 
           <div className="settings-detail__body">
             <div className="settings-detail__pane" key={activeId}>
+              {activeSection && ActiveIcon && (
+                <SettingsBanner
+                  icon={<ActiveIcon size={24} />}
+                  color={pageColor}
+                  title={activeSection.label}
+                  {...banners[activeId]}
+                />
+              )}
+
               {activeId === "profile" && <ProfileSection />}
 
               {activeId === "appearance" && (
@@ -387,32 +515,31 @@ export function SettingsModal({
 
               {activeId === "widgets" && (
                 <div className="settings-pages">
-                  <div className="settings-group-wrap">
-                    <div className="settings-group">
-                      <button
-                        type="button"
-                        className="settings-group__row settings-group__row--accent"
-                        onClick={onStartArranging}
-                      >
-                        <span className="settings-group__label">
-                          Arrange widgets
-                        </span>
-                        <ChevronRightIcon
-                          size={15}
-                          className="settings-group__chevron"
-                        />
-                      </button>
-                    </div>
-                    <span className="settings-footnote">
-                      Reorder them right on your day panel.
-                    </span>
+                  <div className="settings-group settings-group--tiles">
+                    <button
+                      type="button"
+                      className="settings-group__row"
+                      onClick={onStartArranging}
+                    >
+                      <span className="settings-tile" aria-hidden="true">
+                        <GripIcon size={15} />
+                      </span>
+                      <span className="settings-group__label settings-group__label--stack">
+                        Arrange widgets
+                        <small>Reorder them right on your day panel</small>
+                      </span>
+                      <ChevronRightIcon
+                        size={15}
+                        className="settings-group__chevron"
+                      />
+                    </button>
                   </div>
 
                   <div className="settings-group-wrap">
                     <span className="settings-group__title">
                       Show on your day
                     </span>
-                    <div className="settings-group">
+                    <div className="settings-group settings-group--tiles">
                       {WIDGET_IDS.map((id) => {
                         const visible = !hiddenWidgets.includes(id);
                         const locked =
@@ -420,6 +547,7 @@ export function SettingsModal({
                           !membership.isPremium &&
                           visibleWidgetCount >= FREE_WIDGET_LIMIT;
                         const previewing = previewWidget === id;
+                        const info = WIDGET_INFO[id];
                         return (
                           <Fragment key={id}>
                             {/* Two separate controls in one row - tapping the
@@ -435,18 +563,30 @@ export function SettingsModal({
                                   setPreviewWidget(previewing ? null : id)
                                 }
                               >
-                                <ChevronRightIcon
-                                  size={14}
-                                  className={`settings-group__chevron ${previewing ? "settings-group__chevron--open" : ""}`}
-                                />
+                                <span
+                                  className="settings-tile"
+                                  style={
+                                    { "--tile-color": info.color } as CSSProperties
+                                  }
+                                  aria-hidden="true"
+                                >
+                                  {info.icon}
+                                </span>
                                 <span className="settings-group__label">
                                   {WIDGET_LABELS[id]}
                                 </span>
                                 {locked && (
+                                  <span className="settings-tag">Premium</span>
+                                )}
+                                {id === "streak" && (
                                   <span className="settings-group__value">
-                                    Premium
+                                    {STREAK_STYLES.find((st) => st.id === streakStyle)?.label}
                                   </span>
                                 )}
+                                <ChevronRightIcon
+                                  size={14}
+                                  className={`settings-group__chevron ${previewing ? "settings-group__chevron--open" : ""}`}
+                                />
                               </button>
                               <Switch
                                 checked={visible}
@@ -457,11 +597,32 @@ export function SettingsModal({
                               />
                             </div>
                             {previewing && (
-                              <div
-                                className="settings-group__expand widget-preview"
-                                aria-hidden="true"
-                              >
-                                {renderWidgetPreview(id)}
+                              <div className="settings-group__expand">
+                                {/* Day Streak comes in a few looks - pick one,
+                                    see it right below with your own numbers. */}
+                                {id === "streak" && (
+                                  <div
+                                    className="settings-segmented widget-style-picker"
+                                    role="radiogroup"
+                                    aria-label="Day Streak style"
+                                  >
+                                    {STREAK_STYLES.map((st) => (
+                                      <button
+                                        key={st.id}
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={streakStyle === st.id}
+                                        className={`settings-segmented__option ${streakStyle === st.id ? "settings-segmented__option--active" : ""}`}
+                                        onClick={() => onChangeStreakStyle(st.id)}
+                                      >
+                                        {st.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                                <div className="widget-preview" aria-hidden="true">
+                                  {renderWidgetPreview(id)}
+                                </div>
                               </div>
                             )}
                           </Fragment>
@@ -487,20 +648,10 @@ export function SettingsModal({
 
               {activeId === "reminders" && (
                 <div className="settings-pages">
-                  <div className="settings-group-wrap">
-                    <div className="settings-group">
-                      <div className="settings-group__row">
-                        <span className="settings-group__label">
-                          Task reminders
-                        </span>
-                        <Switch
-                          checked={remindersEnabled}
-                          onChange={onChangeRemindersEnabled}
-                          label="Task reminders"
-                        />
-                      </div>
-                      {remindersEnabled &&
-                        reminderStatus.permission === "denied" && (
+                  {remindersEnabled &&
+                    reminderStatus.permission === "denied" && (
+                      <div className="settings-group-wrap">
+                        <div className="settings-group">
                           <button
                             type="button"
                             className="settings-group__row settings-group__row--accent"
@@ -518,59 +669,57 @@ export function SettingsModal({
                               className="settings-group__chevron"
                             />
                           </button>
-                        )}
-                    </div>
-                    <span className="settings-footnote">
-                      At each task's time, plus a 9 PM nudge if anything's still
-                      left today.
-                    </span>
-                    {remindersEnabled && reminderStatus.usesServerPush && (
-                      <span className="settings-footnote settings-footnote--success">
-                        Sent by the server - tick a task on any device and its
-                        reminder won't come.
-                      </span>
-                    )}
-                    {remindersEnabled &&
-                      reminderStatus.permission === "denied" && (
+                        </div>
                         <span className="settings-footnote settings-footnote--warning">
                           Notifications are turned off for Consistency.
                         </span>
-                      )}
-                    {remindersEnabled && reminderStatus.lastError && (
-                      <span className="settings-footnote settings-footnote--warning">
-                        Couldn't schedule reminders: {reminderStatus.lastError}
-                      </span>
+                      </div>
                     )}
-                    {remindersEnabled &&
-                      reminderStatus.permission === "granted" &&
-                      reminderStatus.usesLiveFallback && (
-                        <span className="settings-footnote">
-                          On this device they only arrive while the app is open.
-                        </span>
-                      )}
-                    {remindersEnabled &&
-                      reminderStatus.permission === "granted" &&
-                      !reminderStatus.usesLiveFallback &&
-                      reminderStatus.attemptedCount >
-                        reminderStatus.confirmedCount && (
-                        <span className="settings-footnote settings-footnote--warning">
-                          {reminderStatus.attemptedCount -
-                            reminderStatus.confirmedCount}{" "}
-                          of {reminderStatus.attemptedCount} reminders didn't
-                          register - they may not arrive.
-                        </span>
-                      )}
-                  </div>
 
                   {remindersEnabled && (
-                    <div className="settings-group-wrap">
-                      <span className="settings-group__title">Upcoming</span>
-                      <div className="settings-group settings-group--padded">
-                        <ReminderList
-                          tasks={tasks}
-                          completions={completions}
-                          onSelectReminder={onJumpToReminder}
-                        />
+                    <div className="settings-notes">
+                      {reminderStatus.usesServerPush && (
+                        <span className="settings-footnote settings-footnote--success">
+                          Sent by the server - tick a task on any device and
+                          its reminder won't come.
+                        </span>
+                      )}
+                      {reminderStatus.lastError && (
+                        <span className="settings-footnote settings-footnote--warning">
+                          Couldn't schedule reminders: {reminderStatus.lastError}
+                        </span>
+                      )}
+                      {reminderStatus.permission === "granted" &&
+                        reminderStatus.usesLiveFallback && (
+                          <span className="settings-footnote">
+                            On this device they only arrive while the app is
+                            open.
+                          </span>
+                        )}
+                      {reminderStatus.permission === "granted" &&
+                        !reminderStatus.usesLiveFallback &&
+                        reminderStatus.attemptedCount >
+                          reminderStatus.confirmedCount && (
+                          <span className="settings-footnote settings-footnote--warning">
+                            {reminderStatus.attemptedCount -
+                              reminderStatus.confirmedCount}{" "}
+                            of {reminderStatus.attemptedCount} reminders didn't
+                            register - they may not arrive.
+                          </span>
+                        )}
+                    </div>
+                  )}
+
+                  {remindersEnabled ? (
+                    <ReminderList
+                      tasks={tasks}
+                      completions={completions}
+                      onSelectReminder={onJumpToReminder}
+                    />
+                  ) : (
+                    <div className="settings-group">
+                      <div className="settings-group__row settings-group__row--muted">
+                        Reminders are off - turn them on above.
                       </div>
                     </div>
                   )}
@@ -578,16 +727,45 @@ export function SettingsModal({
               )}
 
               {activeId === "friends" && (
-                <FriendsManager
-                  online={online}
-                  onlineFriendIds={onlineFriendIds}
-                  onViewFriend={(friend) => {
-                    onViewFriend(friend);
-                    onClose();
-                  }}
-                  isPremium={membership.isPremium}
-                  onFriendLimitReached={onFriendLimitReached}
-                />
+                <div className="settings-pages">
+                  <FriendsManager
+                    online={online}
+                    onlineFriendIds={onlineFriendIds}
+                    onViewFriend={(friend) => {
+                      onViewFriend(friend);
+                      onClose();
+                    }}
+                    isPremium={membership.isPremium}
+                    onFriendLimitReached={onFriendLimitReached}
+                  />
+                  <div className="settings-group-wrap">
+                    <span className="settings-group__title">Privacy</span>
+                    <div className="settings-group settings-group--tiles">
+                      <div className="settings-group__row">
+                        <span
+                          className="settings-tile"
+                          style={{ "--tile-color": "#22c55e" } as CSSProperties}
+                          aria-hidden="true"
+                        >
+                          <TrendingUpIcon size={15} />
+                        </span>
+                        <span className="settings-group__label">
+                          Share my results with friends
+                        </span>
+                        <Switch
+                          checked={shareResults}
+                          onChange={onChangeShareResults}
+                          label="Share my results with friends"
+                        />
+                      </div>
+                    </div>
+                    <span className="settings-footnote">
+                      {shareResults
+                        ? "Friends see your logged results (+2R, 0R...) on your calendar."
+                        : "Your results stay private - friends see only your tasks."}
+                    </span>
+                  </div>
+                </div>
               )}
 
               {activeId === "membership" && (
@@ -650,18 +828,15 @@ export function SettingsModal({
                     </div>
                   </div>
 
-                  <div className="settings-group">
-                    <button
-                      type="button"
-                      className="settings-group__row settings-group__row--danger"
-                      onClick={onSignOut}
-                    >
-                      Sign out
-                    </button>
-                  </div>
-
                   <div className="settings-group-wrap">
                     <div className="settings-group">
+                      <button
+                        type="button"
+                        className="settings-group__row settings-group__row--danger"
+                        onClick={onSignOut}
+                      >
+                        Sign out
+                      </button>
                       <button
                         type="button"
                         className="settings-group__row settings-group__row--danger"
@@ -671,7 +846,8 @@ export function SettingsModal({
                       </button>
                     </div>
                     <span className="settings-footnote">
-                      Permanently deletes your account and all its data.
+                      Deleting your account permanently removes it and all its
+                      data.
                     </span>
                   </div>
                 </div>

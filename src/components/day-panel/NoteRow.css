@@ -1,13 +1,16 @@
-/* Same card as a task group (TaskGroup.css), so notes sit naturally among
-   them; the yellow note icon is what says "just a note, nothing to tick". */
+/* Same rounded surface as a template's task list (TaskGroup.css), so notes
+   sit naturally among them; the yellow note icon is what says "just a
+   note, nothing to tick". */
 .note-row {
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--bg-elevated);
+  padding: var(--space-3) 12px var(--space-3) 16px;
+  position: relative;
+  overflow: hidden;
+  border: none;
+  border-radius: 14px;
+  background: var(--surface);
   cursor: pointer;
   /* Native vertical scrolling stays on; a long press picks it up (see
      useReorderDrag's bindLongPress). */
@@ -21,7 +24,7 @@
 
 @media (hover: hover) {
   .note-row:hover {
-    border-color: var(--border-strong);
+    background: var(--surface-hover);
   }
 }
 
@@ -48,7 +51,7 @@
   height: 26px;
   border-radius: 8px;
   background: rgba(245, 196, 66, 0.16);
-  color: #f5c442;
+  color: var(--gold-text);
 }
 
 .note-row__text {
@@ -90,4 +93,15 @@
   .note-row__delete {
     display: none;
   }
+}
+
+/* The note's yellow edge, like the template and streak cards. */
+.note-row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: #f5c442;
 }

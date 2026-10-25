@@ -16,6 +16,33 @@
   color: #fff;
 }
 
+/* Long names shorten with "..." instead of pushing the count off. */
+.templates-modal-list__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.templates-modal-list__new {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  border: 1px dashed color-mix(in srgb, #a855f7 45%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, #a855f7 8%, transparent);
+  color: color-mix(in srgb, #a855f7 85%, var(--text));
+  font: inherit;
+  font-weight: 600;
+  transition: background-color 0.12s ease;
+}
+
+.templates-modal-list__new:hover {
+  background: color-mix(in srgb, #a855f7 15%, transparent);
+}
+
 .templates-modal-list__plus {
   flex: none;
   display: inline-flex;
@@ -103,6 +130,47 @@
   transform: scale(0.9);
 }
 
+/* Custom color: a rainbow circle with a "+" that opens the system color
+   picker (the real input sits invisibly on top of it). Once a custom
+   color is chosen, the circle shows that color. */
+.templates-modal-edit__swatch--custom {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: conic-gradient(#ef4444, #f59e0b, #eab308, #22c55e, #06b6d4, #3b82f6, #a855f7, #ec4899, #ef4444);
+  cursor: pointer;
+}
+
+.templates-modal-edit__custom-plus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  pointer-events: none;
+}
+
+/* Block, so the icon centers on its own box rather than a text line. */
+.templates-modal-edit__custom-plus svg {
+  display: block;
+}
+
+.templates-modal-edit__color-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  opacity: 0;
+  cursor: pointer;
+}
+
 /* Selected: a ring around it with a small gap, like iOS color pickers. */
 .templates-modal-edit__swatch--active {
   box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--text);
@@ -174,4 +242,9 @@
   color: var(--text-secondary);
   font-size: var(--text-sm);
   font-weight: 500;
+}
+
+/* A little room between the list and the "New template" button. */
+.templates-modal-list .settings-group-wrap {
+  gap: 10px;
 }

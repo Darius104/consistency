@@ -1,10 +1,23 @@
 import { useEffect, useState } from "react";
-import { listAllMembers, setMemberTier, type Friend, type Member } from "../../db/friends";
+import type { CSSProperties } from "react";
+import {
+  listAllMembers,
+  setMemberTier,
+  type Friend,
+  type Member,
+  type MembershipTier,
+} from "../../db/friends";
 import { AvatarBadge } from "../stats/AvatarBadge";
-import { Button } from "../ui/Button";
 import { EyeIcon } from "../ui/icons";
 import { Skeleton } from "../ui/Skeleton";
 import "./AdminMembersList.css";
+
+// Each tier's tag color - grey, gold (Premium's own), indigo.
+const TIER_COLOR: Record<MembershipTier, string> = {
+  free: "var(--text-muted)",
+  premium: "#eab308",
+  admin: "#6366f1",
+};
 
 interface AdminMembersListProps {
   online: boolean;
@@ -61,25 +74,16 @@ export function AdminMembersList({ online, onView }: AdminMembersListProps) {
   }
 
   return (
-    <div className="admin-members">
+    <div className="settings-group-wrap admin-members">
       <div className="admin-members__header">
-        <span className="settings__label">All Members</span>
+        <span className="settings-group__title">All members</span>
         {members && (
           <span className="admin-members__count">
             {members.length} total · {premiumCount} premium
           </span>
         )}
       </div>
-      {error && <span className="settings__hint settings__hint--warning">{error}</span>}
-      {!members && !error && (
-        <div className="admin-members__list">
-          {[0, 1, 2].map((i) => (
-            <div className="admin-members__row" key={i}>
-              <Skeleton width="35%" height="0.85em" />
-            </div>
-          ))}
-        </div>
-      )}
+      {error && <span className="settings-footnote settings-footnote--warning">{error}</span>}
       {members && (
         <input
           type="text"
@@ -89,19 +93,31 @@ export function AdminMembersList({ online, onView }: AdminMembersListProps) {
           onChange={(e) => setQuery(e.target.value)}
         />
       )}
+      {!members && !error && (
+        <div className="settings-group">
+          {[0, 1, 2].map((i) => (
+            <div className="settings-group__row" key={i}>
+              <Skeleton width="35%" height="0.85em" />
+            </div>
+          ))}
+        </div>
+      )}
       {members && visibleMembers && visibleMembers.length === 0 && (
-        <span className="admin-members__empty">No members match "{query}".</span>
+        <span className="settings-footnote">No members match "{query}".</span>
       )}
       {visibleMembers && visibleMembers.length > 0 && (
-        <div className="admin-members__list">
+        <div className="settings-group">
           {visibleMembers.map((member) => (
-            <div className="admin-members__row" key={member.userId}>
-              <AvatarBadge avatarId={member.avatarId} size={28} />
+            <div className="settings-group__row admin-members__row" key={member.userId}>
+              <AvatarBadge avatarId={member.avatarId} size={32} />
               <span className="admin-members__identity">
                 <span className="admin-members__name">{member.displayName}</span>
                 {member.bio && <span className="admin-members__bio">{member.bio}</span>}
               </span>
-              <span className={`admin-members__tier admin-members__tier--${member.tier}`}>
+              <span
+                className="settings-tag"
+                style={{ "--tag-color": TIER_COLOR[member.tier] } as CSSProperties}
+              >
                 {member.tier}
               </span>
               <button
@@ -114,7 +130,9 @@ export function AdminMembersList({ online, onView }: AdminMembersListProps) {
                 <EyeIcon size={15} />
               </button>
               {member.tier !== "admin" && (
-                <Button
+                <button
+                  type="button"
+                  className={`settings-row-action ${member.tier === "premium" ? "admin-members__make-free" : ""}`}
                   onClick={() => void handleToggle(member)}
                   disabled={pendingUserId === member.userId}
                 >
@@ -123,7 +141,7 @@ export function AdminMembersList({ online, onView }: AdminMembersListProps) {
                     : member.tier === "premium"
                       ? "Make Free"
                       : "Make Premium"}
-                </Button>
+                </button>
               )}
             </div>
           ))}

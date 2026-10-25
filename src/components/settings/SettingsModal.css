@@ -13,18 +13,10 @@
   flex-direction: column;
 }
 
+/* Only the phone's "< Settings" back bar - on desktop the page's banner
+   (SettingsBanner) is the top of the page. */
 .settings-detail__header {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-4) var(--space-5) 0;
-}
-
-.settings-detail__title {
-  margin: 0;
-  font-size: var(--text-lg);
-  font-weight: 600;
+  display: none;
 }
 
 .settings-detail__back {
@@ -49,7 +41,7 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: var(--space-5);
+  padding: 20px var(--space-5) var(--space-5);
 }
 
 /* A fresh element per tab (keyed by activeId in SettingsModal.tsx) so
@@ -58,7 +50,7 @@
 .settings-detail__pane {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: 20px;
   /* Gives a short tab's own content something to grow/center into (see
      Membership's own centering for its short Premium/Admin states) - a
      no-op for every other tab, since their content already exceeds the
@@ -121,24 +113,24 @@
     display: none;
   }
 
-  /* iOS nav bar: "‹ Settings" on the left, the page title centered. */
+  /* iOS nav bar: "‹ Settings" on the left - the page's name is in its
+     banner just below. */
   .settings-detail__header {
-    position: relative;
-    justify-content: center;
+    flex: none;
+    display: flex;
+    align-items: center;
     min-height: 44px;
-    padding: var(--space-2) var(--space-4) 0;
+    padding: var(--space-1) var(--space-2) 0;
   }
 
   .settings-detail__back {
-    position: absolute;
-    left: var(--space-2);
     display: inline-flex;
     align-items: center;
     gap: 0;
     width: auto;
     height: 40px;
     padding: 0 var(--space-2) 0 0;
-    color: var(--accent);
+    color: var(--page-color, var(--accent));
     font-size: var(--text-md);
   }
 
@@ -146,13 +138,8 @@
     display: inline;
   }
 
-  .settings-detail__title {
-    font-size: var(--text-md);
-    font-weight: 600;
-  }
-
   .settings-detail__body {
-    padding: var(--space-4);
+    padding: var(--space-2) var(--space-4) var(--space-4);
   }
 }
 
@@ -268,7 +255,8 @@ button.settings-group__row:active {
 }
 
 .settings-group__row--accent {
-  color: var(--accent);
+  color: var(--page-color, var(--accent));
+  font-weight: 600;
 }
 
 /* One short grey line under a group - instead of paragraphs. */
@@ -305,6 +293,13 @@ button.settings-group__row:active {
 /* A widget preview inside the list - full widget, nothing clickable. */
 .widget-preview {
   pointer-events: none;
+}
+
+/* Day Streak's look picker, above its preview - on the page's background
+   so it reads apart from the white-ish preview card under it. */
+.widget-style-picker {
+  margin-bottom: var(--space-3);
+  background: var(--bg-elevated);
 }
 
 /* Inline field inside a grouped row (Profile's name/bio, codes). */
@@ -346,17 +341,31 @@ button.settings-group__row:active {
   font-weight: 600;
 }
 
-/* Small pill-shaped action at the end of a row ("Freeze", "Copy"...). */
+/* Small pill-shaped action at the end of a row ("Freeze", "Copy"...) -
+   a soft tint of the page's color. */
 .settings-row-action {
+  --action-color: var(--page-color, var(--accent));
   flex: none;
   height: 30px;
   padding: 0 14px;
   border: none;
   border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: color-mix(in srgb, var(--action-color) 16%, transparent);
+  color: color-mix(in srgb, var(--action-color) 85%, var(--text));
   font-size: var(--text-sm);
-  font-weight: 600;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background-color 0.12s ease, transform 120ms var(--ease-out);
+}
+
+.settings-row-action:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+@media (hover: hover) {
+  .settings-row-action:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--action-color) 24%, transparent);
+  }
 }
 
 .settings-row-action:disabled {
@@ -364,8 +373,14 @@ button.settings-group__row:active {
 }
 
 .settings-row-action--danger {
-  background: rgba(229, 104, 107, 0.14);
-  color: var(--danger);
+  --action-color: var(--danger);
+}
+
+/* Each page's main button (Save, Send, Buy me a coffee...) is solid in
+   the page's color, not the theme accent (grey on Steel). */
+.settings-detail .btn--primary {
+  background: var(--page-color);
+  color: var(--page-ink);
 }
 
 /* A row holding two controls side by side (see Widgets): the main part
@@ -412,7 +427,7 @@ button.settings-group__row:active {
 }
 
 .appearance-mode__option--active {
-  border-color: var(--accent);
+  border-color: var(--page-color, var(--accent));
   color: var(--text);
 }
 
@@ -451,4 +466,117 @@ button.settings-group__row:active {
 
 .appearance-mode__preview--light span:last-child {
   background: #e3e6ec;
+}
+
+/* --- Pieces shared by the pages --- */
+
+/* A soft icon square at the start of a row, in the row's own color
+   (--tile-color) or the page's. */
+.settings-tile {
+  --tile: var(--tile-color, var(--page-color, var(--accent)));
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--tile) 18%, transparent);
+  color: var(--tile);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.settings-tile--muted {
+  --tile: var(--text-secondary);
+}
+
+/* Rows with a tile: the hairlines start after it, at the text. */
+.settings-group--tiles > .settings-group__row + .settings-group__row::before,
+.settings-group--tiles > .settings-group__row + .settings-group__expand::before,
+.settings-group--tiles > .settings-group__expand + .settings-group__row::before {
+  left: calc(var(--space-4) + 28px + var(--space-3));
+}
+
+/* A label with a smaller second line under it. */
+.settings-group__label--stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-weight: 600;
+}
+
+.settings-group__label--stack small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+/* A small word-pill inside a row ("Premium", "Bug"...). */
+.settings-tag {
+  --tag: var(--tag-color, #eab308);
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tag) 16%, transparent);
+  color: color-mix(in srgb, var(--tag) 85%, var(--text));
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+/* A few footnotes stacked under the banner. */
+.settings-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-notes:empty {
+  display: none;
+}
+
+/* Pick one of a few (Preview Mode, a message's kind): the chosen one is a
+   solid pill in the page's color. */
+.settings-segmented {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.settings-segmented__option {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+@media (hover: hover) {
+  .settings-segmented__option:hover:not(.settings-segmented__option--active) {
+    background: var(--surface-hover);
+    color: var(--text);
+  }
+}
+
+.settings-segmented__option--active {
+  background: var(--page-color, var(--accent));
+  color: var(--page-ink, var(--on-accent));
+  font-weight: 700;
 }

@@ -272,6 +272,17 @@ export function CalendarIcon({ size = 16, ...props }: IconProps) {
   );
 }
 
+/** A calendar with an arrow out of it - move something to another day. */
+export function CalendarMoveIcon({ size = 16, ...props }: IconProps) {
+  return (
+    <svg {...base(size, props)}>
+      <path d="M21 11.5V7a2.5 2.5 0 0 0-2.5-2.5h-13A2.5 2.5 0 0 0 3 7v11.5A2.5 2.5 0 0 0 5.5 21H12" />
+      <path d="M3 9.5h18M8 2.5v4M16 2.5v4" />
+      <path d="M15 18h6.5M19 15.5l2.5 2.5-2.5 2.5" />
+    </svg>
+  );
+}
+
 export function TodayIcon({ size = 16, ...props }: IconProps) {
   return (
     <svg {...base(size, props)}>

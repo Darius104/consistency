@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { ComponentType, CSSProperties } from "react";
 import { getMyProfile } from "../../db/friends";
 import type { AvatarId } from "../../utils/avatars";
+import { inkOn } from "../day-panel/addKinds";
 import { AvatarBadge } from "../stats/AvatarBadge";
 import { ChevronRightIcon, CrownIcon } from "../ui/icons";
 import { Skeleton } from "../ui/Skeleton";
@@ -31,6 +32,8 @@ interface SettingsHomeProps {
   avatarId: AvatarId | null;
   streak: number;
   isPremium: boolean;
+  /** Profile's own color - the tint behind it while its page is open. */
+  profileColor: string;
   onSelect: (id: string) => void;
   onSignOut: () => void;
   /** Desktop: the page currently open next to this list, highlighted. */
@@ -40,12 +43,14 @@ interface SettingsHomeProps {
 /** The Settings list, laid out like the iPhone's own Settings app: your
  *  profile card on top, then inset groups of rows with colored icon
  *  squares and each one's current value on the right, and Sign out at the
- *  bottom. Full screen on a phone; the left sidebar on desktop. */
+ *  bottom. Full screen on a phone; on desktop the left sidebar - a flat
+ *  list where the open page is a solid pill in its own color. */
 export function SettingsHome({
   groups,
   avatarId,
   streak,
   isPremium,
+  profileColor,
   onSelect,
   onSignOut,
   activeId,
@@ -71,6 +76,7 @@ export function SettingsHome({
       <button
         type="button"
         className={`settings-home__profile ${activeId === "profile" ? "settings-home__profile--active" : ""}`}
+        style={{ "--row-color": profileColor } as CSSProperties}
         onClick={() => onSelect("profile")}
       >
         {avatarId ? (
@@ -104,9 +110,10 @@ export function SettingsHome({
                 type="button"
                 key={row.id}
                 className={`settings-home__row ${activeId === row.id ? "settings-home__row--active" : ""}`}
+                style={{ "--row-color": row.color, "--row-ink": inkOn(row.color) } as CSSProperties}
                 onClick={() => onSelect(row.id)}
               >
-                <span className="settings-home__icon" style={{ "--row-color": row.color } as CSSProperties}>
+                <span className="settings-home__icon">
                   <Icon size={16} />
                 </span>
                 <span className="settings-home__label">{row.label}</span>

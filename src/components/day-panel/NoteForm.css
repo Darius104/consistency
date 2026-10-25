@@ -146,3 +146,12 @@
     font-weight: 600;
   }
 }
+
+/* The note's color (yellow, see addKinds.ts) on its main button. */
+.note-form__save,
+.note-form__save:hover:not(:disabled) {
+  border-color: transparent;
+  background: #f5c442;
+  color: #2a2103;
+  font-weight: 700;
+}

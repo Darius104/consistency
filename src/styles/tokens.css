@@ -46,6 +46,12 @@
      reusing it here would make a frozen day look different per theme for
      no reason). */
   --frost: #5ec8e8;
+  /* Bright accent colors used as TEXT (the streak's orange, break-even
+     amber, Premium gold) - light mode swaps in deeper shades of each, the
+     bright ones are too pale to read on white. */
+  --streak-text: #ff9f43;
+  --amber-text: #f59e0b;
+  --gold-text: #f5c442;
   --frost-rgb: 94, 200, 232;
   --frost-soft: rgba(94, 200, 232, 0.16);
 
@@ -266,13 +272,18 @@ body.is-dragging {
    data-mode="light" on the root next to data-theme. Neutrals go light with
    a faint tint of the theme's own color; each theme gets a deeper shade of
    its accent, since its bright dark-mode one doesn't read on white. (The
-   custom color is built in JS instead - see generateCustomThemeColors.) */
+   custom color is built in JS instead - see generateCustomThemeColors.)
+   Cards are WHITE on a light grey panel/page (like iOS's grouped lists):
+   every card in the app is var(--surface) on var(--bg-elevated)/--bg, so
+   --surface has to be the lightest of the three here, the way it's the
+   lightest in dark mode too - the other way round, cards read as grey
+   blocks sunk into a white panel. */
 :root[data-mode="light"] {
   color-scheme: light;
-  --bg: color-mix(in srgb, var(--accent) 5%, #f3f4f7);
-  --bg-elevated: #ffffff;
-  --surface: color-mix(in srgb, var(--accent) 4%, #eef0f4);
-  --surface-hover: color-mix(in srgb, var(--accent) 7%, #e4e7ed);
+  --bg: color-mix(in srgb, var(--accent) 6%, #e9ebf0);
+  --bg-elevated: color-mix(in srgb, var(--accent) 3%, #f4f5f8);
+  --surface: #ffffff;
+  --surface-hover: color-mix(in srgb, var(--accent) 6%, #eff1f5);
   --border: color-mix(in srgb, var(--accent) 6%, #e0e3e9);
   --border-strong: color-mix(in srgb, var(--accent) 8%, #c8cdd6);
   --text: #15171c;
@@ -287,6 +298,15 @@ body.is-dragging {
   --danger: #dc2626;
   --frost: #0891b2;
   --frost-soft: rgba(8, 145, 178, 0.12);
+  --streak-text: #e8590c;
+  --amber-text: #b45309;
+  --gold-text: #a16207;
+  /* The day's result pills - the dark mode's bright green/red are too
+     pale as text on white. */
+  --trading-profit: #15803d;
+  --trading-profit-soft: rgba(21, 128, 61, 0.12);
+  --trading-loss: #dc2626;
+  --trading-loss-soft: rgba(220, 38, 38, 0.12);
   --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.08);
   --shadow-md: 0 6px 20px rgba(16, 24, 40, 0.12);
 }

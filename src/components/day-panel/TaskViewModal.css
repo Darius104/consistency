@@ -211,6 +211,32 @@
   cursor: not-allowed;
 }
 
+/* Not done today? Push it to another day (see MoveTaskModal). */
+.task-view__move {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 42px;
+  border: none;
+  border-radius: 12px;
+  background: color-mix(in srgb, #3b82f6 14%, transparent);
+  color: color-mix(in srgb, #3b82f6 85%, var(--text));
+  font-size: var(--text-sm);
+  font-weight: 700;
+  transition: background-color 0.15s ease, transform 120ms var(--ease-out);
+}
+
+.task-view__move:active {
+  transform: scale(0.98);
+}
+
+@media (hover: hover) {
+  .task-view__move:hover {
+    background: color-mix(in srgb, #3b82f6 22%, transparent);
+  }
+}
+
 .task-view__delete {
   align-self: center;
   display: inline-flex;
@@ -239,6 +265,7 @@
 .task-view__notes,
 .task-view__history,
 .task-view__actions,
+.task-view__move,
 .task-view__delete {
   animation: task-view-reveal 260ms var(--ease-out) both;
 }
@@ -256,6 +283,7 @@
   animation-delay: 140ms;
 }
 .task-view__actions,
+.task-view__move,
 .task-view__delete {
   animation-delay: 180ms;
 }

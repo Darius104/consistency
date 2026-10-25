@@ -1,7 +1,9 @@
 import type { CSSProperties } from "react";
 import type { Tag } from "../../types";
+import { WIDGET_COLORS } from "../../utils/panelOrder";
 import type { TemplateBreakdownItem } from "../../utils/stats";
-import { CheckIcon } from "../ui/icons";
+import { BookmarkIcon, CheckIcon } from "../ui/icons";
+import { WidgetCard } from "./WidgetCard";
 import "./stats.css";
 
 interface TemplateBreakdownProps {
@@ -20,12 +22,8 @@ interface TemplateBreakdownProps {
 export function TemplateBreakdown({ data, tags, compact = false }: TemplateBreakdownProps) {
   const rows = compact ? data.slice(0, 3) : data;
 
-  return (
-    <div className={`stat-card template-breakdown ${compact ? "template-breakdown--compact" : ""}`}>
-      <div className="template-breakdown__head">
-        <span className="stat-card__label">Templates · this week</span>
-        {!compact && data.length > 0 && <span className="template-breakdown__hint">so far</span>}
-      </div>
+  const body = (
+    <>
       {data.length === 0 ? (
         <div className="template-breakdown__empty">Nothing scheduled this week</div>
       ) : (
@@ -82,6 +80,30 @@ export function TemplateBreakdown({ data, tags, compact = false }: TemplateBreak
           )}
         </div>
       )}
-    </div>
+    </>
+  );
+
+  // The phone tile (WidgetTiles) draws its own frame around this.
+  if (compact) {
+    return (
+      <div className="template-breakdown template-breakdown--compact">
+        <div className="template-breakdown__head">
+          <span className="template-breakdown__label">Templates · this week</span>
+        </div>
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <WidgetCard
+      color={WIDGET_COLORS.templates}
+      icon={<BookmarkIcon size={13} />}
+      title="Templates"
+      meta="this week, so far"
+      className="template-breakdown"
+    >
+      {body}
+    </WidgetCard>
   );
 }

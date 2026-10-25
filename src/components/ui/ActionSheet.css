@@ -1,3 +1,5 @@
+/* Phone: a bottom sheet. Desktop (bottom of this file): a small centered
+   card - a sheet glued to the bottom of a wide window looked lost. */
 .action-sheet-overlay {
   position: fixed;
   inset: 0;
@@ -19,17 +21,16 @@
 }
 
 .action-sheet {
+  --sheet-color: var(--accent);
   width: 100%;
   max-width: 420px;
   background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-bottom: none;
-  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  padding: var(--space-3) var(--space-3) calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+  border-radius: 22px 22px 0 0;
+  padding: var(--space-3) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
   box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.4);
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
   transform: translateY(0);
   opacity: 1;
   transition: transform 220ms var(--ease-out), opacity 220ms var(--ease-out);
@@ -47,11 +48,10 @@
 
 .action-sheet__grabber {
   width: 36px;
-  height: 4px;
+  height: 5px;
   border-radius: 999px;
   background: var(--border-strong);
   align-self: center;
-  margin-bottom: var(--space-1);
 }
 
 .action-sheet__title {
@@ -63,52 +63,163 @@
   padding: 0 var(--space-2);
 }
 
+/* What it's about: its colored icon, name and a line about it. */
+.action-sheet__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 2px 0;
+}
+
+.action-sheet__icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: var(--sheet-color);
+  color: #fff;
+}
+
+.action-sheet__icon svg {
+  width: 19px;
+  height: 19px;
+}
+
+.action-sheet__head-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.action-sheet__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-xl);
+  font-weight: 800;
+}
+
+.action-sheet__subtitle {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
 .action-sheet__actions {
   display: flex;
   flex-direction: column;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: 14px;
   overflow: hidden;
 }
 
 .action-sheet__action {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-3);
+  min-height: 52px;
+  padding: 0 var(--space-3);
   background: transparent;
   border: none;
-  border-bottom: 1px solid var(--border);
   color: var(--text);
   font-size: var(--text-md);
+  font-weight: 600;
   text-align: left;
   transition: background-color 0.12s ease;
 }
 
-.action-sheet__action:last-child {
-  border-bottom: none;
+/* Hairlines between rows, starting at the text. */
+.action-sheet__action + .action-sheet__action::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: calc(var(--space-3) + 30px + var(--space-3));
+  height: 1px;
+  background: var(--border);
 }
 
 .action-sheet__action:active {
   background: var(--surface-hover);
 }
 
+@media (hover: hover) {
+  .action-sheet__action:hover {
+    background: var(--surface-hover);
+  }
+}
+
+.action-sheet__action-icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--text-muted) 16%, transparent);
+  color: var(--text-secondary);
+}
+
 .action-sheet__action--destructive {
   color: var(--danger);
 }
 
+.action-sheet__action--destructive .action-sheet__action-icon {
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+  color: var(--danger);
+}
+
 .action-sheet__cancel {
-  padding: var(--space-3);
+  height: 50px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border: none;
+  border-radius: 14px;
   color: var(--text);
-  font-weight: 600;
+  font-weight: 700;
   font-size: var(--text-md);
   transition: background-color 0.12s ease;
 }
 
 .action-sheet__cancel:active {
   background: var(--surface-hover);
+}
+
+@media (hover: hover) {
+  .action-sheet__cancel:hover {
+    background: var(--surface-hover);
+  }
+}
+
+/* Desktop: a small card in the middle that scales in, not a sheet. */
+@media (min-width: 701px) {
+  .action-sheet-overlay {
+    align-items: center;
+  }
+
+  .action-sheet {
+    max-width: 380px;
+    border-radius: 18px;
+    padding: var(--space-4);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    transform: scale(1);
+    transition: transform 200ms var(--ease-out), opacity 200ms var(--ease-out);
+
+    @starting-style {
+      transform: scale(0.96);
+      opacity: 0;
+    }
+  }
+
+  .action-sheet--closing {
+    transform: scale(0.96);
+  }
+
+  .action-sheet__grabber {
+    display: none;
+  }
 }

@@ -5,15 +5,14 @@ export interface Quote {
   text: string;
 }
 
-// Reuses the app's existing semantic color tokens instead of inventing new
-// ones - each category gets a color that already means something similar
-// elsewhere (risk -> the same red as a high-priority task, life -> the
-// same green as a completed one).
-export const QUOTE_CATEGORY_COLOR_VAR: Record<QuoteCategory, string> = {
-  risk: "--priority-high",
-  mindset: "--accent",
-  patience: "--priority-medium",
-  life: "--success",
+// One fixed color per category - not theme colors: "mindset" used to be
+// the theme accent, which is grey on Steel. Red for risk, purple for
+// mindset, amber for patience, green for life.
+export const QUOTE_CATEGORY_COLOR: Record<QuoteCategory, string> = {
+  risk: "#ef4444",
+  mindset: "#8b5cf6",
+  patience: "#f59e0b",
+  life: "#22c55e",
 };
 
 export const QUOTE_CATEGORY_LABEL: Record<QuoteCategory, string> = {

@@ -80,8 +80,9 @@
 }
 
 .day-panel__date {
-  font-size: var(--text-lg);
-  font-weight: 600;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   margin: 0;
   flex: 1 1 auto;
   min-width: 0;
@@ -320,8 +321,91 @@
 
 .day-panel__date-sub {
   display: block;
-  margin-top: 1px;
+  margin-top: 2px;
   font-size: var(--text-xs);
   font-weight: 500;
+  letter-spacing: 0;
   color: var(--text-muted);
+}
+
+/* "+ Add": a solid blue button (blue = task, see addKinds.ts) in the same
+   shape as the result button beside it. */
+.day-panel__header .add-menu > .btn {
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 10px;
+  background: #3b82f6;
+  color: #fff;
+  font-weight: 600;
+}
+
+.day-panel__header .add-menu > .btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+/* "+ Add widget": dashed, in the widget orange (same as the gallery). */
+.day-panel .day-panel__add-widget {
+  border: 1px dashed color-mix(in srgb, #f97316 40%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, #f97316 6%, transparent);
+  color: color-mix(in srgb, #f97316 85%, var(--text));
+  font-weight: 600;
+}
+
+.day-panel .day-panel__add-widget:hover {
+  background: color-mix(in srgb, #f97316 12%, transparent);
+}
+
+/* Phone: swiping between days. The day's content follows the finger, then
+   slides out the way it was swiped while the new day slides in from the
+   other side (see usePanelGestures). The pull-to-sync indicator and the
+   expand handle stay put. */
+@media (max-width: 700px) {
+  .day-panel--swiping > *:not(.day-panel__pull):not(.day-panel__expand-toggle-wrap) {
+    transform: translateX(var(--day-swipe, 0px));
+    opacity: var(--day-swipe-fade, 1);
+  }
+
+  .day-panel--swipe-glide > *:not(.day-panel__pull):not(.day-panel__expand-toggle-wrap) {
+    transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity 200ms ease;
+  }
+}
+
+@media (max-width: 700px) and (prefers-reduced-motion: reduce) {
+  .day-panel--swiping > *:not(.day-panel__pull):not(.day-panel__expand-toggle-wrap) {
+    transform: none;
+  }
+}
+
+/* Day Streak's look, picked from its own menu (the ActionSheet). */
+.widget-menu__styles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 3px;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.widget-menu__style {
+  min-width: 0;
+  height: 36px;
+  padding: 0 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.widget-menu__style--on {
+  background: var(--sheet-color, var(--accent));
+  color: #fff;
+  font-weight: 700;
 }

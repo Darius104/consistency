@@ -144,6 +144,9 @@ export interface WeekDay {
 export interface TodayStatus {
   /** Monday-Sunday of the current week. */
   week: WeekDay[];
+  /** The last 14 days, oldest first, ending today - the "Two weeks"
+   *  streak style. */
+  recent: WeekDay[];
   hasTasks: boolean;
   scheduled: number;
   completed: number;
@@ -165,24 +168,30 @@ export function computeTodayStatus(
   ).length;
   const scheduled = scheduledTasks.length;
 
+  function dayState(date: string): WeekDayState {
+    if (date > todayKey) return "future";
+    const rate = dayCompletionRate(tasks, completions, date);
+    if (rate === 1) return "done";
+    if (frozen.has(date)) return "frozen";
+    if (rate === null) return date === todayKey ? "today" : "rest";
+    return date === todayKey ? "today" : "missed";
+  }
+
   const monday = startOfWeek(todayKey);
   const week: WeekDay[] = [];
   for (let i = 0; i < 7; i++) {
     const date = addDays(monday, i);
-    let state: WeekDayState;
-    if (date > todayKey) state = "future";
-    else {
-      const rate = dayCompletionRate(tasks, completions, date);
-      if (rate === 1) state = "done";
-      else if (frozen.has(date)) state = "frozen";
-      else if (rate === null) state = date === todayKey ? "today" : "rest";
-      else state = date === todayKey ? "today" : "missed";
-    }
-    week.push({ date, state });
+    week.push({ date, state: dayState(date) });
+  }
+  const recent: WeekDay[] = [];
+  for (let i = 13; i >= 0; i--) {
+    const date = addDays(todayKey, -i);
+    recent.push({ date, state: dayState(date) });
   }
 
   return {
     week,
+    recent,
     hasTasks: scheduled > 0,
     scheduled,
     completed,
@@ -219,9 +228,13 @@ export interface FreezeCandidate {
 }
 
 /**
- * Days this calendar month, up to and including `uptoKey`, that had tasks
+ * Days this calendar month, before `uptoKey` (today), that had tasks
  * scheduled, weren't fully completed, and aren't already frozen - i.e. the
  * days you could still choose to protect. Most recent first.
+ *
+ * Never today itself: it isn't missed yet. It used to be offered too, so a
+ * freeze could be spent on a day still in progress that then got finished
+ * anyway - leaving it both done and frozen, with the freeze wasted.
  */
 export function getFreezeCandidates(
   tasks: Task[],
@@ -232,7 +245,7 @@ export function getFreezeCandidates(
   const monthStart = `${uptoKey.slice(0, 7)}-01`;
   const candidates: FreezeCandidate[] = [];
 
-  let cursor = uptoKey;
+  let cursor = addDays(uptoKey, -1);
   while (!isBefore(cursor, monthStart)) {
     if (!frozen.has(cursor)) {
       const rate = dayCompletionRate(tasks, completions, cursor);
@@ -250,6 +263,9 @@ export interface WeeklyCompletion {
   scheduled: number;
   completed: number;
   percent: number; // 0..100, 0 when nothing was scheduled
+  /** Monday-Sunday, each day's share done (null = nothing scheduled) -
+   *  the widget's one bar per day. */
+  days: { date: string; rate: number | null }[];
 }
 
 /** `weekStartKey` should be the Monday of the week to summarize. */
@@ -260,20 +276,27 @@ export function computeWeeklyCompletion(
 ): WeeklyCompletion {
   let scheduled = 0;
   let completed = 0;
+  const days: WeeklyCompletion["days"] = [];
 
   for (let i = 0; i < 7; i++) {
     const day = addDays(weekStartKey, i);
     const dayTasks = tasksScheduledOn(tasks, day);
-    scheduled += dayTasks.length;
-    completed += dayTasks.filter((t) =>
+    const dayDone = dayTasks.filter((t) =>
       completions.has(`${t.id}:${day}`),
     ).length;
+    scheduled += dayTasks.length;
+    completed += dayDone;
+    days.push({
+      date: day,
+      rate: dayTasks.length === 0 ? null : dayDone / dayTasks.length,
+    });
   }
 
   return {
     scheduled,
     completed,
     percent: scheduled === 0 ? 0 : Math.round((completed / scheduled) * 100),
+    days,
   };
 }
 
