@@ -199,26 +199,29 @@
   }
 }
 
-/* Placeholder that appears once at least one widget's been removed - matches
-   the dashed-border language already used for Arrange mode's own blocks. */
+/* Once at least one widget's been removed: a small, quiet link at the end
+   of the panel. Not a big dashed "+ Add" row - at the end of a list that
+   read as "add a task", and people tapped it for that. */
 .day-panel__add-widget {
-  display: flex;
+  align-self: center;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  padding: var(--space-3);
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--text-secondary);
+  gap: 6px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-muted);
   font-size: var(--text-sm);
   font-weight: 600;
-  transition: border-color 0.12s ease, color 0.12s ease, background-color 0.12s ease;
+  transition: color 0.12s ease, background-color 0.12s ease;
 }
 
-.day-panel__add-widget:hover {
-  border-color: var(--accent);
-  color: var(--text);
-  background: var(--accent-soft);
+@media (hover: hover) {
+  .day-panel__add-widget:hover {
+    background: var(--surface);
+    color: var(--text);
+  }
 }
 
 .day-panel__handle {
@@ -342,19 +345,6 @@
 
 .day-panel__header .add-menu > .btn:hover:not(:disabled) {
   filter: brightness(1.08);
-}
-
-/* "+ Add widget": dashed, in the widget orange (same as the gallery). */
-.day-panel .day-panel__add-widget {
-  border: 1px dashed color-mix(in srgb, #f97316 40%, transparent);
-  border-radius: 12px;
-  background: color-mix(in srgb, #f97316 6%, transparent);
-  color: color-mix(in srgb, #f97316 85%, var(--text));
-  font-weight: 600;
-}
-
-.day-panel .day-panel__add-widget:hover {
-  background: color-mix(in srgb, #f97316 12%, transparent);
 }
 
 /* Phone: swiping between days. The day's content follows the finger, then

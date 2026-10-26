@@ -469,17 +469,20 @@
 }
 
 /* Compact: one line - flame, number, pill. */
+/* Enough height for the whole fire: the card clips what spills out
+   (overflow: hidden above), and the flame's glow and rising embers reach
+   past its own box - squeezed in, their tops got cut off. */
 .streak-hero.streak-compact {
   flex-direction: row;
   align-items: center;
   gap: 8px;
-  padding-top: 12px;
-  padding-bottom: 12px;
+  /* The same above and below, so the number and pill sit dead center. */
+  padding-top: 16px;
+  padding-bottom: 16px;
 }
 
 .streak-compact .flame {
-  margin: -4px 0 -2px;
-  translate: 0 -3px;
+  translate: 0 -2px;
 }
 
 .streak-compact .streak-hero__value {

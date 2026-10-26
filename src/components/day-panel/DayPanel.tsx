@@ -30,6 +30,7 @@ import { Button } from "../ui/Button";
 import {
   ChevronDownIcon,
   ChevronUpIcon,
+  GridIcon,
   GripIcon,
   MoreIcon,
   PlusIcon,
@@ -716,7 +717,8 @@ export function DayPanel({
           className="day-panel__add-widget"
           onClick={() => setAddWidgetSheetOpen(true)}
         >
-          + Add widget
+          <GridIcon size={13} />
+          Add a widget
         </button>
       )}
 
