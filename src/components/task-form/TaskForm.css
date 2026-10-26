@@ -140,6 +140,13 @@
   padding: 0;
 }
 
+/* Bare text, no box - so no focus ring either (tokens.css's own would
+   otherwise win, as it loads after this file). */
+.task-form__title:focus-visible,
+.task-form__notes:focus-visible {
+  outline: none;
+}
+
 .task-form__title {
   font-size: 19px;
   font-weight: 600;

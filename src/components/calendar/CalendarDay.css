@@ -1,7 +1,8 @@
 /* A day in the month grid: a soft rounded tile (the same surface as the
    app's cards), the day's progress as a thin green bar along the bottom,
-   a quiet check once it's all done, the day's result as a pill in the
-   middle. Weekends a touch darker. Phone: the same tile, smaller, with
+   the day's result as a pill a little below the middle. No icons - a day
+   that's all done is tinted green, a frozen one is ice with cracks in its
+   corners. Weekends a touch darker. Phone: the same tile, smaller, with
    the day's tasks as chips. */
 .cal-day {
   position: relative;
@@ -49,9 +50,91 @@
   box-shadow: inset 0 0 0 1.5px var(--accent);
 }
 
-/* Frozen: a light ice tint, so it reads as protected at a glance. */
+/* All done: a soft green tile, its number in green - no check mark. */
+.cal-day--complete {
+  background: color-mix(in srgb, var(--success) 13%, var(--surface));
+}
+
+.cal-day--complete .cal-day__number {
+  color: color-mix(in srgb, var(--success) 70%, var(--text));
+}
+
+/* Frozen: ice - a blue tint, a frosty glow along the inside edge, and thin
+   cracks spreading from two opposite corners, top-left (behind the
+   number) and bottom-right (clear of the result, bottom-center). */
 .cal-day--frozen {
-  background: color-mix(in srgb, var(--frost) 11%, var(--surface));
+  background: color-mix(in srgb, var(--frost) 30%, var(--surface));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--frost) 60%, transparent),
+    inset 0 0 18px color-mix(in srgb, var(--frost) 40%, transparent);
+}
+
+/* The number sits on top of the crack: a soft halo in the ice's own color
+   around the digits clears the lines right next to them - no box. */
+.cal-day--frozen .cal-day__number {
+  --ice: color-mix(in srgb, var(--frost) 30%, var(--surface));
+  color: color-mix(in srgb, var(--frost) 55%, #fff);
+  text-shadow:
+    0 0 2px var(--ice),
+    0 0 3px var(--ice),
+    0 0 4px var(--ice),
+    0 0 6px var(--ice),
+    0 0 8px var(--ice);
+}
+
+:root[data-mode="light"] .cal-day--frozen .cal-day__number {
+  color: color-mix(in srgb, var(--frost) 85%, #000);
+}
+
+.cal-day--frozen::before,
+.cal-day--frozen::after {
+  content: "";
+  position: absolute;
+  width: 46px;
+  height: 46px;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--frost) 45%, #fff);
+  -webkit-mask: var(--frost-cracks) center / contain no-repeat;
+  mask: var(--frost-cracks) center / contain no-repeat;
+}
+
+.cal-day--frozen::before {
+  top: 0;
+  left: 0;
+}
+
+.cal-day--frozen::after {
+  bottom: 0;
+  right: 0;
+  transform: rotate(180deg);
+}
+
+.cal-day {
+  /* The crack drawing, as a mask - branching lines from a corner. */
+  --frost-cracks: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48' fill='none' stroke='%23000' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M0 13l7 3 5-4 6 4 4-1' stroke-width='1.3'/%3E%3Cpath d='M7 16l2 7-3 5' stroke-width='1.1'/%3E%3Cpath d='M12 12l3-6-1-6' stroke-width='1.1'/%3E%3Cpath d='M9 23l6 3 2 5' stroke-width='.8'/%3E%3Cpath d='M0 31l5 2 2 5' stroke-width='.8'/%3E%3Cpath d='M23 0l1 4 5 3' stroke-width='.8'/%3E%3C/svg%3E");
+}
+
+/* What's in the cell sits above the cracks. */
+.cal-day__number,
+.cal-day__chips {
+  position: relative;
+  z-index: 1;
+}
+
+@media (hover: hover) {
+  .cal-day--complete:hover {
+    background: color-mix(in srgb, var(--success) 19%, var(--surface));
+  }
+
+  .cal-day--frozen:hover {
+    background: color-mix(in srgb, var(--frost) 36%, var(--surface));
+  }
+}
+
+.cal-day--frozen.cal-day--selected {
+  box-shadow:
+    inset 0 0 0 1.5px var(--accent),
+    inset 0 0 18px color-mix(in srgb, var(--frost) 40%, transparent);
 }
 
 .cal-day__number {
@@ -73,31 +156,7 @@
   font-weight: 700;
 }
 
-.cal-day__badges {
-  position: absolute;
-  top: var(--space-2);
-  right: var(--space-2);
-  height: 18px;
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-
-/* Quiet on purpose: it's on most days, so it marks them without competing
-   with the day's result. */
-.cal-day__check {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  width: 13px;
-  height: 13px;
-  color: color-mix(in srgb, var(--success) 70%, var(--text-muted));
-  /* Only ever mounts the instant a day becomes fully completed - worth a
-     small pop. */
-  animation: cal-day-check-in 260ms var(--ease-out);
-}
-
+/* A small pop as something appears on a day (its result). */
 @keyframes cal-day-check-in {
   from {
     scale: 0.4;
@@ -105,57 +164,59 @@
   }
 }
 
-.cal-day__frozen {
+/* The day's result: its trend arrow and the number, in its color - green
+   up, red down, amber flat - centered along the bottom, no background. On
+   desktop it takes the progress bar's place on that day. */
+.cal-day__result-center {
+  --result-color: var(--trading-profit);
+  position: absolute;
+  left: 50%;
+  bottom: 9px;
+  translate: -50% 0;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  flex: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--frost) 25%, transparent);
-  color: var(--frost);
-  animation: cal-day-check-in 260ms var(--ease-out);
-}
-
-/* The day's result: a tinted pill a little below the middle of the cell -
-   green profit, red loss, orange break-even. */
-.cal-day__result-center {
-  position: absolute;
-  top: 60%;
-  left: 50%;
-  translate: -50% -50%;
-  max-width: calc(100% - 8px);
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.3;
+  gap: 4px;
+  max-width: calc(100% - 16px);
+  overflow: hidden;
+  color: var(--result-color);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.2;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
   pointer-events: none;
   animation: cal-day-check-in 260ms var(--ease-out);
 }
 
-.cal-day__result-center--positive {
-  color: var(--trading-profit);
-  background: color-mix(in srgb, var(--trading-profit) 16%, transparent);
-}
-
 .cal-day__result-center--negative {
-  color: var(--trading-loss);
-  background: color-mix(in srgb, var(--trading-loss) 16%, transparent);
+  --result-color: var(--trading-loss);
 }
 
 .cal-day__result-center--even {
-  color: var(--amber-text);
-  background: color-mix(in srgb, #f59e0b 16%, transparent);
+  --result-color: var(--amber-text);
+}
+
+.cal-day__result-icon {
+  flex: none;
+  display: inline-flex;
+}
+
+.cal-day__result-center--negative .cal-day__result-icon svg {
+  transform: scaleY(-1);
+}
+
+@media (min-width: 701px) {
+  .cal-day--has-result .cal-day__progress {
+    display: none;
+  }
 }
 
 /* The day's progress: a thin bar along the bottom, filling with the share
    of its tasks done (full = the whole day). */
 .cal-day__progress {
   position: absolute;
+  z-index: 1;
   left: var(--space-2);
   right: var(--space-2);
   bottom: 6px;
@@ -214,11 +275,12 @@
     display: none;
   }
 
-  .cal-day__badges {
-    top: 3px;
-    right: 3px;
-    height: auto;
+  .cal-day--frozen::before,
+  .cal-day--frozen::after {
+    width: 30px;
+    height: 30px;
   }
+
 
   .cal-day__chips {
     display: flex;
@@ -258,13 +320,22 @@
   }
 
   /* The middle of a phone cell holds its task chips, so the result sits
-     centered along the bottom instead, above the progress bar. */
+     centered along the bottom instead, above the progress bar - a small
+     tinted pill, no chip (no room). */
   .cal-day__result-center {
-    top: auto;
+    left: 50%;
     bottom: 11px;
     translate: -50% 0;
+    max-width: calc(100% - 8px);
     padding: 1px 4px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--result-color) 16%, transparent);
     font-size: 9px;
+    font-weight: 700;
+  }
+
+  .cal-day__result-icon {
+    display: none;
   }
 
   .cal-day__progress {
@@ -275,12 +346,3 @@
   }
 }
 
-/* Frozen: the day was protected, not finished - its bar is ice blue (like
-   the snowflake and the tint), not the green of a completed day. */
-.cal-day--frozen .cal-day__progress {
-  background: color-mix(in srgb, var(--frost) 18%, transparent);
-}
-
-.cal-day--frozen .cal-day__progress > span {
-  background: var(--frost);
-}

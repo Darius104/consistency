@@ -6,9 +6,11 @@ import type { AvatarId } from "../../utils/avatars";
 import type { DayNote, Tag, Task, Template, TradingResult, TradingResultUnit } from "../../types";
 import { formatDayName, parseDateKey, todayKey } from "../../utils/dates";
 import {
+  FLAME_COLORS,
   STREAK_STYLES,
   WIDGET_COLORS,
   WIDGET_LABELS,
+  type FlameColor,
   type PanelBlockId,
   type StreakStyle,
   type WidgetId,
@@ -47,6 +49,7 @@ import { TaskList } from "./TaskList";
 import { TradingResultBadge } from "./TradingResultBadge";
 import { TradingResultModal } from "./TradingResultModal";
 import { WidgetTiles } from "./WidgetTiles";
+import { FlameColorPicker } from "../stats/FlameColorPicker";
 import "./DayPanel.css";
 
 // How close the pointer needs to get to the scrollable container's top/
@@ -89,6 +92,9 @@ interface DayPanelProps {
   streakStyle?: StreakStyle;
   /** Picks it right from the widget's own menu, too. */
   onChangeStreakStyle?: (style: StreakStyle) => void;
+  /** Its flame color - also picked from that menu. */
+  flameColor?: FlameColor;
+  onChangeFlameColor?: (color: FlameColor) => void;
   todayStatus: TodayStatus;
   weekly: WeeklyCompletionData;
   freezesRemaining: number;
@@ -156,6 +162,8 @@ export function DayPanel({
   bestStreak,
   streakStyle,
   onChangeStreakStyle,
+  flameColor,
+  onChangeFlameColor,
   todayStatus,
   weekly,
   freezesRemaining,
@@ -452,7 +460,13 @@ export function DayPanel({
 
   const blocks: Record<PanelBlockId, ReactNode> = {
     streak: (
-      <StreakCounter streak={streak} best={bestStreak} today={todayStatus} variant={streakStyle} />
+      <StreakCounter
+        streak={streak}
+        best={bestStreak}
+        today={todayStatus}
+        variant={streakStyle}
+        flameColor={flameColor}
+      />
     ),
     weekly: <WeeklyCompletion data={weekly} />,
     freezes: <FreezeSummary remaining={freezesRemaining} total={MAX_FREEZES_PER_MONTH} />,
@@ -550,6 +564,7 @@ export function DayPanel({
         <div className="day-panel__header-actions">
           <TradingResultBadge
             value={tradingResult?.value ?? null}
+            unit={tradingResult?.unit ?? null}
             onClick={() => setTradingModalOpen(true)}
           />
           <AddMenu
@@ -605,6 +620,7 @@ export function DayPanel({
             streak={streak}
             bestStreak={bestStreak}
             streakStyle={streakStyle}
+            flameColor={flameColor}
             todayStatus={todayStatus}
             weekly={weekly}
             freezesRemaining={freezesRemaining}
@@ -708,7 +724,12 @@ export function DayPanel({
         <ActionSheet
           title={WIDGET_LABELS[actionSheetFor]}
           icon={WIDGET_INFO[actionSheetFor].icon}
-          color={WIDGET_COLORS[actionSheetFor]}
+          color={
+            // The streak's menu wears its flame color.
+            actionSheetFor === "streak"
+              ? (FLAME_COLORS.find((c) => c.id === flameColor)?.swatch ?? WIDGET_COLORS.streak)
+              : WIDGET_COLORS[actionSheetFor]
+          }
           subtitle={WIDGET_INFO[actionSheetFor].text}
           onClose={() => setActionSheetFor(null)}
           actions={[
@@ -742,6 +763,9 @@ export function DayPanel({
                 </button>
               ))}
             </div>
+          )}
+          {actionSheetFor === "streak" && onChangeFlameColor && (
+            <FlameColorPicker value={flameColor ?? "classic"} onChange={onChangeFlameColor} />
           )}
         </ActionSheet>
       )}

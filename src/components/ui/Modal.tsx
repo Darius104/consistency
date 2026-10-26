@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { XIcon } from "./icons";
@@ -20,6 +20,18 @@ interface ModalProps {
   icon?: ReactNode;
   /** That square's color. */
   accent?: string;
+  /** No title bar - the content is the whole window and brings its own
+   *  close button (closing through useModalClose, so it still animates
+   *  out). The title is still the window's accessible name. */
+  bare?: boolean;
+}
+
+// Lets a bare window's own buttons close it the same animated way the
+// title bar's close button does.
+const ModalCloseContext = createContext<() => void>(() => {});
+
+export function useModalClose(): () => void {
+  return useContext(ModalCloseContext);
 }
 
 // Matches the CSS transition duration below - the actual unmount (calling
@@ -48,6 +60,7 @@ export function Modal({
   asTab = false,
   icon,
   accent,
+  bare = false,
 }: ModalProps) {
   const [closing, setClosing] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -160,39 +173,41 @@ export function Modal({
       <div
         ref={panelRef}
         className={`modal-panel ${size === "wide" ? "modal-panel--wide" : ""} ${
-          closing ? "modal-panel--closing" : ""
-        }`}
+          bare ? "modal-panel--bare" : ""
+        } ${closing ? "modal-panel--closing" : ""}`}
         onMouseDown={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={title}
       >
-        <div
-          className="modal-header"
-          onPointerDown={onHeaderPointerDown}
-          onPointerMove={onHeaderPointerMove}
-          onPointerUp={onHeaderPointerUp}
-          onPointerCancel={onHeaderPointerUp}
-        >
-          <span className="modal-grabber" aria-hidden="true" />
-          <h2 className="modal-title">
-            {icon && (
-              <span
-                className="modal-title-icon"
-                style={accent ? ({ "--modal-accent": accent } as CSSProperties) : undefined}
-                aria-hidden="true"
-              >
-                {icon}
-              </span>
-            )}
-            <span className="modal-title-text">{title}</span>
-          </h2>
-          <button className="modal-close" onClick={requestClose} aria-label="Close">
-            <XIcon size={16} />
-          </button>
-        </div>
+        {!bare && (
+          <div
+            className="modal-header"
+            onPointerDown={onHeaderPointerDown}
+            onPointerMove={onHeaderPointerMove}
+            onPointerUp={onHeaderPointerUp}
+            onPointerCancel={onHeaderPointerUp}
+          >
+            <span className="modal-grabber" aria-hidden="true" />
+            <h2 className="modal-title">
+              {icon && (
+                <span
+                  className="modal-title-icon"
+                  style={accent ? ({ "--modal-accent": accent } as CSSProperties) : undefined}
+                  aria-hidden="true"
+                >
+                  {icon}
+                </span>
+              )}
+              <span className="modal-title-text">{title}</span>
+            </h2>
+            <button className="modal-close" onClick={requestClose} aria-label="Close">
+              <XIcon size={16} />
+            </button>
+          </div>
+        )}
         <div className={`modal-body ${size === "wide" ? "modal-body--flush" : ""}`}>
-          {children}
+          <ModalCloseContext.Provider value={requestClose}>{children}</ModalCloseContext.Provider>
         </div>
       </div>
     </div>,

@@ -15,11 +15,11 @@
   content: "";
   position: absolute;
   z-index: 2;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 3px;
-  background: var(--group-color);
+  inset: 0;
+  border-radius: inherit;
+  /* The color edge as an inset line around the card's own shape, so it
+     curves with the rounded corners instead of being cut off by them. */
+  box-shadow: inset 3px 0 0 var(--group-color);
   pointer-events: none;
 }
 

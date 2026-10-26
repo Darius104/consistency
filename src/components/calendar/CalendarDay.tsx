@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import type { TradingResult } from "../../types";
 import { parseDateKey } from "../../utils/dates";
 import { formatTradingResult } from "../../utils/trading";
-import { FrostIcon } from "../ui/icons";
+import { MinusIcon, TrendingUpIcon } from "../ui/icons";
 import "./CalendarDay.css";
 
 export interface DayChip {
@@ -55,12 +55,22 @@ export function CalendarDay({
   const isWeekend = weekday === 0 || weekday === 6;
   // The day's progress as a thin bar along the bottom - only where it says
   // something: today, and past days that weren't finished. A fully done
-  // day just gets its quiet check (most days are, so they stay calm).
+  // day is just tinted green (most days are, so they stay calm), and a
+  // frozen one is protected either way - its ice says it all.
   const showProgress =
-    completionRate !== null && !isFullyCompleted && (isPast || isToday);
+    completionRate !== null && !isFullyCompleted && !isFrozen && (isPast || isToday);
+
+  // Said aloud only - on screen it's the cell's color (green done, ice
+  // frozen), no icons.
+  const status = isFrozen ? ", frozen" : isFullyCompleted ? ", all done" : "";
 
   return (
     <button
+      aria-label={`${parseDateKey(dateKey).toLocaleDateString(undefined, {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+      })}${status}`}
       className={[
         "cal-day",
         !isCurrentMonth && "cal-day--dim",
@@ -68,6 +78,7 @@ export function CalendarDay({
         isFullyCompleted && "cal-day--complete",
         isFrozen && "cal-day--frozen",
         isWeekend && "cal-day--weekend",
+        tradingResult !== null && "cal-day--has-result",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -75,27 +86,6 @@ export function CalendarDay({
     >
       <span className={`cal-day__number ${isToday ? "cal-day__number--today" : ""}`}>
         {dayNumber}
-      </span>
-      <span className="cal-day__badges">
-        {isFullyCompleted && (
-          <span className="cal-day__check" aria-label="All tasks completed">
-            <svg viewBox="0 0 16 16" width="10" height="10">
-              <path
-                d="M2 8.5L6 12.5L14 3.5"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                fill="none"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </span>
-        )}
-        {isFrozen && (
-          <span className="cal-day__frozen" aria-label="Streak frozen this day">
-            <FrostIcon size={8} />
-          </span>
-        )}
       </span>
       {tradingResult !== null && (
         <span
@@ -107,6 +97,10 @@ export function CalendarDay({
                 : "cal-day__result-center--even"
           }`}
         >
+          {/* Desktop: the trend arrow before the number (hidden on phone). */}
+          <span className="cal-day__result-icon" aria-hidden="true">
+            {tradingResult.value === 0 ? <MinusIcon size={13} /> : <TrendingUpIcon size={13} />}
+          </span>
           {formatTradingResult(tradingResult.value, tradingResult.unit)}
         </span>
       )}

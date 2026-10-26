@@ -56,6 +56,17 @@
   height: 700px;
 }
 
+/* No title bar (see Modal's `bare`): the content is the whole window and
+   draws its own background - the panel is just its frame. */
+.modal-panel--bare {
+  border: none;
+  background: transparent;
+}
+
+.modal-panel--bare .modal-body {
+  padding: 0;
+}
+
 /* Phone-sized screens: the wide variant (Settings) takes over the whole
    screen instead of floating as a centered card with margins around it -
    there's more to see in there (nav list + a detail pane) than a small
@@ -186,6 +197,13 @@
       transform: translateY(100%);
       opacity: 1;
     }
+  }
+
+  /* A bare window's content runs to the bottom edge itself (and pads for
+     the home bar on its own) - no empty strip under it. */
+  .modal-overlay .modal-panel--bare:not(.modal-panel--wide) {
+    padding-bottom: 0;
+    background: transparent;
   }
 
   .modal-overlay .modal-panel--closing:not(.modal-panel--wide) {

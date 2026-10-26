@@ -143,18 +143,26 @@
   white-space: nowrap;
 }
 
-/* Desktop: a small trash that appears on hover. Touch: none at all -
-   swipe left instead (the inline button was too easy to hit by accident). */
-/* Laid over the right end of the row (on hover), so it doesn't hold space
-   and push the time in from the edge. */
+/* Desktop: Move and Delete appear on hover. Touch: none at all - swipe
+   left instead (the inline button was too easy to hit by accident). */
+/* They take the place of the row's right end (like a mail list swapping
+   the date for its actions): a strip of the row's own hover color, full
+   height, fading in from the left over the end of the title and
+   description - so the icons never sit on top of text. The reminder time
+   steps aside while they're there. Laid over the row rather than holding
+   space, so the time keeps its place at the edge the rest of the time. */
 .task-item__hover-actions {
   position: absolute;
-  top: 50%;
-  right: 8px;
-  translate: 0 -50%;
+  top: 0;
+  bottom: 0;
+  right: 0;
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 2px;
+  padding: 0 10px 0 28px;
+  background: linear-gradient(to right, transparent, var(--surface-hover) 24px);
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.12s ease;
 }
 
@@ -163,25 +171,39 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface-hover);
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border: none;
+  border-radius: 8px;
+  background: transparent;
   color: var(--text-muted);
-  padding: var(--space-1);
-  border-radius: var(--radius-sm);
-  transition: color 0.12s ease;
+  transition: color 0.12s ease, background-color 0.12s ease;
+}
+
+.task-item__line .task-item__time {
+  transition: opacity 0.12s ease;
 }
 
 @media (hover: hover) {
   .task-item:hover .task-item__hover-actions,
   .task-item__hover-actions:focus-within {
     opacity: 1;
+    pointer-events: auto;
+  }
+
+  .task-item:hover .task-item__line .task-item__time,
+  .task-item:has(.task-item__hover-actions:focus-within) .task-item__line .task-item__time {
+    opacity: 0;
   }
 
   .task-item__move:hover {
+    background: color-mix(in srgb, #3b82f6 16%, transparent);
     color: #3b82f6;
   }
 
   .task-item__delete:hover {
+    background: color-mix(in srgb, var(--danger) 16%, transparent);
     color: var(--danger);
   }
 }

@@ -34,9 +34,8 @@ import { QuoteWidget } from "../stats/QuoteWidget";
 import { StreakCounter } from "../stats/StreakCounter";
 import { TemplateBreakdown } from "../stats/TemplateBreakdown";
 import { WeeklyCompletion } from "../stats/WeeklyCompletion";
-import { Button } from "../ui/Button";
 import { EmptyState } from "../ui/EmptyState";
-import { CheckIcon, ChevronLeftIcon, NoteIcon } from "../ui/icons";
+import { CheckIcon, ChevronLeftIcon, EyeIcon, NoteIcon } from "../ui/icons";
 import { Skeleton } from "../ui/Skeleton";
 import { FriendPresenceStatus } from "./FriendPresenceStatus";
 import { FriendTaskRow } from "./FriendTaskRow";
@@ -207,47 +206,50 @@ export function FriendCalendarView({ friend, isOnline, onBack }: FriendCalendarV
 
   return (
     <div className={`friend-view ${expanded ? "friend-view--day-expanded" : ""}`}>
-      <div className="friend-view__bar">
-        <span className="friend-view__bar-text">
-          {/* Prefers the freshly-fetched name once loaded (data.displayName) over
-              the Friends-list prop, which can be stale if they've renamed
-              themselves since that list was last fetched - falls back to the
-              prop only for the brief moment before this view's own fetch resolves. */}
-          <span className="friend-view__bar-extra">Viewing </span>
-          <strong>{data?.displayName ?? friend.displayName}</strong>
-          <span className="friend-view__bar-extra">'s calendar (read-only)</span>
+      {/* "‹ Your calendar" · whose calendar it is · "Send a note" (yellow,
+          like notes everywhere else). */}
+      <div className="friend-bar">
+        {/* Phone, on one of their days: back to their month first (like
+            any iPhone screen you went into), not straight out. */}
+        {expanded && (
+          <button
+            type="button"
+            className="friend-bar__back friend-bar__back--month"
+            onClick={() => setExpanded(false)}
+            aria-label={`Back to ${monthName}`}
+          >
+            <ChevronLeftIcon size={16} />
+            <span>{monthName}</span>
+          </button>
+        )}
+        <button
+          type="button"
+          className={`friend-bar__back ${expanded ? "friend-bar__back--desktop-only" : ""}`}
+          onClick={onBack}
+          aria-label="Back to your calendar"
+        >
+          <ChevronLeftIcon size={16} />
+          <span className="friend-bar__desk">Your calendar</span>
+          <span className="friend-bar__phone">Back</span>
+        </button>
+        <span className="friend-bar__who">
+          <AvatarBadge avatarId={data?.avatarId ?? friend.avatarId} size={28} />
+          {/* Prefers the freshly-fetched name once loaded. */}
+          <strong className="friend-bar__name">{data?.displayName ?? friend.displayName}</strong>
+          <span className="friend-bar__ro">
+            <EyeIcon size={11} />
+            Read-only
+          </span>
         </span>
-        <div className="friend-view__bar-actions">
-          <Button
-            onClick={() => setSendingNote(true)}
-            className="friend-view__send-note"
-            aria-label="Send a note"
-          >
-            <NoteIcon size={14} />
-            <span className="friend-view__btn-label">Send a note</span>
-          </Button>
-          {/* Phone, on one of their days: back to their month first (like
-              any iPhone screen you went into), not straight out. */}
-          {expanded && (
-            <Button
-              onClick={() => setExpanded(false)}
-              className="friend-view__back friend-view__back--month"
-              aria-label={`Back to ${monthName}`}
-            >
-              <ChevronLeftIcon size={14} />
-              <span className="friend-view__back-label">{monthName}</span>
-            </Button>
-          )}
-          <Button
-            onClick={onBack}
-            className={`friend-view__back ${expanded ? "friend-view__back--desktop-only" : ""}`}
-            aria-label="Back to your calendar"
-          >
-            <ChevronLeftIcon size={14} />
-            <span className="friend-view__btn-label">Back to your calendar</span>
-            <span className="friend-view__back-label">Back</span>
-          </Button>
-        </div>
+        <button
+          type="button"
+          className="friend-bar__note"
+          onClick={() => setSendingNote(true)}
+          aria-label="Send a note"
+        >
+          <NoteIcon size={15} />
+          <span className="friend-bar__desk">Send a note</span>
+        </button>
       </div>
 
       {loading && (
@@ -371,7 +373,16 @@ function FriendDayContent({
   // panelOrder, not always last, so hardcoding it after every widget would
   // misplace it for anyone who's dragged it above one.
   const blocks: Partial<Record<PanelBlockId, ReactNode>> = {
-    streak: <StreakCounter streak={streak} best={bestStreak} today={todayStatus} />,
+    // In the look they picked for it (Settings > Widgets > Day Streak).
+    streak: (
+      <StreakCounter
+        streak={streak}
+        best={bestStreak}
+        today={todayStatus}
+        variant={data.streakStyle}
+        flameColor={data.flameColor}
+      />
+    ),
     weekly: <WeeklyCompletion data={weekly} />,
     freezes: (
       <FreezeSummary

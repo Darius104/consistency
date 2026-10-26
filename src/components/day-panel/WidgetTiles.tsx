@@ -6,6 +6,7 @@ import type { AvatarId } from "../../utils/avatars";
 import {
   WIDGET_COLORS,
   WIDGET_LABELS,
+  type FlameColor,
   type PanelBlockId,
   type StreakStyle,
   type WidgetId,
@@ -35,6 +36,7 @@ interface WidgetTilesProps {
   streak: number;
   bestStreak: number;
   streakStyle?: StreakStyle;
+  flameColor?: FlameColor;
   todayStatus: TodayStatus;
   weekly: WeeklyCompletion;
   freezesRemaining: number;
@@ -416,6 +418,7 @@ export function WidgetTiles(props: WidgetTilesProps) {
                 best={props.bestStreak}
                 today={props.todayStatus}
                 variant={props.streakStyle}
+                flameColor={props.flameColor}
               />
               {!arranging && (
                 <button

@@ -99,8 +99,12 @@
   user-select: text;
 }
 
-.note-form__editor:focus {
+/* Its border shows focus - not tokens.css's focus ring as well (which
+   would otherwise win, as it loads after this file). */
+.note-form__editor:focus,
+.note-form__editor:focus-visible {
   border-color: var(--accent);
+  outline: none;
 }
 
 .note-form__editor--empty::before {

@@ -22,7 +22,7 @@
   opacity: clamp(0, calc(var(--power, 0) * 40), 1);
   filter: drop-shadow(
     0 0 calc(3px + var(--power, 0) * 7px)
-      rgba(240, 147, 43, calc(0.35 + var(--power, 0) * 0.45))
+      rgba(var(--flame-glow, 240, 147, 43), calc(0.35 + var(--power, 0) * 0.45))
   );
   transition: transform 0.35s var(--ease-out), opacity 0.35s ease, filter 0.35s ease;
 }
@@ -39,76 +39,85 @@
   border-radius: 50%;
   background: radial-gradient(
     closest-side,
-    rgba(240, 147, 43, calc(var(--power, 0) * 0.6)),
-    rgba(240, 147, 43, 0) 100%
+    rgba(var(--flame-glow, 240, 147, 43), calc(var(--power, 0) * 0.6)),
+    rgba(var(--flame-glow, 240, 147, 43), 0) 100%
   );
   filter: blur(3px);
   scale: calc(0.7 + var(--power, 0) * 0.6);
   transition: scale 0.35s var(--ease-out);
 }
 
-/* Two crossed logs under the fire - constant size regardless of --power
-   (a woodpile doesn't grow, only the fire on top of it does). */
+/* Two crossed logs under the fire (FlameLogs in Flame.tsx) - constant size
+   regardless of --power (a woodpile doesn't grow, only the fire on top of
+   it does). Slightly wider than the flame's box, like the fire's base. */
 .flame__logs {
   position: absolute;
   left: 50%;
-  bottom: -2px;
+  bottom: -4px;
   translate: -50% 0;
   width: 30px;
-  height: 9px;
+  height: 12.75px;
+  overflow: visible;
 }
 
-/* Warm wood with a lit top edge and a pale cut end, instead of flat grey
-   bars - reads as actual logs at this size. The bottom edge glows faintly
-   with the fire. */
-.flame__log {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 24px;
-  height: 6px;
-  border-radius: 3px;
-  background:
-    radial-gradient(circle at 92% 50%, #d9a066 0 1.6px, #8a5a32 1.7px 2.6px, transparent 2.7px),
-    linear-gradient(180deg, #8b5a33 0%, #5c3a1f 55%, #3a2312 100%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 220, 170, 0.25),
-    0 1px 2px rgba(0, 0, 0, 0.5),
-    0 0 calc(var(--power, 0) * 5px) rgba(255, 120, 40, calc(var(--power, 0) * 0.45));
+/* Burning: a warm glow around the wood, stronger as the day fills up. */
+.flame__logs--lit {
+  filter: drop-shadow(
+    0 0 calc(1px + var(--power, 0) * 4px)
+      rgba(var(--flame-glow, 240, 147, 43), calc(0.25 + var(--power, 0) * 0.35))
+  );
 }
 
-.flame__log--1 {
-  translate: -50% -50%;
-  rotate: -18deg;
+/* Plain wood until something's done - then charred on top, with cracks
+   glowing in the flame's color and the cut ends' rings lit. */
+.flame__log-char,
+.flame__log-cracks,
+.flame__embers {
+  opacity: 0;
+  transition: opacity 0.4s ease;
 }
 
-/* Mirrored so its cut end faces the other way. */
-.flame__log--2 {
-  translate: -50% -50%;
-  rotate: 198deg;
+.flame__log-cracks {
+  stroke: var(--flame-mid, #f0932b);
+}
+
+.flame__log-ring {
+  stroke: #8a5a32;
+  transition: stroke 0.4s ease;
+}
+
+.flame__logs--lit .flame__log-char {
+  opacity: calc(0.45 + var(--power, 0) * 0.4);
+}
+
+.flame__logs--lit .flame__log-cracks {
+  opacity: calc(0.55 + var(--power, 0) * 0.45);
+  animation: log-cracks-glow 2.2s ease-in-out infinite;
+}
+
+.flame__logs--lit .flame__log-ring {
+  stroke: var(--flame-mid, #f0932b);
 }
 
 /* Embers glowing where the logs cross - there from the first completed
    task, brighter as the day fills up. */
-.flame__logs::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 30%;
-  width: 12px;
-  height: 5px;
-  translate: -50% -50%;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, #ffcf5a, rgba(255, 110, 30, 0.8) 60%, transparent);
-  opacity: clamp(0, calc(var(--power, 0) * 40), 1);
-  filter: blur(0.6px);
+.flame__logs--lit .flame__embers {
+  opacity: calc(0.7 + var(--power, 0) * 0.3);
+  transform-box: fill-box;
+  transform-origin: center;
   animation: ember-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes log-cracks-glow {
+  50% {
+    stroke-opacity: 0.55;
+  }
 }
 
 @keyframes ember-pulse {
   50% {
-    transform: scale(1.15);
-    filter: blur(0.6px) brightness(1.25);
+    transform: scale(1.12, 1.06);
+    filter: brightness(1.2);
   }
 }
 
@@ -340,3 +349,69 @@
     opacity: 0;
   }
 }
+
+/* --- Flame colors (Settings > Widgets > Day Streak) ---------------------
+   Each sets the flame's three layers and its glow, and the streak card's
+   own color (edge, number, week dots, pill - see stats.css). "Classic"
+   orange is the default and needs no class. */
+.flame-color--red {
+  --flame-base: #991b1b;
+  --flame-mid: #ef4444;
+  --flame-tip: #fecaca;
+  --flame-glow: 239, 68, 68;
+  --streak-color: #f87171;
+  --streak-text: #f87171;
+}
+
+.flame-color--pink {
+  --flame-base: #9d174d;
+  --flame-mid: #ec4899;
+  --flame-tip: #fbcfe8;
+  --flame-glow: 236, 72, 153;
+  --streak-color: #f472b6;
+  --streak-text: #f472b6;
+}
+
+.flame-color--purple {
+  --flame-base: #6b21a8;
+  --flame-mid: #a855f7;
+  --flame-tip: #e9d5ff;
+  --flame-glow: 168, 85, 247;
+  --streak-color: #c084fc;
+  --streak-text: #c084fc;
+}
+
+.flame-color--blue {
+  --flame-base: #1e40af;
+  --flame-mid: #3b82f6;
+  --flame-tip: #bfdbfe;
+  --flame-glow: 59, 130, 246;
+  --streak-color: #60a5fa;
+  --streak-text: #60a5fa;
+}
+
+.flame-color--green {
+  --flame-base: #166534;
+  --flame-mid: #22c55e;
+  --flame-tip: #bbf7d0;
+  --flame-glow: 34, 197, 94;
+  --streak-color: #4ade80;
+  --streak-text: #4ade80;
+}
+
+.flame-color--gold {
+  --flame-base: #a16207;
+  --flame-mid: #eab308;
+  --flame-tip: #fef9c3;
+  --flame-glow: 234, 179, 8;
+  --streak-color: #facc15;
+  --streak-text: #facc15;
+}
+
+/* Light mode: deeper text in each color, so the number reads on white. */
+:root[data-mode="light"] .flame-color--red { --streak-text: #b91c1c; }
+:root[data-mode="light"] .flame-color--pink { --streak-text: #be185d; }
+:root[data-mode="light"] .flame-color--purple { --streak-text: #7e22ce; }
+:root[data-mode="light"] .flame-color--blue { --streak-text: #1d4ed8; }
+:root[data-mode="light"] .flame-color--green { --streak-text: #15803d; }
+:root[data-mode="light"] .flame-color--gold { --streak-text: #a16207; }

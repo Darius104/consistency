@@ -8,10 +8,124 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
     />
     <title>Consistency</title>
+    <!-- The very first frame, before the app's code has loaded: the same
+         icon and week of dots as App's loading screen (.app-loading), on
+         the background of your light/dark mode, so opening the app is one
+         continuous screen instead of a blank flash. React replaces #root's
+         content the moment it starts. -->
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #101114;
+      }
+      /* Only while this first frame is up - once the app runs, its own
+         styles (tokens.css) set the background from the current mode. */
+      html.boot-light:has(.boot),
+      html.boot-light:has(.boot) body {
+        background: #e9ebf0;
+      }
+      .boot {
+        height: 100vh;
+        height: calc(100dvh - var(--titlebar-h, 0px));
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 22px;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+      }
+      .boot img {
+        width: 64px;
+        height: 64px;
+        border-radius: 17px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      }
+      .boot__week {
+        display: flex;
+        gap: 10px;
+      }
+      .boot__week span {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 5px;
+        font-size: 10px;
+        font-weight: 700;
+        color: #64656d;
+      }
+      .boot__week i {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: rgba(100, 101, 109, 0.2);
+      }
+      /* The Mac window's top strip (see the script below): the page's own
+         background - var(--bg) follows the theme and light/dark once the
+         app's styles load - and the handle to drag the window by. */
+      html.mac-titlebar {
+        --titlebar-h: 28px;
+      }
+      html.mac-titlebar body {
+        padding-top: var(--titlebar-h);
+      }
+      .titlebar {
+        display: none;
+      }
+      html.mac-titlebar .titlebar {
+        display: block;
+        position: fixed;
+        z-index: 50;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: var(--titlebar-h);
+        background: var(--bg, #101114);
+      }
+      html.mac-titlebar.boot-light .titlebar {
+        background: var(--bg, #e9ebf0);
+      }
+      .boot__text {
+        margin: 0;
+        font-size: 12px;
+        color: #9a9aa4;
+      }
+      html.boot-light .boot__text {
+        color: #4f5563;
+      }
+    </style>
+    <script>
+      try {
+        if (localStorage.getItem("consistency:appearanceMode") === "light") {
+          document.documentElement.classList.add("boot-light");
+        }
+      } catch (e) {}
+      // The Mac app: macOS draws its window buttons over the page
+      // (titleBarStyle "Overlay" in tauri.conf.json), so the page keeps a
+      // strip free for them (.titlebar below) in its own colors. Not the
+      // iPhone/iPad app (touch), not a plain browser (no Tauri).
+      if (
+        /Macintosh/.test(navigator.userAgent) &&
+        navigator.maxTouchPoints <= 1 &&
+        "__TAURI_INTERNALS__" in window
+      ) {
+        document.documentElement.classList.add("mac-titlebar");
+      }
+    </script>
   </head>
 
   <body>
-    <div id="root"></div>
+    <div class="titlebar" data-tauri-drag-region></div>
+    <div id="root">
+      <div class="boot" aria-label="Loading">
+        <img src="/app-icon.png" alt="" />
+        <div class="boot__week" aria-hidden="true">
+          <span><i></i>M</span><span><i></i>T</span><span><i></i>W</span><span><i></i>T</span
+          ><span><i></i>F</span><span><i></i>S</span><span><i></i>S</span>
+        </div>
+        <p class="boot__text">Getting your days ready…</p>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

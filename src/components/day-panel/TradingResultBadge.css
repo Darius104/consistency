@@ -1,7 +1,6 @@
-/* The result button: a soft green pill in the same shape as "+ Add"
-   next to it (DayPanel.css) - green is the result's color everywhere
-   (see addKinds.ts). Once a result is logged it shows in its own color
-   (green profit / red loss). */
+/* The result button next to "+ Add" (same size and shape). Empty: a dashed
+   green "+ Result" slot waiting to be filled. Logged: the number itself in
+   its color - green profit, red loss, amber even - like the calendar. */
 .trading-result {
   --result-color: #22c55e;
   display: inline-flex;
@@ -12,27 +11,37 @@
   padding: 0 12px;
   border: none;
   border-radius: 10px;
-  background: color-mix(in srgb, var(--result-color) 14%, var(--surface));
-  color: color-mix(in srgb, var(--result-color) 85%, var(--text));
-  font-size: var(--text-sm);
-  font-weight: 600;
+  background: color-mix(in srgb, var(--result-color) 16%, var(--surface));
+  color: var(--result-color);
+  font-size: var(--text-base);
+  font-weight: 800;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
   transition: background-color 0.12s ease, transform 120ms var(--ease-out);
 }
 
-.trading-result:hover {
-  background: color-mix(in srgb, var(--result-color) 24%, var(--surface));
+@media (hover: hover) {
+  .trading-result:hover {
+    background: color-mix(in srgb, var(--result-color) 24%, var(--surface));
+  }
 }
 
 .trading-result:active {
   transform: scale(0.96);
 }
 
-.trading-result__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: currentColor;
+.trading-result--empty {
+  background: transparent;
+  outline: 1.5px dashed color-mix(in srgb, var(--result-color) 55%, transparent);
+  outline-offset: -1.5px;
+  color: color-mix(in srgb, var(--result-color) 85%, var(--text));
+  font-weight: 700;
+}
+
+@media (hover: hover) {
+  .trading-result--empty:hover {
+    background: color-mix(in srgb, var(--result-color) 10%, transparent);
+  }
 }
 
 .trading-result--positive {
@@ -41,6 +50,15 @@
 
 .trading-result--negative {
   --result-color: var(--trading-loss);
+}
+
+.trading-result--negative .trading-result__trend {
+  transform: scaleY(-1);
+}
+
+.trading-result--even {
+  --result-color: #f59e0b;
+  color: var(--amber-text);
 }
 
 /* Phone: logging a result lives in the tab bar's "+" sheet (see AddMenu),

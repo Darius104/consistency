@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { AuthScreen } from "./auth/AuthScreen";
 import { useSession } from "./auth/useSession";
@@ -94,9 +95,11 @@ import {
   parseHiddenWidgets,
   resolveNewWidgetIds,
   parseStreakStyle,
+  parseFlameColor,
   FREE_WIDGET_LIMIT,
   WIDGET_IDS,
   type PanelBlockId,
+  type FlameColor,
   type StreakStyle,
   type WidgetId,
 } from "./utils/panelOrder";
@@ -157,6 +160,8 @@ const KNOWN_WIDGET_IDS_SETTING_KEY = "knownWidgetIds";
 const PHRASE_VIEW_SETTING_KEY = "lastPhraseViewDate";
 // Which look the Day Streak widget has (Settings > Widgets > Day Streak).
 const STREAK_STYLE_SETTING_KEY = "streakStyle";
+// The Day Streak's flame color (picked next to its style).
+const FLAME_COLOR_SETTING_KEY = "flameColor";
 // Whether friends see your logged results on your calendar - "false" hides
 // them; anything else (or never set) shares. Read on the server too, by
 // get_friend_calendar_data (supabase/friend_trading_results_schema.sql).
@@ -279,6 +284,10 @@ export default function App() {
   // flicker withRecentToggles stops for checkboxes). A fresh pick wins.
   const recentStreakStyleRef = useRef<{ style: StreakStyle; at: number } | null>(null);
   const streakStyleSaveTimerRef = useRef<number | null>(null);
+  // Same switch-now, save-once-you-stop handling as the style above.
+  const [flameColor, setFlameColor] = useState<FlameColor>("classic");
+  const recentFlameColorRef = useRef<{ color: FlameColor; at: number } | null>(null);
+  const flameColorSaveTimerRef = useRef<number | null>(null);
   const [arranging, setArranging] = useState(false);
   const [loading, setLoading] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -519,6 +528,7 @@ export default function App() {
       savedAppearanceMode,
       savedStreakStyle,
       savedShareResults,
+      savedFlameColor,
     ] = await Promise.all([
       getAllTasks(),
       getTags(),
@@ -541,6 +551,7 @@ export default function App() {
       getSetting(APPEARANCE_MODE_SETTING_KEY),
       getSetting(STREAK_STYLE_SETTING_KEY),
       getSetting(SHARE_RESULTS_SETTING_KEY),
+      getSetting(FLAME_COLOR_SETTING_KEY),
     ]);
     setTasks(taskRows);
     setTags(tagRows);
@@ -575,6 +586,12 @@ export default function App() {
     );
     const recentStyle = recentStreakStyleRef.current;
     setShareResults(savedShareResults !== "false");
+    const recentFlame = recentFlameColorRef.current;
+    setFlameColor(
+      recentFlame && Date.now() - recentFlame.at < RECENT_TOGGLE_MS
+        ? recentFlame.color
+        : parseFlameColor(savedFlameColor),
+    );
     setStreakStyle(
       recentStyle && Date.now() - recentStyle.at < RECENT_TOGGLE_MS
         ? recentStyle.style
@@ -787,6 +804,19 @@ export default function App() {
   async function handleChangeShareResults(share: boolean) {
     setShareResults(share);
     await setSetting(SHARE_RESULTS_SETTING_KEY, share ? "true" : "false");
+  }
+
+  function handleChangeFlameColor(color: FlameColor) {
+    setFlameColor(color);
+    recentFlameColorRef.current = { color, at: Date.now() };
+    if (flameColorSaveTimerRef.current !== null) {
+      window.clearTimeout(flameColorSaveTimerRef.current);
+    }
+    flameColorSaveTimerRef.current = window.setTimeout(() => {
+      flameColorSaveTimerRef.current = null;
+      recentFlameColorRef.current = { color, at: Date.now() };
+      void setSetting(FLAME_COLOR_SETTING_KEY, color);
+    }, 500);
   }
 
   // Switches at once; saves only the one you stop on (quick taps through
@@ -1237,8 +1267,19 @@ export default function App() {
 
   if (loading || !openGateOpen) {
     return (
-      <div className="app-loading">
+      // The icon and a week of dots filling in, one by one, while your
+      // days load - the app's own idea of progress.
+      <div className="app-loading" role="status" aria-label="Loading">
         <img className="app-loading__icon" src="/app-icon.png" alt="" />
+        <div className="app-loading__week" aria-hidden="true">
+          {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
+            <span key={i} style={{ "--i": i } as CSSProperties}>
+              <i />
+              {d}
+            </span>
+          ))}
+        </div>
+        <p className="app-loading__text">Getting your days ready…</p>
       </div>
     );
   }
@@ -1470,6 +1511,8 @@ export default function App() {
         bestStreak={bestStreak}
         streakStyle={streakStyle}
         onChangeStreakStyle={handleChangeStreakStyle}
+        flameColor={flameColor}
+        onChangeFlameColor={handleChangeFlameColor}
         todayStatus={todayStatus}
         weekly={weekly}
         freezesRemaining={freezesRemainingThisMonth}
@@ -1598,6 +1641,8 @@ export default function App() {
             bestStreak={bestStreak}
             streakStyle={streakStyle}
             onChangeStreakStyle={handleChangeStreakStyle}
+            flameColor={flameColor}
+            onChangeFlameColor={handleChangeFlameColor}
             shareResults={shareResults}
             onChangeShareResults={(share) => void handleChangeShareResults(share)}
             todayStatus={todayStatus}

@@ -1,6 +1,7 @@
 .app {
   height: 100vh;
-  height: 100dvh;
+  /* Minus the Mac window's top strip (see index.html) - 0 elsewhere. */
+  height: calc(100dvh - var(--titlebar-h, 0px));
   display: flex;
   overflow: hidden;
   animation: app-fade-in 240ms var(--ease-out);
@@ -42,29 +43,86 @@
 
 .app-loading {
   height: 100vh;
-  height: 100dvh;
+  /* Minus the Mac window's top strip (see index.html) - 0 elsewhere. */
+  height: calc(100dvh - var(--titlebar-h, 0px));
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 22px;
   background: var(--bg);
+  animation: app-loading-in 300ms var(--ease-out) both;
 }
 
 .app-loading__icon {
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  animation: app-loading-pulse 1.4s ease-in-out infinite;
+  width: 64px;
+  height: 64px;
+  border-radius: 17px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 
-@keyframes app-loading-pulse {
+/* A week of dots that fill in green one after another, then start over. */
+.app-loading__week {
+  display: flex;
+  gap: 10px;
+}
+
+.app-loading__week span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.app-loading__week i {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text-muted) 20%, transparent);
+  animation: app-loading-day 2.1s var(--ease-out) infinite;
+  animation-delay: calc(var(--i) * 0.2s);
+}
+
+@keyframes app-loading-day {
   0%,
-  100% {
-    opacity: 0.5;
-    scale: 0.96;
-  }
-  50% {
-    opacity: 1;
+  8% {
+    background: color-mix(in srgb, var(--text-muted) 20%, transparent);
+    box-shadow: none;
     scale: 1;
+  }
+  16% {
+    scale: 1.25;
+  }
+  22%,
+  80% {
+    background: var(--success);
+    box-shadow: 0 0 10px color-mix(in srgb, var(--success) 60%, transparent);
+    scale: 1;
+  }
+  100% {
+    background: color-mix(in srgb, var(--text-muted) 20%, transparent);
+    box-shadow: none;
+  }
+}
+
+.app-loading__text {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+@keyframes app-loading-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-loading__week i {
+    animation: none;
+    background: var(--success);
   }
 }

@@ -30,66 +30,155 @@
   color: var(--success);
 }
 
-/* Finished templates, together in one green-tinted card. */
+/* Finished templates fold into one line (TaskList): a card with a green
+   edge, "5 templates done", their names small, their colors stacked. Tap
+   it to list them; each row opens its template. */
 .task-list__done {
+  position: relative;
   display: flex;
   flex-direction: column;
-  padding: 4px 0 6px;
+  gap: 2px;
+  padding: 6px;
   border-radius: 14px;
-  background: color-mix(in srgb, var(--success) 6%, var(--surface));
+  background: var(--surface);
+}
+
+.task-list__done::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 3px 0 0 var(--success);
+  pointer-events: none;
 }
 
 .task-list__done-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px 6px;
-  color: var(--success);
-  font-weight: 700;
+  gap: 10px;
+  min-width: 0;
+  padding: 8px 8px 8px 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  transition: background-color 0.12s ease;
+}
+
+@media (hover: hover) {
+  .task-list__done-head:hover {
+    background: color-mix(in srgb, var(--success) 10%, transparent);
+  }
 }
 
 .task-list__done-check {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--success);
+  color: #052e16;
+}
+
+.task-list__done-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.task-list__done-title {
+  font-size: var(--text-base);
+  font-weight: 700;
+}
+
+.task-list__done-names {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+/* Their colors, overlapping like avatars. */
+.task-list__done-stack {
+  flex: none;
+  display: flex;
+  padding-left: 5px;
+}
+
+.task-list__done-stack i {
+  width: 14px;
+  height: 14px;
+  margin-left: -5px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+.task-list__done-chevron {
+  flex: none;
+  color: var(--text-muted);
+  transition: transform 0.2s var(--ease-out);
+}
+
+.task-list__done-chevron--open {
+  transform: rotate(90deg);
+}
+
+/* Each finished template: a rounded row, tinted in its own color on hover. */
+.task-list__done-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  height: 36px;
+  padding: 0 8px 0 10px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--text-base);
+  font-weight: 600;
+  text-align: left;
+  animation: task-list-done-row-in 200ms var(--ease-out) both;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+@keyframes task-list-done-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+
+@media (hover: hover) {
+  .task-list__done-row:hover {
+    background: color-mix(in srgb, var(--group-color) 13%, transparent);
+    color: var(--text);
+  }
+
+  .task-list__done-row:hover .task-list__done-go {
+    opacity: 1;
+  }
+}
+
+.task-list__done-dot {
+  flex: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: var(--success);
-  color: #0d1a14;
-}
-
-.task-list__done-count {
-  margin-left: auto;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-.task-list__done-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  padding: 7px 14px 7px 40px;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  font: inherit;
-  text-align: left;
-  transition: background-color 0.12s ease;
-}
-
-.task-list__done-row:hover {
-  background: color-mix(in srgb, var(--success) 8%, transparent);
-}
-
-.task-list__done-dot {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--group-color);
+  background: color-mix(in srgb, var(--group-color) 85%, transparent);
+  color: #fff;
 }
 
 /* Long names shorten with "..." instead of widening the card. */
@@ -105,6 +194,26 @@
   flex: none;
   font-size: var(--text-xs);
   font-weight: 600;
-  color: var(--success);
+  color: var(--text-muted);
   font-variant-numeric: tabular-nums;
+}
+
+.task-list__done-go {
+  flex: none;
+  color: var(--text-secondary);
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+@media (hover: none) {
+  .task-list__done-go {
+    opacity: 1;
+    color: var(--text-muted);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-list__done-row {
+    animation: none;
+  }
 }

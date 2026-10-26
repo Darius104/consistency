@@ -1,20 +1,40 @@
+/* A note a friend sent you - the same soft card and yellow edge as your
+   own notes (NoteRow), their avatar with a small note badge. */
 .friend-note-widget {
+  position: relative;
+  /* Never squashed to fit the panel's column - the panel scrolls instead. */
+  flex: none;
+  overflow: hidden;
   display: flex;
   align-items: flex-start;
-  gap: var(--space-2);
+  gap: var(--space-3);
   width: 100%;
-  background: var(--accent-soft);
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-md);
-  padding: var(--space-2) var(--space-3);
+  padding: 12px 10px 12px 16px;
+  border-radius: 14px;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, #f5c442 9%, transparent),
+      transparent 70%
+    ),
+    var(--surface);
   /* Two animations, not one - "enter" is a one-shot drop-and-settle for how
      it arrives (it's inserted above everything else, so it reads as coming
      from above with a little overshoot rather than just fading in flat),
-     "attention" is the separate few-second pulse that keeps drawing the eye
-     after it's already settled. They only share box-shadow/transform space
-     loosely (enter never touches box-shadow, attention never touches
-     transform), so running both at once doesn't fight itself. */
+     "attention" is a short yellow glow that keeps drawing the eye after it
+     has settled. Enter never touches box-shadow, attention never touches
+     transform, so running both at once doesn't fight itself. */
   animation: friend-note-enter 340ms var(--ease-out), friend-note-attention 2s ease-out;
+}
+
+/* The yellow edge, curving with the corners like every card's. */
+.friend-note-widget::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 3px 0 0 #f5c442;
+  pointer-events: none;
 }
 
 @keyframes friend-note-enter {
@@ -34,17 +54,45 @@
 
 @keyframes friend-note-attention {
   0% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+    box-shadow: 0 0 0 0 color-mix(in srgb, #f5c442 55%, transparent);
   }
   30% {
-    box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent) 0%, transparent);
+    box-shadow: 0 0 0 10px color-mix(in srgb, #f5c442 0%, transparent);
   }
   55% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent);
+    box-shadow: 0 0 0 0 color-mix(in srgb, #f5c442 40%, transparent);
   }
   100% {
-    box-shadow: 0 0 0 10px color-mix(in srgb, var(--accent) 0%, transparent);
+    box-shadow: 0 0 0 10px color-mix(in srgb, #f5c442 0%, transparent);
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .friend-note-widget {
+    animation: none;
+  }
+}
+
+.friend-note-widget__avatar {
+  position: relative;
+  flex: none;
+  display: inline-flex;
+}
+
+/* A small yellow note on their avatar - says what this is at a glance. */
+.friend-note-widget__badge {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #f5c442;
+  color: #2a2103;
+  box-shadow: 0 0 0 2px var(--surface);
 }
 
 .friend-note-widget__body {
@@ -52,28 +100,39 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .friend-note-widget__header {
   display: flex;
   align-items: baseline;
-  gap: var(--space-2);
+  gap: 6px;
+  min-width: 0;
 }
 
 .friend-note-widget__sender {
-  font-size: var(--text-sm);
-  font-weight: 600;
+  flex: none;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-base);
+  font-weight: 700;
 }
 
 .friend-note-widget__time {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: var(--text-xs);
   color: var(--text-muted);
 }
 
 .friend-note-widget__text {
   margin: 0;
-  font-size: var(--text-sm);
+  font-size: var(--text-md);
+  line-height: 1.45;
   color: var(--text);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -84,15 +143,19 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-1);
-  border-radius: var(--radius-sm);
-  background: transparent;
+  width: 28px;
+  height: 28px;
+  margin: -4px -2px 0 0;
   border: none;
+  border-radius: 50%;
+  background: transparent;
   color: var(--text-muted);
   transition: color 0.12s ease, background-color 0.12s ease;
 }
 
-.friend-note-widget__dismiss:hover {
-  color: var(--danger);
-  background: var(--surface-hover);
+@media (hover: hover) {
+  .friend-note-widget__dismiss:hover {
+    color: var(--text);
+    background: var(--surface-hover);
+  }
 }

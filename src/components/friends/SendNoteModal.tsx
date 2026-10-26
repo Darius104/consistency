@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { sendFriendNote } from "../../db/friendNotes";
-import { Button } from "../ui/Button";
-import { CheckIcon } from "../ui/icons";
+import { ADD_COLORS, inkOn } from "../day-panel/addKinds";
+import { CheckIcon, NoteIcon } from "../ui/icons";
 import { Modal } from "../ui/Modal";
 import "./SendNoteModal.css";
 
@@ -36,7 +36,13 @@ export function SendNoteModal({ recipientId, recipientName, onClose }: SendNoteM
   }
 
   return (
-    <Modal title={`Send a note to ${recipientName}`} onClose={onClose}>
+    // Notes are yellow everywhere - same icon and color as your own NoteForm.
+    <Modal
+      title={`Send a note to ${recipientName}`}
+      onClose={onClose}
+      icon={<NoteIcon size={14} style={{ color: inkOn(ADD_COLORS.note) }} />}
+      accent={ADD_COLORS.note}
+    >
       <div className="send-note">
         {sent ? (
           <div className="send-note__sent">
@@ -56,19 +62,24 @@ export function SendNoteModal({ recipientId, recipientName, onClose }: SendNoteM
               rows={3}
               autoFocus
             />
-            <div className="send-note__footer">
+            <div className="send-note__meta">
+              {error ? (
+                <span className="send-note__error">{error}</span>
+              ) : (
+                <span>They'll see it on their day.</span>
+              )}
               <span className="send-note__count">
                 {body.length}/{MAX_NOTE_LENGTH}
               </span>
-              {error && <span className="send-note__error">{error}</span>}
-              <Button
-                variant="primary"
-                onClick={() => void handleSend()}
-                disabled={sending || !body.trim()}
-              >
-                {sending ? "Sending…" : "Send"}
-              </Button>
             </div>
+            <button
+              type="button"
+              className="send-note__send"
+              onClick={() => void handleSend()}
+              disabled={sending || !body.trim()}
+            >
+              {sending ? "Sending…" : `Send to ${recipientName}`}
+            </button>
           </>
         )}
       </div>

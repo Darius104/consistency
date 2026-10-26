@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
-import type { StreakStyle } from "../../utils/panelOrder";
+import type { FlameColor, StreakStyle } from "../../utils/panelOrder";
 import { streakTier, type TodayStatus, type WeekDayState } from "../../utils/stats";
 import { CheckIcon, FrostIcon } from "../ui/icons";
 import { Flame } from "./Flame";
@@ -12,6 +12,9 @@ interface StreakCounterProps {
   today: TodayStatus;
   /** Which look (Settings > Widgets > Day Streak) - Campfire by default. */
   variant?: StreakStyle;
+  /** The flame's color, which the whole card follows - Classic orange by
+   *  default (see the flame-color classes in Flame.css). */
+  flameColor?: FlameColor;
 }
 
 const WEEK_LETTERS = ["M", "T", "W", "T", "F", "S", "S"];
@@ -53,7 +56,13 @@ function statusPill(today: TodayStatus): { text: ReactNode; tone: string } {
   return { text: `${today.remaining} left today`, tone: "pending" };
 }
 
-export function StreakCounter({ streak, best, today, variant = "campfire" }: StreakCounterProps) {
+export function StreakCounter({
+  streak,
+  best,
+  today,
+  variant = "campfire",
+  flameColor = "classic",
+}: StreakCounterProps) {
   const t = streakTier(streak);
   const isRecordStreak = streak > 0 && streak >= best;
 
@@ -105,6 +114,7 @@ export function StreakCounter({ streak, best, today, variant = "campfire" }: Str
   }, [today.allDone]);
 
   const pill = statusPill(today);
+  const colorClass = flameColor === "classic" ? "" : `flame-color--${flameColor}`;
   const pillEl = (
     <span
       className={`streak-hero__pill streak-hero__pill--${pill.tone} ${
@@ -139,7 +149,7 @@ export function StreakCounter({ streak, best, today, variant = "campfire" }: Str
   // Ring: the streak inside a ring that fills with today's progress.
   if (variant === "ring") {
     return (
-      <div className={`streak-hero streak-hero--${t} streak-ring`}>
+      <div className={`streak-hero streak-hero--${t} ${colorClass} streak-ring`}>
         <div className="streak-ring__top">
           <div
             className="streak-ring__dial"
@@ -173,8 +183,10 @@ export function StreakCounter({ streak, best, today, variant = "campfire" }: Str
   // Compact: one slim line - flame, number, today's pill.
   if (variant === "compact") {
     return (
-      <div className={`streak-hero streak-hero--${t} streak-compact`}>
-        <Flame power={power} showLogs={false} />
+      <div className={`streak-hero streak-hero--${t} ${colorClass} streak-compact`}>
+        {/* With its logs, so a day with nothing done yet still shows them
+            smoldering instead of an empty gap. */}
+        <Flame power={power} />
         {valueEl}
         <span className="streak-compact__unit">day streak</span>
         {pillEl}
@@ -185,7 +197,7 @@ export function StreakCounter({ streak, best, today, variant = "campfire" }: Str
   // Two weeks: the last 14 days as squares, oldest first.
   if (variant === "weeks") {
     return (
-      <div className={`streak-hero streak-hero--${t} streak-weeks`}>
+      <div className={`streak-hero streak-hero--${t} ${colorClass} streak-weeks`}>
         <div className="streak-weeks__top">
           <Flame power={power} />
           <div className="streak-hero__text">
@@ -215,7 +227,7 @@ export function StreakCounter({ streak, best, today, variant = "campfire" }: Str
   }
 
   return (
-    <div className={`streak-hero streak-hero--${t}`}>
+    <div className={`streak-hero streak-hero--${t} ${colorClass}`}>
       <div className="streak-hero__main">
         <div className="streak-hero__primary">
           <Flame power={power} />

@@ -12,7 +12,11 @@ import { DEFAULT_AVATAR_ID, parseAvatarId, type AvatarId } from "../utils/avatar
 import {
   parseHiddenWidgets,
   parsePanelOrder,
+  parseStreakStyle,
+  parseFlameColor,
   type PanelBlockId,
+  type FlameColor,
+  type StreakStyle,
   type WidgetId,
 } from "../utils/panelOrder";
 import type { RandomThemeColors } from "../utils/randomTheme";
@@ -74,6 +78,12 @@ export interface FriendCalendarData {
    *  these settings has the same null-from-the-database shape you would. */
   panelOrder: PanelBlockId[];
   hiddenWidgets: WidgetId[];
+  /** The look they picked for their Day Streak widget (Campfire if none,
+   *  or until friend_streak_style_schema.sql has been run). */
+  streakStyle: StreakStyle;
+  /** Their flame color (Classic until friend_flame_color_schema.sql has
+   *  been run, or if they never picked one). */
+  flameColor: FlameColor;
   lastSeenAt: string | null;
 }
 
@@ -422,6 +432,10 @@ export async function fetchFriendCalendarData(friendUserId: string): Promise<Fri
     trading_results?: { date: string; value: number; unit: string }[];
     panel_order: string | null;
     hidden_widgets: string | null;
+    /** Missing until friend_streak_style_schema.sql has been run. */
+    streak_style?: string | null;
+    /** Missing until friend_flame_color_schema.sql has been run. */
+    flame_color?: string | null;
   };
 
   const tasks: Task[] = raw.tasks.map(mapFriendTaskRow);
@@ -455,6 +469,8 @@ export async function fetchFriendCalendarData(friendUserId: string): Promise<Fri
     avatarId: parseAvatarId(profile.avatar_id),
     panelOrder: parsePanelOrder(raw.panel_order),
     hiddenWidgets: parseHiddenWidgets(raw.hidden_widgets),
+    streakStyle: parseStreakStyle(raw.streak_style ?? null),
+    flameColor: parseFlameColor(raw.flame_color ?? null),
     lastSeenAt: profile.last_seen_at,
   };
 }

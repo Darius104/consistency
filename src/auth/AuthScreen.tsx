@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import type { FormEvent } from "react";
+import type { CSSProperties, FormEvent } from "react";
 import { getCurrent, onOpenUrl } from "@tauri-apps/plugin-deep-link";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { supabase } from "../lib/supabaseClient";
-import { Button } from "../components/ui/Button";
 import { Checkbox } from "../components/ui/Checkbox";
-import { EyeIcon, EyeOffIcon } from "../components/ui/icons";
+import { CheckIcon, EyeIcon, EyeOffIcon } from "../components/ui/icons";
+import { Flame } from "../components/stats/Flame";
 import { recordTermsAcceptance } from "../db/friends";
 import { extractAuthCode, startGoogleSignIn } from "./googleAuth";
 import "./AuthScreen.css";
@@ -23,8 +23,7 @@ const GOOGLE_SIGN_IN_ENABLED = false;
 // page rather than a link back into the app, so it works the same from any
 // device's mail app (the iPhone app has no custom link scheme registered).
 // Must also be listed in Supabase > Auth > URL Configuration > Redirect URLs.
-const RESET_PASSWORD_URL =
-  "https://darius104.github.io/consistency/reset-password.html";
+const RESET_PASSWORD_URL = "https://darius104.github.io/consistency/reset-password.html";
 
 // "forgot" asks for the email; "reset" then takes the 6-digit code from
 // that email plus the new password, all inside the app (a code can't be
@@ -36,8 +35,7 @@ type Mode = "signin" | "signup" | "forgot" | "reset";
 function friendlyError(err: unknown): string {
   const raw = err instanceof Error ? err.message : String(err);
   const msg = raw.toLowerCase();
-  if (msg.includes("invalid login credentials"))
-    return "Wrong email or password.";
+  if (msg.includes("invalid login credentials")) return "Wrong email or password.";
   if (
     msg.includes("token has expired") ||
     msg.includes("otp") ||
@@ -48,10 +46,7 @@ function friendlyError(err: unknown): string {
     return "Pick a password different from your old one.";
   if (msg.includes("email not confirmed"))
     return "Confirm your email first - open the link we sent you, then sign in.";
-  if (
-    msg.includes("already registered") ||
-    msg.includes("already been registered")
-  )
+  if (msg.includes("already registered") || msg.includes("already been registered"))
     return "An account with this email already exists - sign in instead.";
   if (msg.includes("password should be at least"))
     return "Use at least 6 characters for your password.";
@@ -122,9 +117,7 @@ export function AuthScreen() {
           if (error) throw error;
         } catch (err) {
           if (!cancelled) {
-            setError(
-              err instanceof Error ? err.message : "Google sign-in failed.",
-            );
+            setError(err instanceof Error ? err.message : "Google sign-in failed.");
           }
         } finally {
           if (!cancelled) setGoogleBusy(false);
@@ -154,9 +147,7 @@ export function AuthScreen() {
       const url = await startGoogleSignIn();
       await openUrl(url);
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Couldn't start Google sign-in.",
-      );
+      setError(err instanceof Error ? err.message : "Couldn't start Google sign-in.");
     } finally {
       setGoogleBusy(false);
     }
@@ -238,9 +229,7 @@ export function AuthScreen() {
         return;
       }
       if (!agreedToTerms) {
-        setError(
-          "You need to agree to the Terms and Conditions to create an account.",
-        );
+        setError("You need to agree to the Terms and Conditions to create an account.");
         return;
       }
     }
@@ -255,9 +244,7 @@ export function AuthScreen() {
         } else {
           // Email confirmation is on - no session until they tap the link,
           // so without this it looked like nothing happened.
-          setNotice(
-            `We sent a confirmation link to ${email}. Tap it, then sign in here.`,
-          );
+          setNotice(`We sent a confirmation link to ${email}. Tap it, then sign in here.`);
           setMode("signin");
         }
       } else {
@@ -274,25 +261,33 @@ export function AuthScreen() {
     }
   }
 
-  return (
-    <div className="auth-screen">
-      <div className="auth-screen__glow" aria-hidden="true" />
-      <form
-        className={`auth-screen__form auth-screen__form--${mode}`}
-        onSubmit={handleSubmit}
-      >
-        <img className="auth-screen__icon" src="/app-icon.png" alt="" />
-        <h1 className="auth-screen__title">Consistency</h1>
-        <p className="auth-screen__tagline">Small habits, every day.</p>
+  const title =
+    mode === "signup"
+      ? "Create your account"
+      : mode === "forgot"
+        ? "Forgot your password?"
+        : mode === "reset"
+          ? "Set a new password"
+          : "Welcome back";
 
-        {mode === "forgot" || mode === "reset" ? (
-          <p className="auth-screen__subtitle">
-            {mode === "forgot"
-              ? "Enter your email and we'll send you a code to set a new password."
-              : "Reset your password"}
-          </p>
-        ) : (
-          <>
+  return (
+    <div className={`auth-screen auth-screen--${mode}`}>
+      <Showcase />
+
+      <div className="auth-screen__side">
+        <form className="auth-screen__form" onSubmit={handleSubmit}>
+          <div className="auth-screen__brand">
+            <img className="auth-screen__icon" src="/app-icon.png" alt="" />
+            <span>Consistency</span>
+          </div>
+          <h1 className="auth-screen__title">{title}</h1>
+          {mode === "forgot" && (
+            <p className="auth-screen__subtitle">
+              Enter your email and we'll send you a code to set a new password.
+            </p>
+          )}
+
+          {(mode === "signin" || mode === "signup") && (
             <div className="auth-screen__tabs" role="tablist">
               <button
                 type="button"
@@ -313,237 +308,259 @@ export function AuthScreen() {
                 Create account
               </button>
             </div>
+          )}
 
-            <p className="auth-screen__subtitle">
-              {mode === "signup"
-                ? "Set up your account to get started"
-                : "Welcome back"}
-            </p>
-          </>
-        )}
+          {GOOGLE_SIGN_IN_ENABLED && mode !== "forgot" && mode !== "reset" && (
+            <>
+              <button
+                type="button"
+                className="auth-screen__google"
+                onClick={() => void handleGoogleSignIn()}
+                disabled={googleBusy}
+              >
+                <GoogleIcon />
+                Continue with Google
+              </button>
 
-        {GOOGLE_SIGN_IN_ENABLED && mode !== "forgot" && mode !== "reset" && (
-          <>
+              <div className="auth-screen__divider">
+                <span>or</span>
+              </div>
+            </>
+          )}
+
+          {mode === "reset" && (
+            <label className="auth-screen__field">
+              <span className="auth-screen__label">Code from the email</span>
+              <input
+                className="auth-screen__input auth-screen__code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                name="code"
+                value={resetCode}
+                onChange={(e) => setResetCode(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                placeholder="123456"
+                required
+                autoFocus
+              />
+            </label>
+          )}
+
+          {mode !== "reset" && (
+            <label className="auth-screen__field">
+              <span className="auth-screen__label">Email</span>
+              <span className="auth-screen__input-wrap">
+                <input
+                  className="auth-screen__input"
+                  type="email"
+                  name="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  spellCheck={false}
+                  required
+                />
+              </span>
+            </label>
+          )}
+          {mode !== "forgot" && (
+            // "Forgot?" sits on the label's line, but outside the <label>
+            // so it isn't read out as part of the field's name.
+            <div className="auth-screen__field-wrap">
+              <label className="auth-screen__field">
+                <span className="auth-screen__label">
+                  {mode === "reset" ? "New password" : "Password"}
+                </span>
+                <span className="auth-screen__input-wrap">
+                  <input
+                    className="auth-screen__input"
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={mode === "signin" ? "Your password" : "At least 6 characters"}
+                    autoComplete={mode === "signin" ? "current-password" : "new-password"}
+                    minLength={6}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="auth-screen__password-toggle"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    onClick={() => setShowPassword((v) => !v)}
+                  >
+                    {showPassword ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+                  </button>
+                </span>
+              </label>
+              {mode === "signin" && (
+                <button
+                  type="button"
+                  className="auth-screen__link auth-screen__forgot"
+                  onClick={() => switchMode("forgot")}
+                >
+                  Forgot?
+                </button>
+              )}
+            </div>
+          )}
+
+          {(mode === "signup" || mode === "reset") && (
+            <label className="auth-screen__field">
+              <span className="auth-screen__label">
+                {mode === "reset" ? "Confirm new password" : "Confirm password"}
+              </span>
+              <span className="auth-screen__input-wrap">
+                <input
+                  className="auth-screen__input"
+                  type={showConfirmPassword ? "text" : "password"}
+                  name="confirm-password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Type it again"
+                  autoComplete="new-password"
+                  minLength={6}
+                  required
+                />
+                <button
+                  type="button"
+                  className="auth-screen__password-toggle"
+                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                  onClick={() => setShowConfirmPassword((v) => !v)}
+                >
+                  {showConfirmPassword ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+                </button>
+              </span>
+            </label>
+          )}
+
+          {mode === "signup" && (
+            <div className="auth-screen__terms">
+              <Checkbox
+                checked={agreedToTerms}
+                onChange={setAgreedToTerms}
+                ariaLabel="I agree to the Terms and Conditions"
+              />
+              <span className="auth-screen__terms-text">
+                I agree to the{" "}
+                <button
+                  type="button"
+                  className="auth-screen__terms-link"
+                  onClick={() => void openUrl(TERMS_URL)}
+                >
+                  Terms
+                </button>{" "}
+                and{" "}
+                <button
+                  type="button"
+                  className="auth-screen__terms-link"
+                  onClick={() => void openUrl(PRIVACY_URL)}
+                >
+                  Privacy Policy
+                </button>
+              </span>
+            </div>
+          )}
+
+          {error && (
+            <div className="auth-screen__error" role="alert" aria-live="polite">
+              {error}
+            </div>
+          )}
+          {notice && (
+            <div className="auth-screen__notice" role="status" aria-live="polite">
+              {notice}
+            </div>
+          )}
+
+          <button type="submit" disabled={busy} className="auth-screen__submit">
+            {busy
+              ? mode === "signup"
+                ? "Creating account…"
+                : mode === "forgot"
+                  ? "Sending…"
+                  : mode === "reset"
+                    ? "Saving…"
+                    : "Signing in…"
+              : mode === "signup"
+                ? "Create account"
+                : mode === "forgot"
+                  ? "Send code"
+                  : mode === "reset"
+                    ? "Set new password"
+                    : "Sign in"}
+          </button>
+
+          {mode === "reset" && (
             <button
               type="button"
-              className="auth-screen__google"
-              onClick={() => void handleGoogleSignIn()}
-              disabled={googleBusy}
+              className="auth-screen__link"
+              disabled={busy}
+              onClick={() => {
+                setError(null);
+                setBusy(true);
+                sendResetCode()
+                  .catch((err) => setError(friendlyError(err)))
+                  .finally(() => setBusy(false));
+              }}
             >
-              <GoogleIcon />
-              Continue with Google
+              Didn't get it? Send a new code
             </button>
+          )}
+          {(mode === "forgot" || mode === "reset") && (
+            <button
+              type="button"
+              className="auth-screen__link"
+              onClick={() => switchMode("signin")}
+            >
+              ‹ Back to sign in
+            </button>
+          )}
+        </form>
+      </div>
+    </div>
+  );
+}
 
-            <div className="auth-screen__divider">
-              <span>or</span>
-            </div>
-          </>
-        )}
+// The left side (top on a phone): a slice of the app itself - today's
+// streak with its fire, a few templates being ticked off - on a wash of the
+// app's colors, so the first screen already says what Consistency is.
+// Just a drawing.
+const SHOWCASE_TEMPLATES = [
+  { name: "Trading", color: "#22c55e", tally: "2/2", done: true },
+  { name: "Activities", color: "#3b82f6", tally: "3/4", done: false },
+  { name: "Learning", color: "#a855f7", tally: "1/1", done: true },
+];
 
-        {mode === "reset" && (
-          <label className="auth-screen__field">
-            <span className="auth-screen__label">Code from the email</span>
-            <input
-              className="auth-screen__input auth-screen__code"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              name="code"
-              value={resetCode}
-              onChange={(e) =>
-                setResetCode(e.target.value.replace(/\D/g, "").slice(0, 10))
-              }
-              placeholder="123456"
-              required
-              autoFocus
-            />
-          </label>
-        )}
-
-        {mode !== "reset" && (
-          <label className="auth-screen__field">
-            <span className="auth-screen__label">Email</span>
-            <input
-              className="auth-screen__input"
-              type="email"
-              name="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              spellCheck={false}
-              required
-            />
-          </label>
-        )}
-        {mode !== "forgot" && (
-          <label className="auth-screen__field">
-            <span className="auth-screen__label">
-              {mode === "reset" ? "New password" : "Password"}
-            </span>
-            <div className="auth-screen__password-wrap">
-              <input
-                className="auth-screen__input"
-                type={showPassword ? "text" : "password"}
-                name="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete={
-                  mode === "signin" ? "current-password" : "new-password"
-                }
-                minLength={6}
-                required
-              />
-              <button
-                type="button"
-                className="auth-screen__password-toggle"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                onClick={() => setShowPassword((v) => !v)}
-              >
-                {showPassword ? (
-                  <EyeOffIcon size={15} />
-                ) : (
-                  <EyeIcon size={15} />
-                )}
-              </button>
-            </div>
-            {mode !== "signin" && (
-              <span className="auth-screen__hint">At least 6 characters</span>
-            )}
-          </label>
-        )}
-
-        {mode === "signin" && (
-          <button
-            type="button"
-            className="auth-screen__forgot"
-            onClick={() => switchMode("forgot")}
+function Showcase() {
+  return (
+    <div className="auth-show" aria-hidden="true">
+      <div className="auth-show__stack">
+        <div className="auth-show__streak">
+          <Flame power={1} />
+          <b>53</b>
+          <span>day streak</span>
+          <em>Done today</em>
+        </div>
+        {SHOWCASE_TEMPLATES.map((t) => (
+          <div
+            key={t.name}
+            className="auth-show__tpl"
+            style={{ "--tpl-color": t.color } as CSSProperties}
           >
-            Forgot password?
-          </button>
-        )}
-
-        {(mode === "signup" || mode === "reset") && (
-          <label className="auth-screen__field">
-            <span className="auth-screen__label">
-              {mode === "reset" ? "Confirm new password" : "Confirm password"}
-            </span>
-            <div className="auth-screen__password-wrap">
-              <input
-                className="auth-screen__input"
-                type={showConfirmPassword ? "text" : "password"}
-                name="confirm-password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                autoComplete="new-password"
-                minLength={6}
-                required
-              />
-              <button
-                type="button"
-                className="auth-screen__password-toggle"
-                aria-label={
-                  showConfirmPassword ? "Hide password" : "Show password"
-                }
-                onClick={() => setShowConfirmPassword((v) => !v)}
-              >
-                {showConfirmPassword ? (
-                  <EyeOffIcon size={15} />
-                ) : (
-                  <EyeIcon size={15} />
-                )}
-              </button>
-            </div>
-          </label>
-        )}
-
-        {mode === "signup" && (
-          <div className="auth-screen__terms">
-            <Checkbox
-              checked={agreedToTerms}
-              onChange={setAgreedToTerms}
-              ariaLabel="I agree to the Terms and Conditions"
-            />
-            <span className="auth-screen__terms-text">
-              I agree to the{" "}
-              <button
-                type="button"
-                className="auth-screen__terms-link"
-                onClick={() => void openUrl(TERMS_URL)}
-              >
-                Terms and Conditions
-              </button>{" "}
-              and{" "}
-              <button
-                type="button"
-                className="auth-screen__terms-link"
-                onClick={() => void openUrl(PRIVACY_URL)}
-              >
-                Privacy Policy
-              </button>
-            </span>
+            <i className={`auth-show__tick ${t.done ? "auth-show__tick--done" : ""}`}>
+              {t.done && <CheckIcon size={10} />}
+            </i>
+            {t.name}
+            <em>{t.tally}</em>
           </div>
-        )}
-
-        {error && (
-          <div className="auth-screen__error" role="alert" aria-live="polite">
-            {error}
-          </div>
-        )}
-        {notice && (
-          <div className="auth-screen__notice" role="status" aria-live="polite">
-            {notice}
-          </div>
-        )}
-
-        <Button
-          type="submit"
-          variant="primary"
-          disabled={busy}
-          className="auth-screen__submit"
-        >
-          {busy
-            ? mode === "signup"
-              ? "Creating account…"
-              : mode === "forgot"
-                ? "Sending…"
-                : mode === "reset"
-                  ? "Saving…"
-                  : "Signing in…"
-            : mode === "signup"
-              ? "Create account"
-              : mode === "forgot"
-                ? "Send code"
-                : mode === "reset"
-                  ? "Set new password"
-                  : "Sign in"}
-        </Button>
-
-        {mode === "reset" && (
-          <button
-            type="button"
-            className="auth-screen__forgot"
-            disabled={busy}
-            onClick={() => {
-              setError(null);
-              setBusy(true);
-              sendResetCode()
-                .catch((err) => setError(friendlyError(err)))
-                .finally(() => setBusy(false));
-            }}
-          >
-            Didn't get it? Send a new code
-          </button>
-        )}
-        {(mode === "forgot" || mode === "reset") && (
-          <button
-            type="button"
-            className="auth-screen__forgot"
-            onClick={() => switchMode("signin")}
-          >
-            ‹ Back to sign in
-          </button>
-        )}
-      </form>
+        ))}
+      </div>
+      <h2 className="auth-show__title">Build habits that stick.</h2>
+      <p className="auth-show__text">
+        Plan your day, tick it off, and keep the streak alive - with friends.
+      </p>
     </div>
   );
 }

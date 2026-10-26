@@ -1,132 +1,484 @@
+/* Sign in / create account. Desktop: a picture of the app on the left
+   (Showcase), the form on the right. Phone: the picture on top, smaller,
+   the form under it. Notes, cards and buttons in the app's own style. */
 .auth-screen {
-  position: relative;
   height: 100vh;
-  height: 100dvh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /* Minus the Mac window's top strip (see index.html) - 0 elsewhere. */
+  height: calc(100dvh - var(--titlebar-h, 0px));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 440px);
   background: var(--bg);
   overflow: hidden;
 }
 
-/* A quiet accent glow behind the card, not a hard spotlight - reads as
-   "considered" rather than flashy, and follows the active theme's own
-   --accent automatically so every theme gets its own tint for free. */
-.auth-screen__glow {
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    ellipse 700px 500px at 50% 35%,
-    var(--accent-soft),
-    transparent 70%
-  );
-  pointer-events: none;
-}
+/* --- The picture of the app --- */
 
-.auth-screen__form {
+/* A slice of the app on a wash of its colors: the streak card with its
+   fire, then a few templates - the same cards as the day panel. */
+.auth-show {
   position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--space-4);
-  width: 340px;
-  padding: var(--space-6) var(--space-5);
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  opacity: 1;
-  transform: translateY(0) scale(1);
-  transition: opacity 240ms var(--ease-out), transform 240ms var(--ease-out);
+  justify-content: center;
+  gap: 12px;
+  padding: 48px clamp(28px, 6vw, 72px);
+  background:
+    radial-gradient(70% 60% at 0% 0%, rgba(59, 130, 246, 0.35), transparent 60%),
+    radial-gradient(60% 60% at 100% 100%, rgba(168, 85, 247, 0.3), transparent 60%),
+    radial-gradient(50% 50% at 90% 10%, rgba(34, 197, 94, 0.2), transparent 60%),
+    var(--bg-elevated);
+}
 
-  @starting-style {
+:root[data-mode="light"] .auth-show {
+  background:
+    radial-gradient(70% 60% at 0% 0%, rgba(59, 130, 246, 0.2), transparent 60%),
+    radial-gradient(60% 60% at 100% 100%, rgba(168, 85, 247, 0.16), transparent 60%),
+    radial-gradient(50% 50% at 90% 10%, rgba(34, 197, 94, 0.14), transparent 60%),
+    var(--bg-elevated);
+}
+
+.auth-show__stack {
+  width: min(320px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.auth-show__streak,
+.auth-show__tpl {
+  animation: auth-show-in 500ms var(--ease-out) both;
+}
+
+.auth-show__streak {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow:
+    inset 3px 0 0 var(--streak-color, #ff9f43),
+    0 16px 40px rgba(0, 0, 0, 0.35);
+}
+
+.auth-show__streak .flame {
+  zoom: 1.2;
+  translate: 0 -3px;
+}
+
+.auth-show__streak b {
+  font-size: 26px;
+  line-height: 1;
+  color: var(--streak-text);
+}
+
+.auth-show__streak span {
+  flex: 1;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.auth-show__streak em {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--success) 16%, transparent);
+  color: var(--success);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.auth-show__tpl {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 13px;
+  background: var(--surface);
+  box-shadow:
+    inset 3px 0 0 var(--tpl-color),
+    0 10px 30px rgba(0, 0, 0, 0.25);
+  font-size: var(--text-base);
+  font-weight: 650;
+}
+
+/* Light mode: the same cards, with a soft shadow instead of a dark one. */
+:root[data-mode="light"] .auth-show__streak {
+  box-shadow:
+    inset 3px 0 0 var(--streak-color, #ff9f43),
+    0 12px 30px rgba(16, 24, 40, 0.1);
+}
+
+:root[data-mode="light"] .auth-show__tpl {
+  box-shadow:
+    inset 3px 0 0 var(--tpl-color),
+    0 8px 22px rgba(16, 24, 40, 0.08);
+}
+
+/* The middle one sits a little in, so the stack reads as cards, not a
+   table. */
+.auth-show__tpl:nth-child(3) {
+  margin-left: 22px;
+}
+
+.auth-show__tpl:nth-child(2) {
+  animation-delay: 70ms;
+}
+.auth-show__tpl:nth-child(3) {
+  animation-delay: 140ms;
+}
+.auth-show__tpl:nth-child(4) {
+  animation-delay: 210ms;
+}
+
+.auth-show__tick {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--tpl-color);
+  color: #fff;
+}
+
+.auth-show__tick--done {
+  background: var(--tpl-color);
+  box-shadow: none;
+}
+
+.auth-show__tpl em {
+  margin-left: auto;
+  font-size: var(--text-xs);
+  font-style: normal;
+  color: var(--text-muted);
+}
+
+.auth-show__title {
+  margin: 20px 0 0;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.auth-show__text {
+  margin: 0;
+  max-width: 32ch;
+  font-size: var(--text-md);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+@keyframes auth-show-in {
+  from {
     opacity: 0;
-    transform: translateY(6px) scale(0.98);
+    transform: translateY(10px);
   }
 }
 
+/* --- The form --- */
+
+.auth-screen__side {
+  overflow-y: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 36px;
+}
+
+.auth-screen__form {
+  width: 100%;
+  max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: auth-form-in 320ms var(--ease-out) both;
+}
+
+@keyframes auth-form-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.auth-screen__brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
 .auth-screen__icon {
-  width: 56px;
-  height: 56px;
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
 }
 
 .auth-screen__title {
   margin: 0;
-  font-size: var(--text-xl);
-  font-weight: 700;
-  color: var(--text);
-  text-align: center;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .auth-screen__subtitle {
-  margin: calc(var(--space-2) * -1) 0 0;
+  margin: -6px 0 0;
   font-size: var(--text-sm);
+  line-height: 1.5;
   color: var(--text-secondary);
-  text-align: center;
 }
 
-/* A real segmented control, not just a small text link at the bottom - the
-   two modes used to look almost identical (same subtitle position, same
-   two fields), so the active tab's fill color is the one thing that's
-   never subtle: sign-in stays the app's own accent, create-account is
-   green, so which mode you're in reads at a glance before you even read
-   the label. */
+/* Sign in / Create account. */
 .auth-screen__tabs {
-  display: flex;
-  width: 100%;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   padding: 3px;
+  border-radius: 12px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
 }
 
 .auth-screen__tab {
-  flex: 1;
-  padding: var(--space-2) 0;
-  border-radius: var(--radius-sm);
+  height: 36px;
+  border: none;
+  border-radius: 9px;
   background: transparent;
   color: var(--text-secondary);
-  font-size: var(--text-sm);
-  font-weight: 600;
+  font-size: var(--text-base);
+  font-weight: 650;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.auth-screen__tab:hover:not(.auth-screen__tab--active) {
+.auth-screen__tab--active {
+  background: color-mix(in srgb, var(--text) 10%, var(--surface));
   color: var(--text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
-.auth-screen__form--signin .auth-screen__tab--active {
-  background: var(--accent);
-  color: white;
+:root[data-mode="light"] .auth-screen__tab--active {
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.12);
 }
 
-.auth-screen__form--signup .auth-screen__tab--active {
-  background: var(--success);
-  color: white;
+/* A field: its label above, then the box. */
+.auth-screen__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-screen__label {
+  font-size: var(--text-sm);
+  font-weight: 650;
+  color: var(--text-secondary);
+}
+
+/* The password field with "Forgot?" on its label's line (outside the
+   <label> itself - see AuthScreen.tsx). */
+.auth-screen__field-wrap {
+  position: relative;
+}
+
+.auth-screen__forgot {
+  position: absolute;
+  top: -4px;
+  right: -6px;
+}
+
+.auth-screen__input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 46px;
+  padding: 0 6px 0 14px;
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  transition: box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+:root[data-mode="light"] .auth-screen__input-wrap {
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+/* Typing in it: a thin bright edge with a soft glow around it, the box a
+   touch lighter. */
+.auth-screen__input-wrap:focus-within,
+.auth-screen__code:focus {
+  background: color-mix(in srgb, var(--text) 4%, var(--surface));
+  box-shadow:
+    inset 0 0 0 1px rgba(96, 165, 250, 0.9),
+    0 0 0 1px rgba(96, 165, 250, 0.25),
+    0 0 18px rgba(59, 130, 246, 0.35);
+}
+
+:root[data-mode="light"] .auth-screen__input-wrap:focus-within,
+:root[data-mode="light"] .auth-screen__code:focus {
+  background: var(--surface);
+  box-shadow:
+    inset 0 0 0 1px #3b82f6,
+    0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.auth-screen__input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-md);
+  outline: none;
+}
+
+/* The box around it shows focus (above) - not the app's own focus ring
+   (tokens.css) on the bare text inside it, which would otherwise win:
+   tokens.css loads after this file. */
+.auth-screen__input:focus-visible {
+  outline: none;
+}
+
+/* No grey flash over the field when it's tapped on iPhone. */
+.auth-screen__field {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.auth-screen__input::placeholder {
+  color: var(--text-muted);
+}
+
+/* The browser's own fill-in color (a saved email or password) would paint
+   the field pale yellow/blue - keep it in the app's colors. */
+.auth-screen__input:-webkit-autofill {
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
+  transition: background-color 9999s ease 0s;
+}
+
+/* The reset code: its own big field, spaced digits easy to check against
+   the email. */
+.auth-screen__code {
+  height: 56px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  transition: box-shadow 0.15s ease, background-color 0.15s ease;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.3em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.auth-screen__password-toggle {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+@media (hover: hover) {
+  .auth-screen__password-toggle:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+  }
+}
+
+/* Forgot password? / Back to sign in / Send a new code. */
+.auth-screen__link {
+  align-self: center;
+  padding: 4px 6px;
+  border: none;
+  background: none;
+  color: #60a5fa;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+:root[data-mode="light"] .auth-screen__link,
+:root[data-mode="light"] .auth-screen__terms-link {
+  color: #2563eb;
+}
+
+.auth-screen__link:disabled {
+  opacity: 0.5;
+}
+
+.auth-screen__terms {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 2px;
+}
+
+.auth-screen__terms-text {
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.auth-screen__terms-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #60a5fa;
+  font: inherit;
+  font-weight: 600;
+}
+
+.auth-screen__submit {
+  height: 46px;
+  margin-top: 4px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #4f8ff7, #3b82f6);
+  color: #fff;
+  font-size: var(--text-md);
+  font-weight: 750;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: filter 0.15s ease, transform 120ms var(--ease-out), opacity 0.15s ease;
+}
+
+.auth-screen__submit:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.auth-screen__submit:disabled {
+  opacity: 0.6;
+}
+
+@media (hover: hover) {
+  .auth-screen__submit:hover:not(:disabled) {
+    filter: brightness(1.08);
+  }
 }
 
 .auth-screen__google {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
-  width: 100%;
-  padding: var(--space-2) var(--space-3);
+  gap: 8px;
+  height: 46px;
+  border: none;
+  border-radius: 12px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
   color: var(--text);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
-}
-
-.auth-screen__google:hover:not(:disabled) {
-  border-color: var(--border-strong);
-  background: var(--surface-hover);
+  font-size: var(--text-md);
+  font-weight: 650;
 }
 
 .auth-screen__google:disabled {
@@ -137,8 +489,6 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  width: 100%;
-  margin: calc(var(--space-2) * -1) 0;
   color: var(--text-muted);
   font-size: var(--text-xs);
 }
@@ -151,70 +501,12 @@
   background: var(--border);
 }
 
-.auth-screen__field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  width: 100%;
-}
-
-.auth-screen__label {
+.auth-screen__error,
+.auth-screen__notice {
+  padding: 10px 12px;
+  border-radius: 12px;
   font-size: var(--text-sm);
-  font-weight: 500;
-  color: var(--text-secondary);
-}
-
-.auth-screen__input {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-3);
-  width: 100%;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.auth-screen__input:hover {
-  border-color: var(--border-strong);
-}
-
-.auth-screen__input:focus-visible {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-.auth-screen__password-wrap {
-  position: relative;
-  width: 100%;
-}
-
-.auth-screen__password-wrap .auth-screen__input {
-  padding-right: calc(var(--space-3) + 24px);
-}
-
-.auth-screen__password-toggle {
-  position: absolute;
-  top: 50%;
-  right: var(--space-2);
-  translate: 0 -50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px;
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  transition: color 0.12s ease;
-}
-
-.auth-screen__password-toggle:hover {
-  color: var(--text);
-}
-
-.auth-screen__error {
-  width: 100%;
-  font-size: var(--text-sm);
-  color: var(--danger);
+  line-height: 1.45;
   opacity: 1;
   transition: opacity 160ms var(--ease-out);
 
@@ -223,115 +515,77 @@
   }
 }
 
-.auth-screen__terms {
-  width: 100%;
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  text-align: left;
-}
-
-.auth-screen__terms-text {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  line-height: 1.4;
-}
-
-.auth-screen__terms-link {
-  background: none;
-  border: none;
-  padding: 0;
-  font-size: inherit;
-  color: var(--accent);
-  text-decoration: underline;
-}
-
-.auth-screen__submit {
-  width: 100%;
-}
-
-.auth-screen__tagline {
-  margin: calc(var(--space-3) * -1) 0 0;
-  font-size: var(--text-sm);
-  color: var(--text-muted);
-  text-align: center;
-}
-
-.auth-screen__hint {
-  font-size: var(--text-xs);
-  color: var(--text-muted);
-}
-
-.auth-screen__forgot {
-  align-self: flex-end;
-  margin-top: calc(var(--space-2) * -1);
-  padding: var(--space-1) 0;
-  border: none;
-  background: none;
-  color: var(--accent);
-  font-size: var(--text-sm);
-  font-weight: 500;
-}
-
-.auth-screen__submit + .auth-screen__forgot {
-  align-self: center;
-  margin-top: 0;
+.auth-screen__error {
+  background: color-mix(in srgb, var(--danger) 13%, transparent);
+  color: var(--danger);
 }
 
 .auth-screen__notice {
-  width: 100%;
-  padding: var(--space-3);
-  border-radius: var(--radius-md);
-  background: var(--success-soft);
+  background: color-mix(in srgb, var(--success) 13%, transparent);
   color: var(--success);
-  font-size: var(--text-sm);
-  line-height: 1.45;
 }
 
-/* Phone: no floating card - the form fills the width and sits near the
-   top, so the keyboard (which covers the bottom half) never hides the
-   password field or the button. */
+/* Phone: the picture on top (smaller), the form under it; the page
+   scrolls, so the keyboard never hides a field or the button. */
 @media (max-width: 700px) {
   .auth-screen {
-    align-items: flex-start;
+    display: block;
     overflow-y: auto;
-    padding: calc(env(safe-area-inset-top, 0px) + var(--space-6)) var(--space-5)
-      calc(env(safe-area-inset-bottom, 0px) + var(--space-6));
+  }
+
+  .auth-show {
+    padding: calc(env(safe-area-inset-top, 0px) + 22px) 20px 20px;
+  }
+
+  .auth-show__stack {
+    width: 100%;
+  }
+
+  /* On a phone the slice is a little shorter - the streak and two
+     templates - and the form's own title says the rest. */
+  .auth-show__tpl:nth-child(4),
+  .auth-show__title,
+  .auth-show__text {
+    display: none;
+  }
+
+  .auth-show__tpl:nth-child(3) {
+    margin-left: 0;
+  }
+
+  /* While the password is being reset, the picture only gets in the way. */
+  .auth-screen--forgot .auth-show,
+  .auth-screen--reset .auth-show {
+    display: none;
+  }
+
+  .auth-screen__side {
+    display: block;
+    overflow: visible;
+    padding: 18px 20px calc(env(safe-area-inset-bottom, 0px) + 28px);
+  }
+
+  .auth-screen--forgot .auth-screen__side,
+  .auth-screen--reset .auth-screen__side {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 28px);
   }
 
   .auth-screen__form {
-    width: 100%;
-    max-width: 420px;
+    max-width: 440px;
     margin: 0 auto;
-    padding: 0;
-    background: none;
-    border: none;
-    box-shadow: none;
   }
 
-  .auth-screen__icon {
-    width: 48px;
-    height: 48px;
-  }
-
-  .auth-screen__input {
-    min-height: 48px;
-    border-radius: var(--radius-md);
-  }
-
-  .auth-screen__submit {
-    width: 100%;
-    height: 48px;
-    font-size: var(--text-md);
-    font-weight: 600;
+  /* The brand repeats the app picture above. */
+  .auth-screen--signin .auth-screen__brand,
+  .auth-screen--signup .auth-screen__brand {
+    display: none;
   }
 }
 
-/* The reset code: big, spaced digits so it's easy to check against the email. */
-.auth-screen__code {
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: 0.3em;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
+@media (prefers-reduced-motion: reduce) {
+  .auth-show__streak,
+  .auth-show__tpl,
+  .auth-screen__form {
+    animation: none;
+  }
 }

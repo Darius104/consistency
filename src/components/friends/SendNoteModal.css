@@ -1,3 +1,5 @@
+/* Sending a friend a note - the same field and yellow button as your own
+   note (NoteForm), so a note looks the same from both sides. */
 .send-note {
   display: flex;
   flex-direction: column;
@@ -5,46 +7,74 @@
 }
 
 .send-note__input {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--text-sm);
+  min-height: 110px;
+  padding: var(--space-3);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: var(--surface);
   color: var(--text);
-  resize: vertical;
-  min-height: 70px;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  font: inherit;
+  font-size: var(--text-md);
+  line-height: 1.5;
+  resize: none;
+  transition: border-color 0.15s ease;
 }
 
-.send-note__input:hover {
-  border-color: var(--border-strong);
+.send-note__input::placeholder {
+  color: var(--text-muted);
 }
 
 .send-note__input:focus-visible {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  border-color: #f5c442;
 }
 
-.send-note__footer {
+.send-note__meta {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-3);
-}
-
-.send-note__count {
+  margin-top: -4px;
+  padding: 0 4px;
   font-size: var(--text-xs);
   color: var(--text-muted);
 }
 
+.send-note__count {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
 .send-note__error {
-  flex: 1;
-  font-size: var(--text-sm);
   color: var(--danger);
 }
 
-.send-note__footer .btn {
-  margin-left: auto;
+.send-note__send {
+  height: 46px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: none;
+  border-radius: 12px;
+  background: #f5c442;
+  color: #2a2103;
+  font-size: var(--text-md);
+  font-weight: 700;
+  transition: filter 0.15s ease, transform 120ms var(--ease-out), opacity 0.15s ease;
+}
+
+.send-note__send:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.send-note__send:disabled {
+  opacity: 0.5;
+}
+
+@media (hover: hover) {
+  .send-note__send:hover:not(:disabled) {
+    filter: brightness(1.06);
+  }
 }
 
 .send-note__sent {
@@ -59,19 +89,20 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
-  background: var(--success-soft);
-  color: var(--success);
+  background: color-mix(in srgb, #f5c442 20%, transparent);
+  color: var(--gold-text);
   animation: send-note-pop 420ms var(--ease-out);
 }
 
 .send-note__sent-text {
   margin: 0;
   text-align: center;
-  font-size: var(--text-sm);
-  color: var(--success);
+  font-size: var(--text-md);
+  font-weight: 650;
+  color: var(--text);
   opacity: 1;
   transition: opacity 260ms var(--ease-out);
 

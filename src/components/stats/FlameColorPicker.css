@@ -1,0 +1,42 @@
+.flame-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 8px 4px 10px;
+}
+
+.flame-picker__label {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.flame-picker__dots {
+  display: flex;
+  gap: 8px;
+}
+
+/* Each color as a round swatch; the chosen one gets a ring around it. */
+.flame-picker__dot {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 70%, color-mix(in srgb, var(--dot) 30%, #fff) 0 20%, transparent 55%),
+    var(--dot);
+  box-shadow: 0 0 0 2px var(--bg-elevated), 0 0 0 2px transparent;
+  transition: box-shadow 0.15s ease, transform 120ms var(--ease-out);
+}
+
+.flame-picker__dot:active {
+  transform: scale(0.9);
+}
+
+.flame-picker__dot--on {
+  box-shadow: 0 0 0 2px var(--bg-elevated), 0 0 0 4px var(--dot);
+}

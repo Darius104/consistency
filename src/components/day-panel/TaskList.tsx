@@ -6,7 +6,7 @@ import type { DayNote, Tag, Task } from "../../types";
 import { addDays, todayKey } from "../../utils/dates";
 import { occurrenceDateTime } from "../../utils/recurrence";
 import { EmptyState } from "../ui/EmptyState";
-import { CheckIcon } from "../ui/icons";
+import { CheckIcon, ChevronRightIcon } from "../ui/icons";
 import { NoteRow } from "./NoteRow";
 import { TaskGroup } from "./TaskGroup";
 import { TaskItem } from "./TaskItem";
@@ -26,7 +26,10 @@ const URGENCY_CRITICAL_MS = 15 * 60 * 1000;
  *  "warn" (calm amber, plenty of time), "high" (red, under an hour),
  *  "critical" (red and pulsing, under 15 minutes). */
 export type UrgencyLevel = "warn" | "high" | "critical";
-const AUTO_COLLAPSE_DELAY_MS = 250;
+// A finished template stays put this long - so the last tick and its full
+// ring register - then plays its exit (FOLD_MS) into the Done card.
+const AUTO_COLLAPSE_DELAY_MS = 450;
+const FOLD_MS = 460;
 // How long a deleted task stays on screen playing its exit (see TaskItem's
 // `leaving`) - matches the slide-out + collapse there.
 const LEAVE_MS = 380;
@@ -182,8 +185,148 @@ export function TaskList({
   // finished it today must not make that same tag show collapsed (and hide
   // fresh, unfinished tasks) on a different day.
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  // The finished templates' one-line summary, unfolded to list them.
+  const [doneOpen, setDoneOpen] = useState(false);
+  // Opening a template from the Done list moves it back to its place in
+  // the list - this remembers where its row was on screen, so the card can
+  // glide from there to its spot (see the layout effect below) instead of
+  // just vanishing from Done.
+  const listRef = useRef<HTMLDivElement>(null);
+  const flyRef = useRef<{ key: string; top: number; color: string } | null>(null);
+
+  useLayoutEffect(() => {
+    const fly = flyRef.current;
+    if (!fly) return;
+    flyRef.current = null;
+    const wrap = listRef.current?.querySelector<HTMLElement>(
+      `[data-group="${CSS.escape(fly.key)}"]`,
+    );
+    if (!wrap) return;
+    // Bring its new spot into view first (instantly), then measure - the
+    // slide starts from where the row was on screen either way.
+    wrap.scrollIntoView({ block: "nearest" });
+    const dy = fly.top - wrap.getBoundingClientRect().top;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!reduceMotion && Math.abs(dy) > 2) {
+      // Travels above the cards it passes, not underneath them.
+      wrap.style.position = "relative";
+      wrap.style.zIndex = "6";
+      wrap
+        .animate(
+          [
+            { transform: `translateY(${dy}px) scale(0.97)`, opacity: 0.6 },
+            { transform: "none", opacity: 1 },
+          ],
+          { duration: 420, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
+        )
+        .finished.catch(() => {})
+        .finally(() => {
+          wrap.style.position = "";
+          wrap.style.zIndex = "";
+        });
+    }
+    // A brief glow in the template's color, so the eye lands on it.
+    wrap.firstElementChild?.animate(
+      [
+        { boxShadow: `0 0 0 2px ${fly.color}` },
+        { boxShadow: `0 0 0 2px ${fly.color}`, offset: 0.4 },
+        { boxShadow: "0 0 0 0 transparent" },
+      ],
+      { duration: 1100, easing: "ease-out" },
+    );
+  });
   const seenKeys = useRef<Set<string>>(new Set());
   const wasComplete = useRef<Record<string, boolean>>({});
+
+  // A template finishing live: after a beat its card shrinks and slides
+  // down out of the list (FOLD_MS), then folds into the Done card, which
+  // takes it in with a glow in its color and its dot popping into the
+  // stack. Per template, in a ref rather than the completion effect's
+  // cleanup, so ticking a task elsewhere meanwhile doesn't cancel it;
+  // unticking one of its own tasks does (see cancelFold).
+  const foldsRef = useRef(new Map<string, { timer: number; anim?: Animation; wrap?: HTMLElement }>());
+  const [arrived, setArrived] = useState<{ key: string; color: string; first: boolean } | null>(null);
+
+  function cancelFold(scopedKey: string) {
+    const fold = foldsRef.current.get(scopedKey);
+    if (!fold) return;
+    window.clearTimeout(fold.timer);
+    fold.anim?.cancel();
+    if (fold.wrap) fold.wrap.style.overflow = "";
+    foldsRef.current.delete(scopedKey);
+  }
+
+  function startFold(scopedKey: string, color: string) {
+    cancelFold(scopedKey);
+    const fold: { timer: number; anim?: Animation; wrap?: HTMLElement } = { timer: 0 };
+    const finish = () => {
+      foldsRef.current.delete(scopedKey);
+      setCollapsed((prev) => new Set(prev).add(scopedKey));
+      setArrived({ key: scopedKey, color, first: !listRef.current?.querySelector(".task-list__done") });
+    };
+    fold.timer = window.setTimeout(() => {
+      const list = listRef.current;
+      const wrap = list?.querySelector<HTMLElement>(`[data-group="${CSS.escape(scopedKey)}"]`);
+      if (!list || !wrap || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        finish();
+        return;
+      }
+      // Closes the list's gap too, so the cards below glide up the whole
+      // way instead of jumping the last few px when it's removed.
+      const gap = parseFloat(getComputedStyle(list).rowGap) || 0;
+      const height = wrap.offsetHeight;
+      wrap.style.overflow = "hidden";
+      fold.wrap = wrap;
+      fold.anim = wrap.animate(
+        [
+          { height: `${height}px`, marginBottom: "0px", opacity: 1, transform: "none" },
+          { height: `${height}px`, marginBottom: "0px", opacity: 1, transform: "scale(0.98)", offset: 0.2 },
+          { height: "0px", marginBottom: `${-gap}px`, opacity: 0, transform: "translateY(14px) scale(0.94)" },
+        ],
+        { duration: FOLD_MS, easing: "cubic-bezier(0.32, 0.72, 0, 1)", fill: "forwards" },
+      );
+      // Cancelled (a task unticked mid-way) - it stays where it is.
+      fold.anim.finished.then(finish, () => {});
+    }, AUTO_COLLAPSE_DELAY_MS);
+    foldsRef.current.set(scopedKey, fold);
+  }
+
+  useEffect(() => {
+    const folds = foldsRef.current;
+    return () => {
+      folds.forEach((fold) => {
+        window.clearTimeout(fold.timer);
+        fold.anim?.cancel();
+      });
+      folds.clear();
+    };
+  }, []);
+
+  // The Done card taking in the template that just folded into it.
+  useLayoutEffect(() => {
+    if (!arrived) return;
+    const done = listRef.current?.querySelector<HTMLElement>(".task-list__done");
+    if (!done) return;
+    if (arrived.first) {
+      done.animate(
+        [{ opacity: 0, transform: "translateY(-10px) scale(0.97)" }, { opacity: 1, transform: "none" }],
+        { duration: 360, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
+      );
+    }
+    done.animate(
+      [
+        { boxShadow: `0 0 0 2px ${arrived.color}` },
+        { boxShadow: `0 0 0 2px ${arrived.color}`, offset: 0.35 },
+        { boxShadow: "0 0 0 0 transparent" },
+      ],
+      { duration: 1000, easing: "ease-out" },
+    );
+    const pop = [{ transform: "scale(0.3)" }, { transform: "scale(1.25)", offset: 0.6 }, { transform: "scale(1)" }];
+    done.querySelector(".task-list__done-check")?.animate(pop, { duration: 380, easing: "ease-out" });
+    done
+      .querySelector(`[data-done-key="${CSS.escape(arrived.key)}"]`)
+      ?.animate(pop, { duration: 420, delay: 80, easing: "ease-out", fill: "backwards" });
+  }, [arrived]);
 
   // Reordered via each row's own small grab handle (see useReorderDrag's
   // bindHandlePointerDown) rather than grab-anywhere, so the rest of the
@@ -326,8 +469,6 @@ export function TaskList({
     .join(",");
 
   useEffect(() => {
-    const timers: number[] = [];
-
     for (const g of groups) {
       const isComplete =
         g.occurrences.length > 0 && g.occurrences.every((o) => o.completed);
@@ -340,20 +481,15 @@ export function TaskList({
           setCollapsed((prev) => new Set(prev).add(g.scopedKey));
         }
       } else if (isComplete && wasComplete.current[g.scopedKey] === false) {
-        // Just finished live - collapse after a short beat so the
+        // Just finished live - folds into Done after a short beat so the
         // checkmark/green state actually registers first.
-        const timer = window.setTimeout(() => {
-          setCollapsed((prev) => new Set(prev).add(g.scopedKey));
-        }, AUTO_COLLAPSE_DELAY_MS);
-        timers.push(timer);
+        startFold(g.scopedKey, g.tag?.color ?? "var(--text-muted)");
+      } else if (!isComplete) {
+        cancelFold(g.scopedKey);
       }
 
       wasComplete.current[g.scopedKey] = isComplete;
     }
-
-    return () => {
-      timers.forEach((t) => window.clearTimeout(t));
-    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [completionSignature, selectedDate]);
 
@@ -389,7 +525,7 @@ export function TaskList({
   }
 
   return (
-    <div className="task-list">
+    <div className="task-list" ref={listRef}>
       {visibleLayout.map((entry) => {
         if (entry.note) {
           const note = entry.note;
@@ -427,6 +563,7 @@ export function TaskList({
           <Fragment key={entry.itemId}>
             {entry.itemId === firstGroupItemId && templatesHeading()}
             <div
+              data-group={entry.group!.scopedKey}
               ref={
                 isDraggable
                   ? layoutDrag.registerItemRef(entry.itemId)
@@ -501,30 +638,72 @@ export function TaskList({
       {/* Every template finished: the heading goes over this card. */}
       {!firstGroupItemId && doneGroups.length > 0 && templatesHeading()}
       {doneGroups.length > 0 && (
-        <div className="task-list__done">
-          <div className="task-list__done-head">
+        // Finished templates fold into one line - "5 templates done" with
+        // their colors stacked; tap it to list them, tap one to open it.
+        <div className={`task-list__done ${doneOpen ? "task-list__done--open" : ""}`}>
+          <button
+            type="button"
+            className="task-list__done-head"
+            onClick={() => setDoneOpen((v) => !v)}
+            aria-expanded={doneOpen}
+          >
             <span className="task-list__done-check" aria-hidden="true">
               <CheckIcon size={11} />
             </span>
-            Done
-            <span className="task-list__done-count">{doneGroups.length}</span>
-          </div>
-          {doneGroups.map((g) => (
-            <button
-              key={g.key}
-              type="button"
-              className="task-list__done-row"
-              style={{ "--group-color": g.tag?.color ?? "var(--text-muted)" } as CSSProperties}
-              onClick={() => toggleGroup(g.scopedKey)}
-              aria-expanded={false}
-            >
-              <span className="task-list__done-dot" aria-hidden="true" />
-              <span className="task-list__done-name">{g.tag?.name ?? "No template"}</span>
-              <span className="task-list__done-tally">
-                {g.occurrences.length}/{g.occurrences.length}
+            <span className="task-list__done-text">
+              <span className="task-list__done-title">
+                {doneGroups.length === 1
+                  ? "1 template done"
+                  : `${doneGroups.length} templates done`}
               </span>
-            </button>
-          ))}
+              {!doneOpen && (
+                <span className="task-list__done-names">
+                  {doneGroups.map((g) => g.tag?.name ?? "No template").join(", ")}
+                </span>
+              )}
+            </span>
+            <span className="task-list__done-stack" aria-hidden="true">
+              {doneGroups.slice(0, 5).map((g) => (
+                <i
+                  key={g.key}
+                  data-done-key={g.scopedKey}
+                  style={{ background: g.tag?.color ?? "var(--text-muted)" }}
+                />
+              ))}
+            </span>
+            <ChevronRightIcon
+              size={14}
+              className={`task-list__done-chevron ${doneOpen ? "task-list__done-chevron--open" : ""}`}
+            />
+          </button>
+          {doneOpen &&
+            doneGroups.map((g) => (
+              <button
+                key={g.key}
+                type="button"
+                data-done-key={g.scopedKey}
+                className="task-list__done-row"
+                style={{ "--group-color": g.tag?.color ?? "var(--text-muted)" } as CSSProperties}
+                onClick={(e) => {
+                  flyRef.current = {
+                    key: g.scopedKey,
+                    top: e.currentTarget.getBoundingClientRect().top,
+                    color: g.tag?.color ?? "var(--text-muted)",
+                  };
+                  toggleGroup(g.scopedKey);
+                }}
+                aria-expanded={false}
+              >
+                <span className="task-list__done-dot" aria-hidden="true">
+                  <CheckIcon size={10} />
+                </span>
+                <span className="task-list__done-name">{g.tag?.name ?? "No template"}</span>
+                <span className="task-list__done-tally">
+                  {g.occurrences.length}/{g.occurrences.length}
+                </span>
+                <ChevronRightIcon size={13} className="task-list__done-go" />
+              </button>
+            ))}
         </div>
       )}
     </div>

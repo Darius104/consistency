@@ -72,6 +72,23 @@ export const STREAK_STYLES: { id: StreakStyle; label: string }[] = [
   { id: "weeks", label: "Two weeks" },
 ];
 
+/** The Day Streak's flame color - picked next to its style. */
+export type FlameColor = "classic" | "red" | "pink" | "purple" | "blue" | "green" | "gold";
+
+export const FLAME_COLORS: { id: FlameColor; label: string; swatch: string }[] = [
+  { id: "classic", label: "Classic", swatch: "#ff9f43" },
+  { id: "red", label: "Red", swatch: "#ef4444" },
+  { id: "pink", label: "Pink", swatch: "#ec4899" },
+  { id: "purple", label: "Purple", swatch: "#a855f7" },
+  { id: "blue", label: "Blue", swatch: "#3b82f6" },
+  { id: "green", label: "Green", swatch: "#22c55e" },
+  { id: "gold", label: "Gold", swatch: "#eab308" },
+];
+
+export function parseFlameColor(saved: string | null): FlameColor {
+  return FLAME_COLORS.some((c) => c.id === saved) ? (saved as FlameColor) : "classic";
+}
+
 export function parseStreakStyle(saved: string | null): StreakStyle {
   return STREAK_STYLES.some((s) => s.id === saved) ? (saved as StreakStyle) : "campfire";
 }

@@ -14,6 +14,7 @@ import {
   STREAK_STYLES,
   WIDGET_IDS,
   WIDGET_LABELS,
+  type FlameColor,
   type StreakStyle,
   type WidgetId,
 } from "../../utils/panelOrder";
@@ -64,6 +65,7 @@ import { MembershipSection } from "./MembershipSection";
 import { ProfileSection } from "./ProfileSection";
 import { ReminderList } from "./ReminderList";
 import { SettingsBanner } from "./SettingsBanner";
+import { FlameColorPicker } from "../stats/FlameColorPicker";
 import {
   SettingsHome,
   type SettingsHomeRow,
@@ -106,6 +108,8 @@ interface SettingsModalProps {
   /** The Day Streak widget's look - picked under its row in Widgets. */
   streakStyle: StreakStyle;
   onChangeStreakStyle: (style: StreakStyle) => void;
+  flameColor: FlameColor;
+  onChangeFlameColor: (color: FlameColor) => void;
   /** Whether friends see your logged results on your calendar. */
   shareResults: boolean;
   onChangeShareResults: (share: boolean) => void;
@@ -216,6 +220,8 @@ export function SettingsModal({
   bestStreak,
   streakStyle,
   onChangeStreakStyle,
+  flameColor,
+  onChangeFlameColor,
   shareResults,
   onChangeShareResults,
   todayStatus,
@@ -281,6 +287,7 @@ export function SettingsModal({
             best={bestStreak}
             today={todayStatus}
             variant={streakStyle}
+            flameColor={flameColor}
           />
         );
       case "weekly":
@@ -619,6 +626,12 @@ export function SettingsModal({
                                       </button>
                                     ))}
                                   </div>
+                                )}
+                                {id === "streak" && (
+                                  <FlameColorPicker
+                                    value={flameColor}
+                                    onChange={onChangeFlameColor}
+                                  />
                                 )}
                                 <div className="widget-preview" aria-hidden="true">
                                   {renderWidgetPreview(id)}

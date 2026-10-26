@@ -1,6 +1,7 @@
 .friend-view {
   height: 100vh;
-  height: 100dvh;
+  /* Minus the Mac window's top strip (see index.html) - 0 elsewhere. */
+  height: calc(100dvh - var(--titlebar-h, 0px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -13,48 +14,6 @@
   min-width: 0;
   min-height: 0;
   height: auto;
-}
-
-/* The short "Back" / month labels are the phone's; desktop keeps
-   "Back to your calendar". */
-.friend-view__back-label,
-.friend-view__bar .friend-view__back--month {
-  display: none;
-}
-
-.friend-view__bar {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-5);
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-elevated);
-}
-
-.friend-view__bar-text {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.friend-view__bar-actions {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.friend-view__back,
-.friend-view__send-note {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
 }
 
 .friend-view__status {
@@ -235,10 +194,6 @@
     );
   }
 
-  .friend-view__bar-text {
-    white-space: normal;
-  }
-
   /* Same two-view layout as your own calendar on a phone: the month grid
      fills the screen, tapping a day swaps it for that day's panel (whose
      collapse handle brings the grid back) - never both at once. */
@@ -278,109 +233,7 @@
   }
 }
 
-/* Phone: an iOS-style navigation bar - back arrow on the left, whose
-   calendar it is in the middle, send-note icon on the right - instead of
-   a sentence plus two full-width text buttons squeezed onto one line. */
 @media (max-width: 700px) {
-  .friend-view__bar {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, auto) minmax(0, 1fr);
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-2) var(--space-3);
-  }
-
-  .friend-view__bar-actions {
-    display: contents;
-  }
-
-  .friend-view__back {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .friend-view__bar-text {
-    grid-column: 2;
-    grid-row: 1;
-    text-align: center;
-    font-size: var(--text-md);
-    color: var(--text);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .friend-view__send-note {
-    grid-column: 3;
-    grid-row: 1;
-  }
-
-  .friend-view__back,
-  .friend-view__send-note {
-    justify-content: center;
-    height: 36px;
-    padding: 0;
-  }
-
-  /* iOS-style text back button: "‹ Back" out of their calendar, "‹ October"
-     from one of their days back to the month. */
-  .friend-view__back {
-    gap: 2px;
-    margin-left: -6px;
-    padding: 0 8px 0 2px;
-    border-color: transparent;
-    background: none;
-    color: var(--accent);
-    font-size: var(--text-md);
-    font-weight: 500;
-  }
-
-  .friend-view__back svg {
-    width: 22px;
-    height: 22px;
-  }
-
-  .friend-view__back-label,
-  .friend-view__bar .friend-view__back--month {
-    display: inline-flex;
-  }
-
-  .friend-view__bar .friend-view__back--desktop-only {
-    display: none;
-  }
-
-  .friend-view__send-note svg {
-    width: 20px;
-    height: 20px;
-  }
-
-  .friend-view__bar-extra,
-  .friend-view__btn-label {
-    display: none;
-  }
-
-  .friend-view__back {
-    justify-self: start;
-  }
-
-  /* "Send a note" spelled out - an icon alone didn't say what it does. */
-  .friend-view__send-note {
-    justify-self: end;
-    width: auto;
-    gap: 5px;
-    padding: 0 12px;
-    border-radius: 999px;
-    background: var(--accent-soft);
-    border-color: transparent;
-    color: var(--accent);
-    font-weight: 600;
-  }
-
-  .friend-view__send-note svg {
-    width: 15px;
-    height: 15px;
-  }
-
   /* Their calendar has no friends row under the month title, so the
      ‹ Today › controls share the title's line instead of sitting alone on
      a second, mostly empty one. */
@@ -394,14 +247,6 @@
 
   .friend-view .cal-header__row {
     flex: none;
-  }
-}
-
-/* The note button keeps its words on the phone (only the back button
-   shrinks to an arrow). */
-@media (max-width: 700px) {
-  .friend-view__send-note .friend-view__btn-label {
-    display: inline;
   }
 }
 
@@ -428,4 +273,147 @@
 .friend-view__result--even {
   color: var(--amber-text);
   background: color-mix(in srgb, #f59e0b 16%, transparent);
+}
+
+/* The top bar: "‹ Your calendar" on the left, whose calendar it is in
+   the middle, "Send a note" (yellow, like notes everywhere) on the right. */
+.friend-bar {
+  flex: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.friend-bar__back {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  height: 34px;
+  padding: 0 14px 0 10px;
+  border: none;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: var(--text-base);
+  font-weight: 650;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, color 0.15s ease, transform 120ms var(--ease-out);
+}
+
+.friend-bar__back:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) {
+  .friend-bar__back:hover {
+    background: var(--surface-hover);
+    color: var(--text);
+  }
+}
+
+.friend-bar__who {
+  grid-column: 2;
+  grid-row: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.friend-bar__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-md);
+}
+
+.friend-bar__ro {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.friend-bar__note {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: #f5c442;
+  color: #2a2103;
+  font-size: var(--text-base);
+  font-weight: 750;
+  white-space: nowrap;
+  transition: filter 0.15s ease, transform 120ms var(--ease-out);
+}
+
+.friend-bar__note:active {
+  transform: scale(0.97);
+}
+
+@media (hover: hover) {
+  .friend-bar__note:hover {
+    filter: brightness(1.06);
+  }
+}
+
+/* "‹ Your calendar" / "Send a note" on desktop; "‹ Back" / a round note
+   button on a phone - and "‹ October" from one of their days. */
+.friend-bar__phone,
+.friend-bar__back--month {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .friend-bar {
+    gap: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .friend-bar__desk,
+  .friend-bar__ro,
+  .friend-bar__back--desktop-only {
+    display: none;
+  }
+
+  .friend-bar__phone {
+    display: inline;
+  }
+
+  .friend-bar__back--month {
+    display: inline-flex;
+  }
+
+  .friend-bar__note {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+  }
+
+  .friend-bar__note svg {
+    width: 17px;
+    height: 17px;
+  }
 }
